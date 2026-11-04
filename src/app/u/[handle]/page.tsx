@@ -49,7 +49,7 @@ export default async function ProfilePage({
     ["Reviews", 128],
   ] as const;
 
-  const shades = ["#ECEBE7", "#FED7AA", "#FB923C", "#C2410C", "#7C2D12"];
+  const shades = ["#EEEDE8", "#D8E5C8", "#A8C487", "#527D31", "#3D5F24"];
   const weeks = Array.from({ length: 26 }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => {
       const v = (w * 7 + d * 13 + w * d * 3) % 11;

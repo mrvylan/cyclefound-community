@@ -131,17 +131,17 @@ export default function GaragePage({
             >
               <span className="w-[52%] bg-ink" />
               <span className="w-[21%] bg-accent" />
-              <span className="w-[15%] bg-[#FB923C]" />
+              <span className="w-[15%] bg-accent-bright" />
               <span className="w-[7%] bg-blue" />
-              <span className="w-[5%] bg-[#93C5FD]" />
+              <span className="w-[5%] bg-[#A8C487]" />
             </div>
             <div className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] text-muted-2">
               {[
-                ["#15171A", "Complete bikes 52%"],
-                ["#C2410C", "Framesets 21%"],
-                ["#FB923C", "Groupsets 15%"],
+                ["#10171B", "Complete bikes 52%"],
+                ["#527D31", "Framesets 21%"],
+                ["#6F963B", "Groupsets 15%"],
                 ["#1E40AF", "Components 7%"],
-                ["#93C5FD", "Wheels & tools 5%"],
+                ["#A8C487", "Wheels & tools 5%"],
               ].map(([c, label]) => (
                 <span key={label} className="inline-flex items-center gap-1.5">
                   <span className="size-2.5 rounded-[2px]" style={{ background: c }} />
@@ -254,7 +254,7 @@ export default function GaragePage({
         <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
           <section className="rounded-[14px] border border-accent-soft-border bg-accent-soft p-5">
             <h2 className="font-display mb-1 mt-0 text-[22px]">Owner&apos;s wanted list</h2>
-            <p className="mb-3 mt-0 text-[13px] text-[#7C2D12]">
+            <p className="mb-3 mt-0 text-[13px] text-[#3d5f24]">
               Parts Marco is hunting for. Match against your garage.
             </p>
             <ul className="m-0 flex list-none flex-col gap-2 p-0">

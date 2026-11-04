@@ -129,7 +129,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                     className="w-full rounded-t"
                     style={{
                       height: `${v}%`,
-                      background: i === trend.v.length - 1 ? "#C2410C" : "#15171A",
+                      background: i === trend.v.length - 1 ? "#527D31" : "#10171B",
                     }}
                   />
                   <span className="font-mono text-[10px] text-muted">{trend.l[i]}</span>

@@ -3,21 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --ink: #15171a;
-  --ink-2: #202328;
-  --ink-3: #2b2f34;
-  --ground: #f3f3f0;
+  --ink: #10171b;
+  --ink-soft: #303737;
+  --ink-2: #1a2226;
+  --ink-3: #2a3236;
+  --ground: #f8f7f4;
   --surface: #ffffff;
-  --line: #deddd8;
-  --line-soft: #ecebe7;
-  --muted: #5b6068;
-  --muted-2: #4a4f57;
+  --line: #e5e5df;
+  --line-soft: #eeede8;
+  --muted: #737772;
+  --muted-2: #525651;
   --on-dark-muted: #b8bcc2;
-  --accent: #c2410c;
-  --accent-hover: #9a3412;
-  --accent-bright: #f97316;
-  --accent-soft: #fff7ed;
-  --accent-soft-border: #fed7aa;
+  --accent: #527d31;
+  --accent-hover: #466c29;
+  --accent-bright: #6f963b;
+  --accent-soft: #eef3e8;
+  --accent-soft-border: #c5d6b5;
   --blue: #1e40af;
   --blue-soft: #eef2ff;
 }
@@ -63,16 +64,16 @@ a:hover {
 .ph {
   background: repeating-linear-gradient(
     135deg,
-    #e4e3de 0 12px,
-    #ecebe7 12px 24px
+    #e8ebe4 0 12px,
+    #f0f1ed 12px 24px
   );
 }
 
 .phd {
   background: repeating-linear-gradient(
     135deg,
-    #25282d 0 14px,
-    #2b2f34 14px 28px
+    #1a2226 0 14px,
+    #2a3236 14px 28px
   );
 }
 

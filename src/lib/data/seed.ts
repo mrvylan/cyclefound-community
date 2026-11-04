@@ -64,7 +64,7 @@ export const people: Person[] = [
     handle: "lugged_marco",
     name: "Marco Reyes",
     init: "MR",
-    bg: "#9A3412",
+    bg: "#527D31",
     role: "Vintage steel restorer · Oakland",
     loc: "Oakland, CA · 31 mi",
     level: "MASTER",
@@ -282,7 +282,7 @@ export const questions: Question[] = [
 
 export const leaders = [
   { rank: 1, name: "Jen Whitlock", handle: "jen_whitlock", init: "JW", bg: "#3F6B5C", role: "Pro mechanic", gain: "1,420" },
-  { rank: 2, name: "Marco Reyes", handle: "lugged_marco", init: "MR", bg: "#9A3412", role: "Vintage restorer", gain: "1,186" },
+  { rank: 2, name: "Marco Reyes", handle: "lugged_marco", init: "MR", bg: "#527D31", role: "Vintage restorer", gain: "1,186" },
   { rank: 3, name: "Priya Natarajan", handle: "priya_wheels", init: "PN", bg: "#1E40AF", role: "Wheelbuilder", gain: "904" },
   { rank: 4, name: "Tomás Lindqvist", handle: "campy_tomas", init: "TL", bg: "#0E7490", role: "Campagnolo collector", gain: "611" },
   { rank: 5, name: "Kai Yamamoto", handle: "kai_suspension", init: "KY", bg: "#B45309", role: "Suspension tuner", gain: "532" },
@@ -313,7 +313,7 @@ export const featuredGarages = [
     handle: "lugged_marco",
     owner: "Marco Reyes · Oakland",
     init: "MR",
-    bg: "#9A3412",
+    bg: "#527D31",
     photo: "Colnago Super, workshop wall",
     items: 34,
     value: "$41k",
@@ -555,7 +555,7 @@ export const itemDetail = {
   ],
   others: [
     { name: "1983 Colnago Super, blue", owner: "Tomás Lindqvist · Berkeley", status: "Not for sale", color: "#4A4F57" },
-    { name: "1985 Colnago Super, Saronni", owner: "Ari Patel · Palo Alto", status: "For sale · $2,650", color: "#C2410C" },
+    { name: "1985 Colnago Super, Saronni", owner: "Ari Patel · Palo Alto", status: "For sale · $2,650", color: "#527D31" },
     { name: "1984 Colnago Super frameset", owner: "Nate Gomez · Oakland", status: "Open to offers", color: "#1E40AF" },
   ],
   guides: [
@@ -588,7 +588,7 @@ export const questionAnswers = [
     name: "Marco Reyes",
     handle: "lugged_marco",
     init: "MR",
-    bg: "#9A3412",
+    bg: "#527D31",
     rating: "4.9",
     spokes: "12,480",
     badge: "Verified · Vintage restoration",

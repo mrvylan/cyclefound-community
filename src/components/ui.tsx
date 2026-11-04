@@ -72,7 +72,7 @@ export function LevelBadge({ level, bright = false }: { level: Level | string; b
   return (
     <span
       className={`inline-flex items-center rounded-md px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.08em] ${
-        bright ? "bg-accent-bright text-ink" : "bg-ink text-white"
+        bright ? "bg-accent text-white" : "bg-ink text-white"
       }`}
     >
       {level}

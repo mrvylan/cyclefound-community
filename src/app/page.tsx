@@ -66,7 +66,7 @@ export default function HomePage() {
             ))}
             <Link
               href="/experts"
-              className="text-[14px] font-semibold text-[#FDBA74] no-underline hover:text-accent-bright"
+              className="text-[14px] font-semibold text-accent-bright no-underline hover:text-accent"
             >
               Browse all experts →
             </Link>
@@ -139,7 +139,7 @@ export default function HomePage() {
 
           <section className="rounded-[14px] border border-accent-soft-border bg-accent-soft p-5">
             <h2 className="font-display mb-1 mt-0 text-[22px]">Wanted board</h2>
-            <p className="mb-3.5 mt-0 text-[13px] text-[#7C2D12]">
+            <p className="mb-3.5 mt-0 text-[13px] text-[#3d5f24]">
               Members hunting for specific parts. Matches in garages are flagged automatically.
             </p>
             <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
@@ -185,14 +185,14 @@ export default function HomePage() {
         <div className="mx-auto max-w-[1280px] px-8 py-14">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="mb-2 mt-0 font-mono text-[13px] tracking-[0.12em] text-[#FDBA74]">
+              <p className="mb-2 mt-0 font-mono text-[13px] tracking-[0.12em] text-accent-bright">
                 GARAGE SPOTLIGHT
               </p>
               <h2 className="font-display m-0 text-[44px]">Walk through someone&apos;s garage</h2>
             </div>
             <Link
               href="/u/lugged_marco/garage"
-              className="font-semibold text-[#FDBA74] no-underline hover:text-accent-bright"
+              className="font-semibold text-accent-bright no-underline hover:text-white"
             >
               All garages →
             </Link>
