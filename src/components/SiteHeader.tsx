@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
-import { Avatar } from "./ui";
+import { AccountMenu } from "./auth/AccountMenu";
 
 const nav = [
   { href: "/", label: "Community" },
@@ -36,6 +36,8 @@ function isNavActive(label: (typeof nav)[number]["label"], pathname: string) {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const onAuth = pathname.startsWith("/auth");
+  const nextPath = onAuth ? "/" : pathname || "/";
 
   return (
     <header className="border-b border-line bg-white/90 text-ink backdrop-blur-[10px]">
@@ -51,55 +53,61 @@ export function SiteHeader() {
           />
         </Link>
 
-        <nav
-          aria-label="Primary"
-          className="flex flex-wrap gap-x-[22px] gap-y-1.5 text-[15px] font-bold"
-        >
-          {nav.map((item) => {
-            const on = isNavActive(item.label, pathname);
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`py-1.5 no-underline transition-colors ${
-                  on
-                    ? "border-b-2 border-accent text-accent"
-                    : "text-ink hover:text-accent"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        {!onAuth ? (
+          <nav
+            aria-label="Primary"
+            className="flex flex-wrap gap-x-[22px] gap-y-1.5 text-[15px] font-bold"
+          >
+            {nav.map((item) => {
+              const on = isNavActive(item.label, pathname);
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`py-1.5 no-underline transition-colors ${
+                    on
+                      ? "border-b-2 border-accent text-accent"
+                      : "text-ink hover:text-accent"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
 
-        <form
-          role="search"
-          className="flex h-[42px] min-w-0 flex-[1_1_240px] items-center gap-2 rounded-[10px] border border-line bg-ground px-3"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          <Search className="size-[18px] shrink-0 text-muted" aria-hidden />
-          <label htmlFor="gsearch" className="sr-only">
-            Search people, garages, parts and questions
-          </label>
-          <input
-            id="gsearch"
-            type="search"
-            placeholder="Search people, garages, parts, questions…"
-            className="min-w-0 flex-1 border-0 bg-transparent text-[14px] text-ink outline-none placeholder:text-[#929792]"
-          />
-        </form>
+        {!onAuth ? (
+          <form
+            role="search"
+            className="flex h-[42px] min-w-0 flex-[1_1_240px] items-center gap-2 rounded-[10px] border border-line bg-ground px-3"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <Search className="size-[18px] shrink-0 text-muted" aria-hidden />
+            <label htmlFor="gsearch" className="sr-only">
+              Search people, garages, parts and questions
+            </label>
+            <input
+              id="gsearch"
+              type="search"
+              placeholder="Search people, garages, parts, questions…"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[14px] text-ink outline-none placeholder:text-[#929792]"
+            />
+          </form>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
 
-        <Link
-          href="/q/seized-seatpost"
-          className="inline-flex h-[42px] items-center rounded-[10px] bg-accent px-[18px] text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white"
-        >
-          Ask the community
-        </Link>
+        {!onAuth ? (
+          <Link
+            href="/q/seized-seatpost"
+            className="inline-flex h-[42px] items-center rounded-[10px] bg-accent px-[18px] text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white"
+          >
+            Ask the community
+          </Link>
+        ) : null}
 
-        <Link href="/u/lugged_marco" aria-label="Your profile" className="inline-flex">
-          <Avatar init="DS" bg="#527D31" size={40} />
-        </Link>
+        <AccountMenu nextPath={nextPath} />
       </div>
     </header>
   );
