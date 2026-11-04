@@ -1,0 +1,65 @@
+---
+description: Cycle Found v2 design system and build conventions
+globs: ["**/*.tsx", "**/*.ts", "**/*.css"]
+alwaysApply: true
+---
+
+# Cycle Found v2 — design rules
+
+Reference mockups live in `/design/*.dc.html` (screenshots in `/design/screenshots/`). Match them closely. They use a canvas template syntax (`<x-dc>`, `<sc-for>`, `<sc-if>`, `{{hole}}`, `renderVals()`); translate that into React components and real data, and never copy the template tags.
+
+## Stack
+- Next.js App Router + TypeScript, server components by default
+- Tailwind CSS with the tokens below in `tailwind.config.ts`
+- Supabase for auth, Postgres, storage; row-level security on every table
+- Fonts via `next/font/google`: Archivo (variable, with width axis), IBM Plex Sans (400/500/600/700), IBM Plex Mono (400/500)
+
+## Color tokens
+| Token | Hex | Use |
+|---|---|---|
+| ink | #15171A | text, dark sections, header |
+| ink-2 | #202328 | cards on dark |
+| ink-3 | #2B2F34 | borders on dark |
+| ground | #F3F3F0 | page background |
+| surface | #FFFFFF | cards |
+| line | #DEDDD8 | card borders |
+| line-soft | #ECEBE7 | dividers |
+| muted | #5B6068 | secondary text (passes 4.5:1 on ground) |
+| muted-2 | #4A4F57 | body-secondary |
+| on-dark-muted | #B8BCC2 | secondary text on ink |
+| accent | #C2410C | primary buttons, stars, "For sale" |
+| accent-hover | #9A3412 | hover, accent text |
+| accent-bright | #F97316 | logo "FOUND", accents on dark only |
+| accent-soft | #FFF7ED / border #FED7AA | wanted board, bounties |
+| blue | #1E40AF | "Open to offers", solved/accepted, trends |
+| blue-soft | #EEF2FF | accepted/solved backgrounds |
+
+Never use red/green alone to mean state; status is blue/orange plus a text label.
+
+## Type
+- Display/headings: Archivo, `font-stretch: 75%`, weight 800, UPPERCASE, tight line-height (0.95–1.05). H1 56–76px, section H2 22–44px.
+- Body: IBM Plex Sans 15–17px, line-height 1.5–1.65.
+- Data (prices, Spokes, years, serials, tags, eyebrows): IBM Plex Mono. Eyebrows are 12–13px, letter-spacing 0.12em, uppercase.
+
+## Shape & spacing
+- Radius: cards 14–16px, buttons/inputs 8–10px, chips/pills 999px, thumbnails 8px.
+- Card: white, 1px `line` border, padding 20–24px, no heavy shadows.
+- Page container: max-width 1280px, 32px side padding. Layouts: content column + sidebar using `flex-wrap`; sidebar stacks below on mobile.
+- Touch targets ≥ 44px tall.
+
+## Shared components (build once, reuse)
+- `SiteHeader` — dark bar: logo, nav (Community, Garages, Experts, Resources, Market), search, "Ask the community" button, avatar
+- `Avatar` — initials fallback on a colored circle; photo when present
+- `RatingStars` — star icon + number + "(n reviews)"
+- `SpokesCount` — mono number + "Spokes"; `LevelBadge` (RIDER / PRO / MASTER / LEGEND, mono, ink bg)
+- `ExpertiseBadge` — "Verified · {area}" ink pill
+- `StatusChip` — For sale (accent bg), Open to offers (blue bg), Trade only (outlined ink), Not for sale (outlined grey)
+- `PersonRow`, `QuestionCard`, `AnswerCard`, `GarageCard`, `ItemCard`, `ValueRange`, `ValueTrendBars`, `ContributionCalendar`, `TagChip`, `FilterChip`, `SegmentedControl`
+
+## Accessibility
+Real `<button>`, `<a>`, `<label>` + inputs; `aria-label` on icon-only buttons; decorative SVG `aria-hidden`; 4.5:1 text contrast; visible focus rings.
+
+## Conventions
+- Icons: lucide-react, 1.5–2.2 stroke. No emoji in UI.
+- Never invent production numbers; read from the database. Seed data may reuse the mockup sample data.
+- Market values are always shown as a range plus "estimate" disclaimer.

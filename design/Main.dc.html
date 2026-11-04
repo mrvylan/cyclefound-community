@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cycle Found — Community home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F3F0}
+a{color:#C2410C}a:hover{color:#9A3412}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ph{background:repeating-linear-gradient(135deg,#E4E3DE 0 12px,#ECEBE7 12px 24px)}
+input,textarea,button,select{font:inherit}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #15171A; background: #F3F3F0; min-height: 100vh">
+
+<!-- Global header -->
+<header style="background: #15171A; color: #FFFFFF">
+<div style="max-width: 1280px; margin: 0 auto; padding: 14px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px">
+<a href="Main.dc.html" style="font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 26px; letter-spacing: 0.02em; color: #FFFFFF; text-decoration: none">CYCLE<span style="color: #F97316">FOUND</span></a>
+<nav aria-label="Primary" style="display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 15px; font-weight: 500">
+<a href="Main.dc.html" style="color: #FFFFFF; text-decoration: none; border-bottom: 2px solid #F97316; padding: 6px 0">Community</a>
+<a href="Garage.dc.html" style="color: #C9CCD1; text-decoration: none; padding: 6px 0">Garages</a>
+<a href="Experts.dc.html" style="color: #C9CCD1; text-decoration: none; padding: 6px 0">Experts</a>
+<a href="Item.dc.html" style="color: #C9CCD1; text-decoration: none; padding: 6px 0">Resources</a>
+<a href="Garage.dc.html" style="color: #C9CCD1; text-decoration: none; padding: 6px 0">Market</a>
+</nav>
+<form role="search" style="flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 8px; background: #24272B; border-radius: 8px; padding: 0 12px; height: 42px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9BA0A8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<label for="gsearch" class="sr">Search people, garages, parts and questions</label>
+<input id="gsearch" type="search" placeholder="Search people, garages, parts, questions…" style="flex: 1; min-width: 0; background: transparent; border: 0; color: #FFFFFF; font-size: 14px; outline: none">
+</form>
+<a href="Question.dc.html" style="background: #C2410C; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 0 18px; height: 42px; display: inline-flex; align-items: center; border-radius: 8px">Ask the community</a>
+<a href="Profile.dc.html" aria-label="Your profile" style="width: 40px; height: 40px; border-radius: 50%; background: #3F6B5C; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; text-decoration: none">DS</a>
+</div>
+</header>
+
+<!-- Hero: ask -->
+<section style="border-bottom: 1px solid #DEDDD8">
+<div style="max-width: 1280px; margin: 0 auto; padding: 64px 32px 56px; display: flex; flex-wrap: wrap; gap: 48px; align-items: stretch">
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.12em; color: #C2410C; font-weight: 500">BUILDERS · MECHANICS · RESTORERS · COLLECTORS</p>
+<h1 style="margin: 0; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 76px; line-height: 0.95; letter-spacing: -0.01em; text-transform: uppercase">Ask the people who actually know bikes.</h1>
+<p style="margin: 0; font-size: 19px; line-height: 1.55; color: #4A4F57; max-width: 620px">Browse real garages, track down rare parts, and get repair help from members who have done the job before. Every answer is tied to a person, their reputation, and the bikes they own.</p>
+<form style="background: #FFFFFF; border: 1px solid #D4D3CD; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 rgba(0,0,0,0.04)">
+<label for="askq" style="font-weight: 600; font-size: 15px">What are you trying to figure out?</label>
+<textarea id="askq" rows="2" placeholder="e.g. Looking for a 1980s Campagnolo Super Record rear derailleur cage — who has one?" style="border: 0; resize: none; font-size: 16px; line-height: 1.5; color: #15171A; outline: none; background: transparent"></textarea>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<sc-for list="{{topics}}" as="t" hint-placeholder-count="5">
+<button type="button" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+<span style="flex: 1 1 20px"></span>
+<a href="Question.dc.html" style="background: #15171A; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px; height: 44px; padding: 0 22px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px">Ask <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+</div>
+<p style="margin: 0; font-size: 13px; color: #5B6068">Your question goes to the feed and is routed to <strong style="color: #15171A">{{routeCount}} members</strong> with verified <strong style="color: #15171A">{{topicLabel}}</strong> expertise.</p>
+</form>
+</div>
+
+<aside aria-label="Experts online now" style="flex: 1 1 340px; min-width: 0; background: #15171A; color: #FFFFFF; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 style="margin: 0; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.02em">In the shop now</h2>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #B8BCC2"><span style="width: 8px; height: 8px; border-radius: 50%; background: #4ADE80"></span>Online</span>
+</div>
+<sc-for list="{{online}}" as="p" hint-placeholder-count="4">
+<a href="Profile.dc.html" style="display: flex; gap: 12px; align-items: center; color: #FFFFFF; text-decoration: none; padding: 12px; border-radius: 12px; background: #202328">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 50%; background: {{p.bg}}; display: inline-flex; align-items: center; justify-content: center; font-weight: 600">{{p.init}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600; font-size: 15px">{{p.name}}</span>
+<span style="font-size: 13px; color: #B8BCC2">{{p.role}}</span>
+</span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13px">
+<span style="display: inline-flex; align-items: center; gap: 4px"><svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" fill="#F97316"></path></svg>{{p.rating}}</span>
+<span style="font-family: 'IBM Plex Mono', monospace; color: #B8BCC2">{{p.spokes}} sp</span>
+</span>
+</a>
+</sc-for>
+<a href="Experts.dc.html" style="color: #FDBA74; font-size: 14px; font-weight: 600; text-decoration: none">Browse all experts →</a>
+</aside>
+</div>
+</section>
+
+<!-- How it works -->
+<section style="max-width: 1280px; margin: 0 auto; padding: 48px 32px 8px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px">
+<div style="display: flex; gap: 16px; align-items: flex-start">
+<span style="font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 44px; line-height: 1; color: #C2410C">01</span>
+<div><h3 style="margin: 0 0 6px; font-size: 17px">Build your garage</h3><p style="margin: 0; color: #5B6068; font-size: 15px; line-height: 1.5">Document the bikes and parts you own — specs, history, market value, and whether you'd ever let them go.</p></div>
+</div>
+<div style="display: flex; gap: 16px; align-items: flex-start">
+<span style="font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 44px; line-height: 1; color: #C2410C">02</span>
+<div><h3 style="margin: 0 0 6px; font-size: 17px">Ask &amp; answer</h3><p style="margin: 0; color: #5B6068; font-size: 15px; line-height: 1.5">Repairs, rare parts, builds, valuations. Questions reach the members whose garages and track record match.</p></div>
+</div>
+<div style="display: flex; gap: 16px; align-items: flex-start">
+<span style="font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 44px; line-height: 1; color: #C2410C">03</span>
+<div><h3 style="margin: 0 0 6px; font-size: 17px">Earn Spokes</h3><p style="margin: 0; color: #5B6068; font-size: 15px; line-height: 1.5">Helpful answers, accepted fixes and well-documented garages earn Spokes — your visible reputation in the community.</p></div>
+</div>
+</div>
+</section>
+
+<!-- Feed + sidebar -->
+<section style="max-width: 1280px; margin: 0 auto; padding: 40px 32px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+<div style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+<h2 style="margin: 0; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 34px; text-transform: uppercase">From the workbench</h2>
+<div role="tablist" aria-label="Filter questions" style="display: flex; flex-wrap: wrap; gap: 4px; background: #E6E5E0; padding: 4px; border-radius: 10px">
+<sc-for list="{{tabs}}" as="tb" hint-placeholder-count="5">
+<button type="button" role="tab" onClick="{{tb.pick}}" style="{{tb.style}}">{{tb.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<sc-for list="{{questions}}" as="q" hint-placeholder-count="5">
+<article style="background: #FFFFFF; border: 1px solid #DEDDD8; border-radius: 14px; padding: 20px; display: flex; gap: 18px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 2px; width: 52px; flex: none">
+<button type="button" aria-label="Upvote" style="width: 44px; height: 36px; border: 1px solid #DEDDD8; background: #FFFFFF; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15171A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></button>
+<span style="font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 16px">{{q.votes}}</span>
+</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{q.tags}}" as="tg" hint-placeholder-count="2">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #F3F3F0; border: 1px solid #DEDDD8; padding: 3px 8px; border-radius: 6px; color: #3D4249">{{tg}}</span>
+</sc-for>
+</div>
+<a href="Question.dc.html" style="color: #15171A; text-decoration: none; font-weight: 600; font-size: 19px; line-height: 1.35">{{q.title}}</a>
+<p style="margin: 0; color: #5B6068; font-size: 15px; line-height: 1.5">{{q.excerpt}}</p>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-size: 13px; color: #5B6068">
+<a href="Profile.dc.html" style="display: inline-flex; align-items: center; gap: 8px; color: #15171A; text-decoration: none; font-weight: 500"><span style="width: 26px; height: 26px; border-radius: 50%; background: {{q.bg}}; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{q.init}}</span>{{q.asker}}</a>
+<span>{{q.time}}</span>
+<span style="display: inline-flex; align-items: center; gap: 5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"></path></svg>{{q.answers}} answers</span>
+<sc-if value="{{q.solved}}" hint-placeholder-val="{{ true }}">
+<span style="display: inline-flex; align-items: center; gap: 6px; background: #EEF2FF; color: #1E40AF; padding: 3px 10px; border-radius: 999px; font-weight: 600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>Solved by {{q.expert}}</span>
+</sc-if>
+<sc-if value="{{q.linked}}" hint-placeholder-val="{{ false }}">
+<span style="display: inline-flex; align-items: center; gap: 6px; color: #9A3412; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6v10H3z"></path><path d="M9 20v-6h6v6"></path></svg>{{q.linked}}</span>
+</sc-if>
+</div>
+</div>
+</article>
+</sc-for>
+<a href="Question.dc.html" style="align-self: center; font-weight: 600; font-size: 15px; padding: 12px 20px">Load more questions</a>
+</div>
+
+<aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section style="background: #FFFFFF; border: 1px solid #DEDDD8; border-radius: 14px; padding: 20px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px">
+<h2 style="margin: 0; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 22px; text-transform: uppercase">Top contributors</h2>
+<span style="font-size: 13px; color: #5B6068">This month</span>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{leaders}}" as="l" hint-placeholder-count="5">
+<li><a href="Profile.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 8px 0; color: #15171A; text-decoration: none">
+<span style="font-family: 'IBM Plex Mono', monospace; width: 18px; color: #5B6068; font-size: 13px">{{l.rank}}</span>
+<span style="width: 34px; height: 34px; border-radius: 50%; background: {{l.bg}}; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: none">{{l.init}}</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600; font-size: 14px">{{l.name}}</span><span style="display: block; font-size: 12px; color: #5B6068">{{l.role}}</span></span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; color: #9A3412">+{{l.gain}}</span>
+</a></li>
+</sc-for>
+</ol>
+</section>
+
+<section style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 14px; padding: 20px">
+<h2 style="margin: 0 0 4px; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 22px; text-transform: uppercase">Wanted board</h2>
+<p style="margin: 0 0 14px; font-size: 13px; color: #7C2D12">Members hunting for specific parts. Matches in garages are flagged automatically.</p>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{wanted}}" as="w" hint-placeholder-count="4">
+<li style="background: #FFFFFF; border: 1px solid #FED7AA; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<a href="Question.dc.html" style="color: #15171A; text-decoration: none; font-weight: 600; font-size: 14px; line-height: 1.4">{{w.part}}</a>
+<span style="display: flex; justify-content: space-between; font-size: 12px; color: #5B6068"><span>{{w.who}}</span><span style="color: #9A3412; font-weight: 600">{{w.matches}}</span></span>
+</li>
+</sc-for>
+</ul>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #DEDDD8; border-radius: 14px; padding: 20px">
+<h2 style="margin: 0 0 14px; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 22px; text-transform: uppercase">Browse by expertise</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{areas}}" as="a" hint-placeholder-count="8">
+<a href="Experts.dc.html" style="font-size: 13px; color: #15171A; text-decoration: none; border: 1px solid #D4D3CD; border-radius: 999px; padding: 7px 12px">{{a.label}} <span style="color: #5B6068; font-family: 'IBM Plex Mono', monospace">{{a.n}}</span></a>
+</sc-for>
+</div>
+</section>
+</aside>
+</section>
+
+<!-- Featured garages -->
+<section style="background: #15171A; color: #FFFFFF">
+<div style="max-width: 1280px; margin: 0 auto; padding: 56px 32px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 24px">
+<div>
+<p style="margin: 0 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.12em; color: #FDBA74">GARAGE SPOTLIGHT</p>
+<h2 style="margin: 0; font-family: Archivo, sans-serif; font-stretch: 75%; font-weight: 800; font-size: 44px; text-transform: uppercase">Walk through someone's garage</h2>
+</div>
+<a href="Garage.dc.html" style="color: #FDBA74; font-weight: 600; text-decoration: none">All garages →</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px">
+<sc-for list="{{garages}}" as="g" hint-placeholder-count="3">
+<a href="Garage.dc.html" style="display: flex; flex-direction: column; background: #202328; border-radius: 16px; overflow: hidden; color: #FFFFFF; text-decoration: none">
+<div class="ph" style="height: 190px; display: flex; align-items: flex-end; padding: 12px; filter: brightness(0.6)">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #15171A; background: #FFFFFF; padding: 3px 8px; border-radius: 6px">Photo: {{g.photo}}</span>
+</div>
+<div style="padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 36px; height: 36px; border-radius: 50%; background: {{g.bg}}; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px">{{g.init}}</span>
+<span><span style="display: block; font-weight: 600">{{g.name}}</span><span style="display: block; font-size: 13px; color: #B8BCC2">{{g.owner}}</span></span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid #33373D; padding-top: 12px">
+<span><span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 17px">{{g.items}}</span><span style="font-size: 12px; color: #B8BCC2">items</span></span>
+<span><span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 17px">{{g.value}}</span><span style="font-size: 12px; color: #B8BCC2">est. value</span></span>
+<span><span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 17px">{{g.forSale}}</span><span style="font-size: 12px; color: #B8BCC2">available</span></span>
+</div>
+</div>
+</a>
+</sc-for>
+</div>
+</div>
+</section>
+
+<footer style="max-width: 1280px; margin: 0 auto; padding: 32px; display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; font-size: 13px; color: #5B6068">
+<span>© Cycle Found · Northern California</span>
+<span style="display: flex; flex-wrap: wrap; gap: 18px"><a href="Main.dc.html">Community guidelines</a><a href="Main.dc.html">How Spokes work</a><a href="Main.dc.html">Terms</a><a href="Main.dc.html">Privacy</a></span>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2560}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { topic: 'Rare / vintage parts', tab: 'Trending' }; }
+  renderVals() {
+    const chip = (on) => 'height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; ' + (on ? 'background: #15171A; color: #FFFFFF; border: 1px solid #15171A' : 'background: #FFFFFF; color: #15171A; border: 1px solid #D4D3CD');
+    const tabS = (on) => 'height: 36px; padding: 0 14px; border-radius: 8px; border: 0; font-size: 13px; font-weight: 600; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #15171A; box-shadow: 0 1px 2px rgba(0,0,0,0.08)' : 'background: transparent; color: #4A4F57');
+    const routes = { 'Repair & maintenance': 214, 'Rare / vintage parts': 86, 'Frame building': 41, 'Wheels': 63, 'Valuation': 58 };
+    const topics = Object.keys(routes).map((label) => ({ label, style: chip(this.state.topic === label), pick: () => this.setState({ topic: label }) }));
+    const tabs = ['Trending', 'Unanswered', 'Rare parts', 'Repairs', 'Builds'].map((label) => ({ label, style: tabS(this.state.tab === label), pick: () => this.setState({ tab: label }) }));
+    return {
+      topics, tabs,
+      topicLabel: this.state.topic.toLowerCase(),
+      routeCount: routes[this.state.topic],
+      online: [
+        { name: 'Marco Reyes', init: 'MR', bg: '#9A3412', role: 'Vintage steel restorer · Oakland', rating: '4.9', spokes: '12.4k' },
+        { name: 'Priya Natarajan', init: 'PN', bg: '#1E40AF', role: 'Wheelbuilder · San Jose', rating: '5.0', spokes: '9.2k' },
+        { name: 'Jen Whitlock', init: 'JW', bg: '#3F6B5C', role: 'Pro mechanic, electronic shifting', rating: '4.9', spokes: '15.8k' },
+        { name: 'Dale Okafor', init: 'DO', bg: '#6D28D9', role: 'Frame builder · Santa Cruz', rating: '4.8', spokes: '6.1k' }
+      ],
+      questions: [
+        { votes: 48, tags: ['repair', 'seatpost', 'columbus-sl'], title: 'Seized aluminum seatpost in a Columbus SL frame — how do I get it out without wrecking the paint?', excerpt: 'Tried penetrating oil for a week. Original 1984 paint I really want to keep. Is the ammonia soak actually safe for steel?', asker: 'Ben Carver', init: 'BC', bg: '#475569', time: '3h ago', answers: 7, solved: true, expert: 'Marco Reyes', linked: '' },
+        { votes: 31, tags: ['rare-parts', 'campagnolo'], title: 'Who has a 1st-gen Super Record rear derailleur cage (pre-1983 stamping)?', excerpt: 'Restoring a ’82 Bianchi Specialissima. Mine is bent past saving. Happy to trade or buy.', asker: 'Lena Ortiz', init: 'LO', bg: '#BE185D', time: '6h ago', answers: 4, solved: false, expert: '', linked: 'In 3 member garages' },
+        { votes: 26, tags: ['build', 'gravel', 'frame-geometry'], title: 'Custom gravel build: 425 vs 440 chainstays for loaded bikepacking?', excerpt: 'Planning a steel frame with a builder next spring. Carrying ~25 lb on the rear. What do the builders here recommend?', asker: 'Sam Whitfield', init: 'SW', bg: '#0F766E', time: '1d ago', answers: 12, solved: true, expert: 'Dale Okafor', linked: '' },
+        { votes: 19, tags: ['valuation', 'vintage'], title: 'Fair value on a 1987 Specialized Stumpjumper Comp, original Deore XT?', excerpt: 'All original down to the tires, one owner. Not sure if I sell or keep it in the garage.', asker: 'Rob Fenn', init: 'RF', bg: '#A16207', time: '1d ago', answers: 5, solved: false, expert: '', linked: 'Similar in 8 garages' },
+        { votes: 14, tags: ['wheels', 'tubeless'], title: 'Rebuilding Mavic Open Pro rims to modern hubs — spoke length sanity check', excerpt: 'Going to DT 350 hubs, 32h 3-cross. My calculator and the shop disagree by 2 mm.', asker: 'Kim Duarte', init: 'KD', bg: '#4338CA', time: '2d ago', answers: 3, solved: true, expert: 'Priya Natarajan', linked: '' }
+      ],
+      leaders: [
+        { rank: 1, name: 'Jen Whitlock', init: 'JW', bg: '#3F6B5C', role: 'Pro mechanic', gain: '1,420' },
+        { rank: 2, name: 'Marco Reyes', init: 'MR', bg: '#9A3412', role: 'Vintage restorer', gain: '1,186' },
+        { rank: 3, name: 'Priya Natarajan', init: 'PN', bg: '#1E40AF', role: 'Wheelbuilder', gain: '904' },
+        { rank: 4, name: 'Tomás Lindqvist', init: 'TL', bg: '#0E7490', role: 'Campagnolo collector', gain: '611' },
+        { rank: 5, name: 'Kai Yamamoto', init: 'KY', bg: '#B45309', role: 'Suspension tuner', gain: '532' }
+      ],
+      wanted: [
+        { part: 'Cinelli 1A stem, 110 mm, 26.4 clamp', who: 'Lena O. · Berkeley', matches: '2 garage matches' },
+        { part: 'Shimano Dura-Ace 7400 8-speed shifters', who: 'Ari P. · Palo Alto', matches: '5 garage matches' },
+        { part: 'Ritchey Logic headset, 1" threaded', who: 'Nate G. · Oakland', matches: 'No matches yet' },
+        { part: 'Brooks Team Pro saddle, copper rails', who: 'Rob F. · San Jose', matches: '1 garage match' }
+      ],
+      areas: [
+        { label: 'Vintage restoration', n: 86 }, { label: 'Wheelbuilding', n: 63 }, { label: 'Frame building', n: 41 },
+        { label: 'Suspension service', n: 37 }, { label: 'Electronic shifting', n: 52 }, { label: 'Bike fit', n: 29 },
+        { label: 'Paint & finish', n: 18 }, { label: 'E-bike systems', n: 44 }, { label: 'Valuation', n: 58 }
+      ],
+      garages: [
+        { name: 'Lugged & Loved', owner: 'Marco Reyes · Oakland', init: 'MR', bg: '#9A3412', photo: 'Colnago Super, workshop wall', items: 34, value: '$41k', forSale: 6 },
+        { name: 'The Wheel Room', owner: 'Priya Natarajan · San Jose', init: 'PN', bg: '#1E40AF', photo: 'Hub & rim shelves', items: 58, value: '$18k', forSale: 14 },
+        { name: 'Campy Archive', owner: 'Tomás Lindqvist · Berkeley', init: 'TL', bg: '#0E7490', photo: 'Groupset display case', items: 112, value: '$63k', forSale: 9 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
