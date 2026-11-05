@@ -117,14 +117,6 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
           >
             Add garage item
           </Link>
-          <Link
-            role="menuitem"
-            href="https://www.cyclefound.com/account.html"
-            className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
-            onClick={() => setOpen(false)}
-          >
-            Marketplace account
-          </Link>
           <button
             type="button"
             role="menuitem"

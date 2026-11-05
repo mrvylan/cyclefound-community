@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Community Guidelines",
   description:
     "How to use Cycle Found — ask and answer, document garages, and buy or sell fairly and safely.",
+  alternates: { canonical: "https://community.cyclefound.com/community-guidelines" },
 };
 
 const linkClass =

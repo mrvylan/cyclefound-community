@@ -143,13 +143,8 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
             </button>
           </form>
           <p className="mb-0 mt-5 text-[13px] text-muted">
-            Looking for the marketplace?{" "}
-            <a
-              href="https://cyclefound.com"
-              className="font-semibold text-accent-hover underline-offset-2 hover:underline"
-            >
-              cyclefound.com
-            </a>
+            After you enter, Terms, Privacy, and Community Guidelines live on this site —
+            not on a separate domain.
           </p>
         </div>
       </div>

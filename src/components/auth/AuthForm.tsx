@@ -350,15 +350,15 @@ export function AuthForm() {
   const titles: Record<Mode, { title: string; lead: string }> = {
     login: {
       title: "Log in",
-      lead: "Enter your email and we’ll send a one-time code. Same account works on cyclefound.com.",
+      lead: "Enter your email and we’ll send a one-time code.",
     },
     "login-password": {
       title: "Log in with password",
-      lead: "Use the password from your Cycle Found marketplace account.",
+      lead: "Use the password on your Cycle Found account, if you’ve set one.",
     },
     join: {
       title: "Join Cycle Found",
-      lead: "Create an account with an email code. You’ll be signed in on Community and the marketplace.",
+      lead: "Create an account with an email code. You’ll be signed in on Cycle Found Community.",
     },
     otp: {
       title: "Enter your code",
@@ -369,7 +369,7 @@ export function AuthForm() {
       lead:
         otpIntent === "recovery"
           ? "Pick a password of at least 12 characters."
-          : "Optional — handy for marketplace login. You can always use email codes here.",
+          : "Optional — handy if you prefer password login. You can always use email codes.",
     },
     recovery: {
       title: "Reset password",

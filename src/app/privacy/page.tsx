@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "How Cycle Found collects, uses, and shares information on Community and related services.",
+  alternates: { canonical: "https://community.cyclefound.com/privacy" },
 };
 
 export default function PrivacyPage() {

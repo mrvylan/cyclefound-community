@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Copyright / DMCA",
   description:
     "How to submit a copyright complaint under the DMCA for Cycle Found Community.",
+  alternates: { canonical: "https://community.cyclefound.com/copyright" },
 };
 
 export default function CopyrightPage() {

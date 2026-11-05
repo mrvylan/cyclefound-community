@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Terms of Service for Cycle Found Community and related Cycle Found services.",
+  alternates: { canonical: "https://community.cyclefound.com/terms" },
 };
 
 export default function TermsPage() {
