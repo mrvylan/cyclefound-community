@@ -1,0 +1,167 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import {
+  getSiteGatePassword,
+  isSiteGateEnabled,
+  SITE_GATE_STORAGE_KEY,
+} from "@/lib/site-gate";
+
+/**
+ * Lightweight Pre-Alpha password wall. Anyone reading page source can bypass it —
+ * only keeps casual visitors out of mock/demo content.
+ */
+export function SiteGate({ children }: { children: React.ReactNode }) {
+  const enabled = isSiteGateEnabled();
+  const [ready, setReady] = useState(!enabled);
+  const [unlocked, setUnlocked] = useState(!enabled);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) {
+      setReady(true);
+      setUnlocked(true);
+      return;
+    }
+    try {
+      const ok = sessionStorage.getItem(SITE_GATE_STORAGE_KEY) === "1";
+      setUnlocked(ok);
+      setBannerDismissed(sessionStorage.getItem("cf_prealpha_banner_dismissed") === "1");
+    } catch {
+      setUnlocked(false);
+    }
+    setReady(true);
+  }, [enabled]);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const expected = getSiteGatePassword();
+    if (password.trim() === expected) {
+      try {
+        sessionStorage.setItem(SITE_GATE_STORAGE_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      setUnlocked(true);
+      setError("");
+      return;
+    }
+    setError("That password doesn’t match. Ask for the Pre-Alpha invite code.");
+  }
+
+  function dismissBanner() {
+    setBannerDismissed(true);
+    try {
+      sessionStorage.setItem("cf_prealpha_banner_dismissed", "1");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ground text-[15px] text-muted">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-ground px-6 py-12">
+        <div className="w-full max-w-[420px] rounded-2xl border border-line bg-surface p-7 sm:p-8">
+          <Image
+            src="/community-logo.png"
+            alt="Cycle Found"
+            width={160}
+            height={36}
+            className="h-9 w-auto"
+            priority
+          />
+          <p className="eyebrow mb-2 mt-6 text-accent">Pre-Alpha · Demo</p>
+          <h1 className="font-display m-0 text-[36px] leading-[1.02]">
+            Community preview
+          </h1>
+          <p className="mt-3 mb-0 text-[15px] leading-[1.55] text-muted-2">
+            This subdomain is in <strong className="font-semibold text-ink">Pre-Alpha</strong>.
+            Names, garages, questions, and market values are{" "}
+            <strong className="font-semibold text-ink">demo / mock data</strong> for
+            product testing — not a live community.
+          </p>
+          <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
+            <label htmlFor="site-gate-password" className="text-[14px] font-semibold">
+              Invite password
+            </label>
+            <input
+              id="site-gate-password"
+              type="password"
+              autoComplete="current-password"
+              autoFocus
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError("");
+              }}
+              placeholder="Enter the Pre-Alpha password"
+              className="h-12 rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent"
+            />
+            {error ? (
+              <p role="alert" className="m-0 text-[14px] font-medium text-[#9B2C2C]">
+                {error}
+              </p>
+            ) : (
+              <p className="m-0 text-[13px] leading-[1.45] text-muted">
+                Soft gate only — keeps casual visitors out while we test. Not real
+                security.
+              </p>
+            )}
+            <button
+              type="submit"
+              className="mt-1 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent text-[15px] font-semibold text-white hover:bg-accent-hover"
+            >
+              Enter preview
+            </button>
+          </form>
+          <p className="mb-0 mt-5 text-[13px] text-muted">
+            Looking for the marketplace?{" "}
+            <a
+              href="https://cyclefound.com"
+              className="font-semibold text-accent-hover underline-offset-2 hover:underline"
+            >
+              cyclefound.com
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {enabled && !bannerDismissed ? (
+        <div className="border-b border-accent-soft-border bg-accent-soft px-4 py-2.5 text-[13px] leading-[1.45] text-ink">
+          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-2 px-4 sm:px-8">
+            <p className="m-0">
+              <span className="font-mono text-[12px] font-medium tracking-wide uppercase text-accent-hover">
+                Pre-Alpha
+              </span>
+              <span className="mx-2 text-muted">·</span>
+              Demo content for testing — not production community data.
+            </p>
+            <button
+              type="button"
+              onClick={dismissBanner}
+              className="shrink-0 border-0 bg-transparent p-0 text-[13px] font-semibold text-accent-hover underline-offset-2 hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {children}
+    </>
+  );
+}

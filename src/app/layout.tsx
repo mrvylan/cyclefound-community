@@ -3,6 +3,7 @@ import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AnalyticsLoader, CookieSettings } from "@/components/CookieSettings";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
+import { SiteGate } from "@/components/SiteGate";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -42,13 +43,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${archivo.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-ground font-sans text-ink">
-        <AuthProvider>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-          <CookieSettings />
-          <AnalyticsLoader />
-        </AuthProvider>
+        <SiteGate>
+          <AuthProvider>
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+            <CookieSettings />
+            <AnalyticsLoader />
+          </AuthProvider>
+        </SiteGate>
       </body>
     </html>
   );
