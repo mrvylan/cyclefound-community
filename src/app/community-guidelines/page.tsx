@@ -24,13 +24,13 @@ export default function CommunityGuidelinesPage() {
       </p>
       <p className="m-0">
         They work alongside our{" "}
-        <a href={LEGAL.terms} className="font-semibold text-accent-hover underline-offset-2 hover:underline">
+        <Link href={LEGAL.terms} className="font-semibold text-accent-hover underline-offset-2 hover:underline">
           Terms of Service
-        </a>
+        </Link>
         ,{" "}
-        <a href={LEGAL.privacy} className="font-semibold text-accent-hover underline-offset-2 hover:underline">
+        <Link href={LEGAL.privacy} className="font-semibold text-accent-hover underline-offset-2 hover:underline">
           Privacy Policy
-        </a>
+        </Link>
         , and{" "}
         <a
           href={LEGAL.marketplaceGuidelines}
@@ -160,9 +160,9 @@ export default function CommunityGuidelinesPage() {
           Do not post other people’s private contact details, serial numbers tied to theft
           reports without a legitimate reason, or sensitive personal information in public
           threads. See our{" "}
-          <a href={LEGAL.privacy} className="font-semibold text-accent-hover underline-offset-2 hover:underline">
+          <Link href={LEGAL.privacy} className="font-semibold text-accent-hover underline-offset-2 hover:underline">
             Privacy Policy
-          </a>{" "}
+          </Link>{" "}
           for how Cycle Found handles account data.
         </p>
       </LegalSection>

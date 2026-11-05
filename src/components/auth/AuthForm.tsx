@@ -430,13 +430,13 @@ export function AuthForm() {
             />
             <span>
               I am 18+ and agree to the{" "}
-              <a href="https://cyclefound.com/terms" className="font-semibold">
+              <Link href="/terms" className="font-semibold">
                 Terms
-              </a>{" "}
+              </Link>{" "}
               and{" "}
-              <a href="https://cyclefound.com/privacy" className="font-semibold">
+              <Link href="/privacy" className="font-semibold">
                 Privacy Policy
-              </a>
+              </Link>
               .
             </span>
           </label>

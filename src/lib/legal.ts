@@ -1,8 +1,17 @@
-/** Canonical legal URLs — single source of truth on cyclefound.com */
+/**
+ * Legal routes on community.cyclefound.com.
+ * Marketplace guidelines remain on cyclefound.com (not duplicated here).
+ */
 export const LEGAL = {
-  terms: "https://cyclefound.com/terms",
-  privacy: "https://cyclefound.com/privacy",
+  terms: "/terms",
+  privacy: "/privacy",
+  copyright: "/copyright",
+  communityGuidelines: "/community-guidelines",
+  /** External — marketplace site only */
   marketplaceGuidelines: "https://cyclefound.com/marketplace-guidelines",
-  communityGuidelinesPath: "/community-guidelines",
   supportEmail: "hello@cyclefound.com",
+  copyrightEmail: "copyright@cyclefound.com",
 } as const;
+
+/** @deprecated use LEGAL.communityGuidelines */
+export const communityGuidelinesPath = LEGAL.communityGuidelines;

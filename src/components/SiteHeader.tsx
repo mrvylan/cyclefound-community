@@ -216,28 +216,25 @@ export function SiteFooter() {
         className="flex flex-wrap gap-x-[18px] gap-y-2"
       >
         <Link
-          href={LEGAL.communityGuidelinesPath}
+          href={LEGAL.communityGuidelines}
           className="text-muted hover:text-accent-hover"
         >
           Community guidelines
         </Link>
-        <a
-          href={LEGAL.marketplaceGuidelines}
-          className="text-muted hover:text-accent-hover"
-        >
-          Marketplace guidelines
-        </a>
         <Feature name="spokesCurrency">
           <Link href="/" className="text-muted hover:text-accent-hover">
             How Spokes work
           </Link>
         </Feature>
-        <a href={LEGAL.terms} className="text-muted hover:text-accent-hover">
+        <Link href={LEGAL.terms} className="text-muted hover:text-accent-hover">
           Terms
-        </a>
-        <a href={LEGAL.privacy} className="text-muted hover:text-accent-hover">
+        </Link>
+        <Link href={LEGAL.privacy} className="text-muted hover:text-accent-hover">
           Privacy
-        </a>
+        </Link>
+        <Link href={LEGAL.copyright} className="text-muted hover:text-accent-hover">
+          Copyright
+        </Link>
         <button
           type="button"
           className="border-0 bg-transparent p-0 text-[13px] text-muted hover:text-accent-hover"

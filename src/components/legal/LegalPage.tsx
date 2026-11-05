@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 export function LegalPage({
   eyebrow,
@@ -39,5 +40,49 @@ export function LegalSection({
       <h2 className="font-display m-0 text-[22px] leading-[1.15] text-ink">{title}</h2>
       {children}
     </section>
+  );
+}
+
+export function LegalP({ children }: { children: ReactNode }) {
+  return <p className="m-0">{children}</p>;
+}
+
+export function LegalList({ children }: { children: ReactNode }) {
+  return <ul className="m-0 list-disc space-y-1.5 pl-5">{children}</ul>;
+}
+
+const linkClass =
+  "font-semibold text-accent-hover underline-offset-2 hover:underline";
+
+export function LegalLink({
+  href,
+  children,
+  external,
+}: {
+  href: string;
+  children: ReactNode;
+  external?: boolean;
+}) {
+  if (external || href.startsWith("http") || href.startsWith("mailto:")) {
+    return (
+      <a href={href} className={linkClass}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={linkClass}>
+      {children}
+    </Link>
+  );
+}
+
+export function LegalAddress() {
+  return (
+    <p className="m-0 text-[14px] text-muted">
+      Fault Board Co., LLC · DBA Cycle Found
+      <br />
+      171 Branham Ln, Ste 10 POB 1074, San Jose, CA 95136, United States
+    </p>
   );
 }
