@@ -47,13 +47,40 @@ export default function TermsPage() {
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="2. Beta service">
+      <LegalSection title="2. Beta / Pre-Alpha service">
         <LegalP>
-          Cycle Found is offered as a beta / early-access service. Features may change, be
-          limited, or be discontinued without notice. The Service may contain errors or
-          incomplete functionality. During beta, we do not make uptime, availability, or
-          performance commitments. Your use of the Service during beta is at your own risk,
-          subject to these Terms.
+          Cycle Found is offered as a beta / early-access service. Community
+          (community.cyclefound.com) may additionally be labeled Pre-Alpha. Features may
+          change, be limited, or be discontinued without notice. The Service may contain
+          errors, incomplete functionality, or demo / sample content used for product
+          testing. During beta or Pre-Alpha, we do not make uptime, availability, or
+          performance commitments. Your use of the Service during these stages is at your
+          own risk, subject to these Terms.
+        </LegalP>
+      </LegalSection>
+
+      <LegalSection title="2A. Community (Ask · Share · Ride)">
+        <LegalP>
+          Community is where members ask and answer bicycle questions, document garages and
+          parts, and build reputation through helpful contributions. Community content is
+          member-generated. Cycle Found does not guarantee that any question, answer,
+          garage entry, or reputation signal is complete, accurate, or safe to follow.
+        </LegalP>
+        <LegalP>
+          Repair, fit, torque, structural, braking, and similar advice on Community is not
+          professional mechanical service. For safety-critical work, verify with a
+          qualified mechanic. Market values shown on Community (when enabled) are estimates
+          only and include an estimate disclaimer — they are not appraisals or offers to
+          buy or sell.
+        </LegalP>
+        <LegalP>
+          Participation in Community is also subject to our{" "}
+          <LegalLink href={LEGAL.communityGuidelines}>Community Guidelines</LegalLink>.
+          Buying and selling on the marketplace remains subject to the{" "}
+          <LegalLink href={LEGAL.marketplaceGuidelines} external>
+            Marketplace Guidelines
+          </LegalLink>
+          . The same Cycle Found account may work across marketplace and Community.
         </LegalP>
       </LegalSection>
 
@@ -66,8 +93,11 @@ export default function TermsPage() {
         <LegalP>When you register, you agree to:</LegalP>
         <LegalList>
           <li>Provide accurate registration information and keep it current</li>
-          <li>Use a password that meets our minimum security requirements</li>
-          <li>Verify your email address before publishing listings or messaging sellers</li>
+          <li>Use a password that meets our minimum security requirements when one is set</li>
+          <li>
+            Verify your email address before publishing listings, messaging sellers, or
+            posting in Community when the Service requires it
+          </li>
           <li>
             Accept these Terms and acknowledge our Privacy Policy as part of account
             creation
@@ -236,8 +266,8 @@ export default function TermsPage() {
       <LegalSection title="11. User-generated content and photo licensing">
         <LegalP>
           You retain ownership of content you submit, including listing photos,
-          descriptions, profile details, Community posts, and messages you send through the
-          Service (“User Content”).
+          descriptions, profile details, Community questions and answers, garage
+          documentation, and messages you send through the Service (“User Content”).
         </LegalP>
         <LegalP>
           By submitting User Content, you grant Cycle Found a worldwide, non-exclusive,

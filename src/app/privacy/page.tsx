@@ -26,12 +26,13 @@ export default function PrivacyPage() {
         website and related services (the “Service”), including Community.
       </LegalP>
       <LegalP>
-        Cycle Found is a marketplace connecting buyers and sellers of used bicycles, and a
-        Community for questions, answers, and garages. The Service is currently in beta and
-        focused on Northern California, while available to users in the United States. “My
-        Garage” is a Cycle Found feature where signed-in users can save bikes and bike parts
-        they own (or are tracking), optionally with photos and notes—separate from public
-        marketplace listings.
+        Cycle Found includes a marketplace connecting buyers and sellers of used bicycles,
+        and Community (Ask · Share · Ride) for questions, answers, and garage documentation.
+        The Service is currently in beta / Pre-Alpha and focused on Northern California,
+        while available to users in the United States. “My Garage” / garage features let
+        signed-in users save bikes and bike parts they own (or are tracking), optionally
+        with photos and notes—separate from public marketplace listings when those remain
+        private to the account.
       </LegalP>
 
       <LegalSection title="1. Information users provide">
@@ -175,9 +176,11 @@ export default function PrivacyPage() {
       <LegalSection title="7. Cookies, analytics, and tracking technologies">
         <LegalP>
           Cycle Found uses browser storage for authentication sessions, local draft listing
-          state, Community demo preferences where applicable, and your analytics preference.
-          We use Google Analytics 4 to understand site usage and measure marketing
-          campaigns.
+          state, your analytics preference, and — on Community during Pre-Alpha — optional
+          local demo state (for example, mock questions, answers, garage items, or a soft
+          invite-gate unlock stored in the browser). That local demo data stays on your
+          device unless you clear site data. We use Google Analytics 4 to understand site
+          usage and measure marketing campaigns when you allow analytics.
         </LegalP>
         <LegalP>
           Google Analytics uses cookies and similar technologies and may collect device and
@@ -334,6 +337,14 @@ export default function PrivacyPage() {
             Listing photos are stored privately, with access limited so owners can manage
             their media and visitors can view photos for active listings
           </li>
+          <li>
+            Public Community questions, answers, and profile information you publish are
+            visible to visitors of Community
+          </li>
+          <li>
+            During Pre-Alpha, some Community demo content may exist only in your browser’s
+            local storage until server-backed Community data is fully enabled
+          </li>
         </LegalList>
         <LegalP>
           No method of transmission or storage is completely secure. We cannot guarantee
@@ -374,9 +385,12 @@ export default function PrivacyPage() {
         <LegalP>
           You can permanently delete your account from Your Account (Delete account).
           Deletion removes your profile, marketplace listings, uploaded listing photos,
-          bikes or parts you saved in My Garage, and listing or parts conversations tied to
-          your account, along with related account data we control. To request access,
-          correction, or help with deletion, or to ask privacy questions, email{" "}
+          bikes or parts you saved in My Garage, listing or parts conversations tied to
+          your account, and Community content we control that is tied to your account
+          (such as questions and answers stored on our servers), along with related account
+          data we control. Local browser demo data on Community is cleared when you clear
+          site data for community.cyclefound.com. To request access, correction, or help
+          with deletion, or to ask privacy questions, email{" "}
           <LegalLink href={`mailto:${LEGAL.supportEmail}`}>
             {LEGAL.supportEmail}
           </LegalLink>

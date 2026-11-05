@@ -25,9 +25,11 @@ export default function CopyrightPage() {
       <LegalP>
         Cycle Found is a service operated by Fault Board Co., LLC (“Cycle Found,” “we,”
         “us,” or “our”). Cycle Found respects intellectual property rights and expects
-        users to do the same. This page describes how to submit a copyright complaint
-        under the Digital Millennium Copyright Act (DMCA). The same process appears in
-        our <LegalLink href={LEGAL.terms}>Terms of Service</LegalLink>.
+        users to do the same. This page covers the Cycle Found Service, including Community
+        (questions, answers, garages, and profiles) and the marketplace. It describes how
+        to submit a copyright complaint under the Digital Millennium Copyright Act (DMCA).
+        The same process appears in our{" "}
+        <LegalLink href={LEGAL.terms}>Terms of Service</LegalLink>.
       </LegalP>
 
       <LegalSection title="Designated agent">

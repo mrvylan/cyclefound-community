@@ -16,6 +16,12 @@ export default function CommunityGuidelinesPage() {
       title="Community Guidelines"
       effectiveDate="November 5, 2026"
     >
+      <p className="m-0 rounded-[10px] border border-accent-soft-border bg-accent-soft px-3.5 py-3 text-[14px] leading-[1.5] text-ink">
+        <strong className="font-semibold">Pre-Alpha · Demo.</strong> Community is early
+        access. Some screens use mock or sample data for testing. Treat advice as
+        member-to-member knowledge-sharing — not a substitute for a qualified mechanic on
+        safety-critical work. Tagline: Ask · Share · Ride.
+      </p>
       <p className="m-0">
         Cycle Found is a service operated by Fault Board Co., LLC (“Cycle Found,” “we,”
         “us,” or “our”). Cycle Found Community is where riders ask repair and parts
