@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AnalyticsLoader, CookieSettings } from "@/components/CookieSettings";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -45,6 +46,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <CookieSettings />
+          <AnalyticsLoader />
         </AuthProvider>
       </body>
     </html>

@@ -7,7 +7,9 @@ import { useEffect, useState } from "react";
 import { Menu, Search, X } from "lucide-react";
 import { AccountMenu } from "./auth/AccountMenu";
 import { Feature } from "./Feature";
+import { openCookieSettings } from "@/lib/cookie-consent";
 import { FEATURES } from "@/lib/features";
+import { LEGAL } from "@/lib/legal";
 
 type NavItem = {
   href: string;
@@ -204,24 +206,45 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="mx-auto flex max-w-[1280px] flex-wrap justify-between gap-x-6 gap-y-3 px-8 py-8 text-[13px] text-muted">
-      <span>© Cycle Found · Northern California</span>
-      <span className="flex flex-wrap gap-[18px]">
-        <Link href="/" className="text-muted hover:text-accent-hover">
-          Community guidelines
-        </Link>
-        <Feature name="spokesCurrency">
-          <Link href="/" className="text-muted hover:text-accent-hover">
-            How Spokes work
+    <footer className="mx-auto flex max-w-[1280px] flex-col gap-4 px-8 py-8 text-[13px] leading-[1.45] text-muted">
+      <div className="flex flex-wrap justify-between gap-x-6 gap-y-3">
+        <span className="max-w-[420px]">
+          © 2026 Fault Board Co., LLC. Cycle Found is a trade name of Fault Board Co.,
+          LLC.
+        </span>
+        <span className="flex flex-wrap gap-x-[18px] gap-y-2">
+          <Link
+            href={LEGAL.communityGuidelinesPath}
+            className="text-muted hover:text-accent-hover"
+          >
+            Community guidelines
           </Link>
-        </Feature>
-        <Link href="/" className="text-muted hover:text-accent-hover">
-          Terms
-        </Link>
-        <Link href="/" className="text-muted hover:text-accent-hover">
-          Privacy
-        </Link>
-      </span>
+          <a
+            href={LEGAL.marketplaceGuidelines}
+            className="text-muted hover:text-accent-hover"
+          >
+            Marketplace guidelines
+          </a>
+          <Feature name="spokesCurrency">
+            <Link href="/" className="text-muted hover:text-accent-hover">
+              How Spokes work
+            </Link>
+          </Feature>
+          <a href={LEGAL.terms} className="text-muted hover:text-accent-hover">
+            Terms
+          </a>
+          <a href={LEGAL.privacy} className="text-muted hover:text-accent-hover">
+            Privacy
+          </a>
+          <button
+            type="button"
+            className="border-0 bg-transparent p-0 text-[13px] text-muted hover:text-accent-hover"
+            onClick={() => openCookieSettings()}
+          >
+            Cookie settings
+          </button>
+        </span>
+      </div>
     </footer>
   );
 }
