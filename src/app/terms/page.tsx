@@ -34,10 +34,10 @@ export default function TermsPage() {
           (collectively, the “Service”).
         </LegalP>
         <LegalP>
-          Cycle Found is an online marketplace that helps people browse, list, and connect
-          about used bicycles, and a Community for questions, answers, and garages. The
-          Service is currently in beta and focused on Northern California, while available
-          to users in the United States.
+          Cycle Found helps people browse, list, document, and connect about used bicycles,
+          parts, tools, and bike accessories, and includes Community for questions,
+          answers, and garages. The Service is currently in beta / Pre-Alpha and focused on
+          Northern California, while available to users in the United States.
         </LegalP>
         <LegalP>
           By creating an account, accessing the Service, or using any Cycle Found feature,
@@ -74,13 +74,10 @@ export default function TermsPage() {
           buy or sell.
         </LegalP>
         <LegalP>
-          Participation in Community is also subject to our{" "}
-          <LegalLink href={LEGAL.communityGuidelines}>Community Guidelines</LegalLink>.
-          Buying and selling on the marketplace remains subject to the{" "}
-          <LegalLink href={LEGAL.marketplaceGuidelines} external>
-            Marketplace Guidelines
-          </LegalLink>
-          . The same Cycle Found account may work across marketplace and Community.
+          How you use Cycle Found — including questions and answers, garages, and buying or
+          selling when those features are available — is also subject to our{" "}
+          <LegalLink href={LEGAL.communityGuidelines}>Community Guidelines</LegalLink>. The
+          same Cycle Found account may work across related Cycle Found surfaces.
         </LegalP>
       </LegalSection>
 

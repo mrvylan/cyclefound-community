@@ -26,13 +26,14 @@ export default function PrivacyPage() {
         website and related services (the “Service”), including Community.
       </LegalP>
       <LegalP>
-        Cycle Found includes a marketplace connecting buyers and sellers of used bicycles,
-        and Community (Ask · Share · Ride) for questions, answers, and garage documentation.
-        The Service is currently in beta / Pre-Alpha and focused on Northern California,
-        while available to users in the United States. “My Garage” / garage features let
-        signed-in users save bikes and bike parts they own (or are tracking), optionally
-        with photos and notes—separate from public marketplace listings when those remain
-        private to the account.
+        Cycle Found helps people browse, document, and connect about used bicycles, parts,
+        tools, and bike accessories, and includes Community (Ask · Share · Ride) for
+        questions, answers, and garage documentation. The Service is currently in beta /
+        Pre-Alpha and focused on Northern California, while available to users in the
+        United States. Garage features let signed-in users save bikes, parts, tools,
+        accessories, and related items they own (or are tracking), optionally with photos
+        and notes. Items you keep private stay with your account; items you mark for sale,
+        trade, or public discovery may be visible to other members.
       </LegalP>
 
       <LegalSection title="1. Information users provide">
@@ -41,8 +42,11 @@ export default function PrivacyPage() {
           <li>Name and public seller or member display name</li>
           <li>Email address and password</li>
           <li>Profile details such as city, state, ZIP code, and seller type</li>
-          <li>Bicycle listing details, condition notes, pricing, and location</li>
-          <li>Photographs of bicycles</li>
+          <li>
+            Listing or garage details for bikes, parts, tools, or accessories — including
+            condition notes, pricing, and location
+          </li>
+          <li>Photographs of bikes, parts, tools, or accessories</li>
           <li>
             Messages you send through our contact tools, including in-app bicycle listing
             conversations and parts offers
@@ -56,8 +60,8 @@ export default function PrivacyPage() {
           </li>
           <li>Questions or prompts you send to AI features</li>
           <li>
-            Garage items — bikes or parts you save in My Garage (details, photos, notes,
-            and related estimates you choose to generate)
+            Garage items — bikes, parts, tools, accessories, or related gear you save
+            (details, photos, notes, and related estimates you choose to generate)
           </li>
           <li>Support emails you send to us</li>
         </LegalList>
@@ -102,11 +106,12 @@ export default function PrivacyPage() {
           and they are never automatically written into our bicycle catalog.
         </LegalP>
         <LegalP>
-          If you use My Garage, we store the garage items you add (bike or part details,
-          photos, and notes) so you can manage them in your account. Garage bikes stay
-          private to your account. If you choose to show a part in Parts search, other
-          people can see a basic description, photo, and the system price estimate — not
-          your purchase price or other private garage fields.
+          If you use Garage features, we store the items you add (bike, part, tool,
+          accessory, or related gear details, photos, and notes) so you can manage them in
+          your account. Items you keep private stay with your account. If you choose to
+          show an item for discovery or sale, other people may see a basic description,
+          photo, and any estimate or asking price you make public — not private fields you
+          keep to yourself.
         </LegalP>
       </LegalSection>
 
@@ -385,8 +390,9 @@ export default function PrivacyPage() {
         <LegalP>
           You can permanently delete your account from Your Account (Delete account).
           Deletion removes your profile, marketplace listings, uploaded listing photos,
-          bikes or parts you saved in My Garage, listing or parts conversations tied to
-          your account, and Community content we control that is tied to your account
+          bikes, parts, tools, accessories, or related garage items you saved, listing or
+          parts conversations tied to your account, and Community content we control that
+          is tied to your account
           (such as questions and answers stored on our servers), along with related account
           data we control. Local browser demo data on Community is cleared when you clear
           site data for community.cyclefound.com. To request access, correction, or help
