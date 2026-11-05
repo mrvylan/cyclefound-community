@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { AnswerComposer } from "@/components/forms/AnswerComposer";
 import { SessionPicker } from "@/components/forms/SessionPicker";
+import { ShareButton } from "@/components/ShareButton";
 import {
   Avatar,
   ExpertiseBadge,
@@ -206,12 +207,11 @@ export default function QuestionPage({
                   Save to resources
                 </button>
               </Feature>
-              <button
-                type="button"
-                className="h-10 rounded-lg border border-[#D4D3CD] bg-white px-3.5 text-[14px] font-semibold"
-              >
-                Share
-              </button>
+              <ShareButton
+                title={q.title}
+                text={q.excerpt || q.body?.[0] || q.title}
+                url={`/q/${q.id}`}
+              />
             </div>
           </article>
 
