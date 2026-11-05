@@ -82,8 +82,39 @@ export function setSessionHandle(handle: string) {
 
 export function getMergedPerson(handle: string): Person | undefined {
   const base = getPerson(handle);
-  if (!base) return undefined;
   const patch = readStore().profilePatches[handle];
+  if (!base) {
+    if (!patch?.name) return undefined;
+    // Auth / demo actor with no seed row — enough for post attribution.
+    const name = patch.name;
+    const parts = name.trim().split(/\s+/);
+    const init =
+      parts.length >= 2
+        ? `${parts[0]![0]!}${parts[1]![0]!}`.toUpperCase()
+        : name.slice(0, 2).toUpperCase();
+    return {
+      handle,
+      name,
+      init,
+      bg: "#527D31",
+      role: "Member",
+      loc: patch.loc ?? "",
+      level: "RIDER",
+      skills: patch.skills ?? [],
+      bio: patch.bio ?? "",
+      rating: "New",
+      reviews: 0,
+      spokes: "0",
+      spokesNum: 0,
+      accepted: 0,
+      items: 0,
+      reply: "—",
+      consult: "",
+      verified: false,
+      memberSince: "2026",
+      roleBadge: "Member",
+    };
+  }
   if (!patch) return base;
   return {
     ...base,

@@ -1,22 +1,60 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import {
+  handleFromAuthProfile,
+  isDemoSessionEnabled,
+} from "@/lib/demo-session";
 import {
   getSessionHandle,
   listMembers,
+  saveProfilePatch,
   setSessionHandle,
   subscribeStore,
 } from "@/lib/data/local-store";
 
-/** Beta-only: pick which mock member you’re acting as (until real auth owns the session). */
+/**
+ * Demo mode: pick which mock member you’re acting as.
+ * Live mode: hide the picker; sync session to the signed-in user when present.
+ */
 export function SessionPicker({ className = "" }: { className?: string }) {
+  const demo = isDemoSessionEnabled();
+  const { ready, profile } = useAuth();
   const [handle, setHandle] = useState("ben_carver");
   const members = listMembers();
 
   useEffect(() => {
+    if (!ready) return;
+
+    if (demo) {
+      setHandle(getSessionHandle());
+      return subscribeStore(() => setHandle(getSessionHandle()));
+    }
+
+    if (profile) {
+      const next = handleFromAuthProfile(profile);
+      const name = profile.fullName || profile.displayName;
+      saveProfilePatch(next, { name });
+      if (getSessionHandle() !== next) setSessionHandle(next);
+      setHandle(next);
+      return;
+    }
+
     setHandle(getSessionHandle());
-    return subscribeStore(() => setHandle(getSessionHandle()));
-  }, []);
+  }, [demo, profile, ready]);
+
+  if (!demo) {
+    if (!ready || !profile) return null;
+    return (
+      <p className={`m-0 text-[13px] text-muted ${className}`}>
+        Posting as{" "}
+        <span className="font-semibold text-ink">
+          {profile.fullName || profile.displayName}
+        </span>
+      </p>
+    );
+  }
 
   return (
     <label
