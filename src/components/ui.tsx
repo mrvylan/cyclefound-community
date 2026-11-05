@@ -90,8 +90,8 @@ export function ExpertiseBadge({ area }: { area: string }) {
 
 export function StatusChip({ status }: { status: ItemStatus | string }) {
   const map: Record<string, string> = {
-    "For sale": "bg-accent text-white",
-    "Open to offers": "bg-blue text-white",
+    "For sale": "bg-status-sale text-white",
+    "Open to offers": "bg-status-offers text-white",
     "Trade only": "border border-ink bg-white text-ink",
     "Not for sale": "border border-line bg-white text-[#3D4249]",
   };

@@ -33,16 +33,15 @@ export function HomeAskBox() {
         ))}
         <span className="min-w-5 flex-1" />
         <Link
-          href="/q/seized-seatpost"
+          href="/ask"
           className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-ink px-[22px] text-[15px] font-semibold text-white no-underline hover:bg-ink hover:text-white"
         >
           Ask <ArrowRight className="size-4 stroke-[2.2]" aria-hidden />
         </Link>
       </div>
       <p className="m-0 text-[13px] text-muted">
-        Your question goes to the feed and is routed to{" "}
-        <strong className="text-ink">{topicRoutes[topic]} members</strong> with verified{" "}
-        <strong className="text-ink">{topic.toLowerCase()}</strong> expertise.
+        Your question goes to the feed and reaches members tagged for{" "}
+        <strong className="text-ink">{topic.toLowerCase()}</strong>.
       </p>
     </form>
   );

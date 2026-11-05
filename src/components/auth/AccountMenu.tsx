@@ -35,6 +35,12 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
     return (
       <div className="flex items-center gap-2.5">
         <Link
+          href="/settings/profile"
+          className="hidden px-1 text-[14px] font-semibold text-ink no-underline hover:text-accent sm:inline"
+        >
+          Profile
+        </Link>
+        <Link
           href={authHref("login", nextPath)}
           className="px-1 text-[14px] font-semibold text-ink no-underline hover:text-accent"
         >
@@ -94,6 +100,22 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
             onClick={() => setOpen(false)}
           >
             Community home
+          </Link>
+          <Link
+            role="menuitem"
+            href="/settings/profile"
+            className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
+            onClick={() => setOpen(false)}
+          >
+            Edit profile
+          </Link>
+          <Link
+            role="menuitem"
+            href="/item/new"
+            className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
+            onClick={() => setOpen(false)}
+          >
+            Add garage item
           </Link>
           <Link
             role="menuitem"

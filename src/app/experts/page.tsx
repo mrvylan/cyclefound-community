@@ -1,10 +1,18 @@
 import Link from "next/link";
-import { Avatar, LevelBadge, StatusChip } from "@/components/ui";
-import { areas, people } from "@/lib/data/seed";
+import { redirect } from "next/navigation";
+import { Avatar, LevelBadge } from "@/components/ui";
+import { FEATURES } from "@/lib/features";
+import { areas, getExperts } from "@/lib/data/seed";
 
 export const metadata = { title: "Find an expert" };
 
 export default function ExpertsPage() {
+  if (!FEATURES.expertsDirectory) {
+    redirect("/members");
+  }
+
+  const experts = getExperts();
+
   return (
     <>
       <section className="border-b border-line">
@@ -121,7 +129,7 @@ export default function ExpertsPage() {
         <div className="flex min-w-0 flex-[999_1_620px] flex-col gap-[18px]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="m-0 text-[15px] text-muted-2">
-              <strong className="text-ink">{people.length} experts</strong> near San Jose
+              <strong className="text-ink">{experts.length} experts</strong> near San Jose
             </p>
             <label className="inline-flex items-center gap-2 text-[14px] text-muted">
               Sort
@@ -135,7 +143,7 @@ export default function ExpertsPage() {
           </div>
 
           <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-[18px]">
-            {people.map((e) => (
+            {experts.map((e) => (
               <article
                 key={e.handle}
                 className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-[22px]"
@@ -191,9 +199,7 @@ export default function ExpertsPage() {
                     <span className="inline-flex h-11 items-center rounded-[10px] border border-line px-3 text-[13px] text-muted">
                       {e.consult}
                     </span>
-                  ) : (
-                    <StatusChip status="Open to offers" />
-                  )}
+                  ) : null}
                 </div>
               </article>
             ))}

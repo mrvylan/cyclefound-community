@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s · Cycle Found",
   },
   description:
-    "A community hub for bike people. Ask experts, document your garage, earn Spokes.",
+    "A community hub for bike people. Ask questions, document your garage, share what you know.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

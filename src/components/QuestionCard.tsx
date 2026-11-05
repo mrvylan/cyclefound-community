@@ -31,7 +31,7 @@ export function QuestionCard({ q }: { q: Question }) {
         <p className="m-0 text-[15px] leading-normal text-muted">{q.excerpt}</p>
         <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2.5 text-[13px] text-muted">
           <Link
-            href="/u/lugged_marco"
+            href={q.askerHandle ? `/u/${q.askerHandle}` : "/"}
             className="inline-flex items-center gap-2 font-medium text-ink no-underline hover:text-accent-hover"
           >
             <Avatar init={q.init} bg={q.bg} size={26} />
@@ -43,7 +43,7 @@ export function QuestionCard({ q }: { q: Question }) {
             {q.answers} answers
           </span>
           {q.solved ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-soft px-2.5 py-0.5 font-semibold text-blue">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-status-accepted-soft px-2.5 py-0.5 font-semibold text-status-accepted">
               <Check className="size-3.5 stroke-[2.6]" aria-hidden />
               Solved by {q.expert}
             </span>

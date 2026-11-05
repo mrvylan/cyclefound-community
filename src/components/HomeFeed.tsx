@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { questions } from "@/lib/data/seed";
+import { getAllQuestions, subscribeStore } from "@/lib/data/local-store";
+import { EmptyState } from "./EmptyState";
 import { QuestionCard } from "./QuestionCard";
 import { SegmentedControl } from "./ui";
 
@@ -10,10 +11,17 @@ const tabs = ["Trending", "Unanswered", "Rare parts", "Repairs", "Builds"];
 
 export function HomeFeed() {
   const [tab, setTab] = useState("Trending");
+  const [questions, setQuestions] = useState(() => getAllQuestions());
+
+  useEffect(() => {
+    setQuestions(getAllQuestions());
+    return subscribeStore(() => setQuestions(getAllQuestions()));
+  }, []);
 
   const filtered = questions.filter((q) => {
     if (tab === "Unanswered") return !q.solved;
-    if (tab === "Rare parts") return q.tags.some((t) => t.includes("rare") || t.includes("campagnolo"));
+    if (tab === "Rare parts")
+      return q.tags.some((t) => t.includes("rare") || t.includes("campagnolo"));
     if (tab === "Repairs") return q.tags.includes("repair");
     if (tab === "Builds") return q.tags.includes("build");
     return true;
@@ -30,15 +38,21 @@ export function HomeFeed() {
           ariaLabel="Filter questions"
         />
       </div>
-      {filtered.map((q) => (
-        <QuestionCard key={q.id} q={q} />
-      ))}
-      <Link
-        href="/q/seized-seatpost"
-        className="self-center px-5 py-3 text-[15px] font-semibold"
-      >
-        Load more questions
-      </Link>
+      {filtered.length === 0 ? (
+        <EmptyState
+          title="No questions in this view"
+          description="Be the first to ask — repairs, rare parts, and builds all belong here."
+          actionLabel="Ask the community"
+          actionHref="/ask"
+        />
+      ) : (
+        filtered.map((q) => <QuestionCard key={q.id} q={q} />)
+      )}
+      {filtered.length > 0 ? (
+        <Link href="/ask" className="self-center px-5 py-3 text-[15px] font-semibold">
+          Ask a question
+        </Link>
+      ) : null}
     </div>
   );
 }

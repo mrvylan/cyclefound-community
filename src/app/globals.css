@@ -19,8 +19,18 @@
   --accent-bright: #6f963b;
   --accent-soft: #eef3e8;
   --accent-soft-border: #c5d6b5;
+  /* Offers blue — Open to offers status only */
   --blue: #1e40af;
   --blue-soft: #eef2ff;
+  --status-sale: var(--accent);
+  --status-offers: var(--blue);
+  --status-offers-soft: var(--blue-soft);
+  /* Positive / accepted — not offers blue */
+  --status-accepted: var(--accent);
+  --status-accepted-soft: var(--accent-soft);
+  --status-accepted-border: var(--accent-soft-border);
+  --value-up: var(--accent);
+  --value-down: var(--muted-2);
 }
 
 html {
