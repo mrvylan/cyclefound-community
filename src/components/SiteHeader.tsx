@@ -206,14 +206,14 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="mx-auto flex max-w-[1280px] flex-col gap-3 px-8 py-8 text-[13px] leading-[1.45] text-muted">
+    <footer className="mx-auto flex max-w-[1280px] flex-col items-center gap-3 px-8 py-8 text-center text-[13px] leading-[1.45] text-muted">
       <p className="m-0 max-w-[520px]">
         © 2026 Fault Board Co., LLC. Cycle Found is a trade name of Fault Board Co.,
         LLC.
       </p>
       <nav
         aria-label="Legal"
-        className="flex flex-wrap gap-x-[18px] gap-y-2"
+        className="flex flex-wrap justify-center gap-x-[18px] gap-y-2"
       >
         <Link
           href={LEGAL.communityGuidelines}
