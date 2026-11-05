@@ -4,7 +4,7 @@ import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
 import { LEGAL } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Community Guidelines",
+  title: "Cycle Found Guidelines",
   description:
     "How to use Cycle Found — ask and answer, document garages, and buy or sell fairly and safely.",
   alternates: { canonical: "https://community.cyclefound.com/community-guidelines" },
@@ -17,20 +17,20 @@ export default function CommunityGuidelinesPage() {
   return (
     <LegalPage
       eyebrow="Cycle Found"
-      title="Community Guidelines"
+      title="Cycle Found Guidelines"
       effectiveDate="November 5, 2026"
     >
       <p className="m-0 rounded-[10px] border border-accent-soft-border bg-accent-soft px-3.5 py-3 text-[14px] leading-[1.5] text-ink">
-        <strong className="font-semibold">Pre-Alpha · Demo.</strong> Cycle Found Community
-        is early access. Some screens use mock or sample data for testing. Treat advice as
-        member-to-member knowledge-sharing — not a substitute for a qualified mechanic on
-        safety-critical work. Tagline: Ask · Share · Ride.
+        <strong className="font-semibold">Pre-Alpha · Demo.</strong> Cycle Found on
+        community.cyclefound.com is early access. Some screens use mock or sample data for
+        testing. Treat advice as member-to-member knowledge-sharing — not a substitute for a
+        qualified mechanic on safety-critical work. Tagline: Ask · Share · Ride.
       </p>
       <p className="m-0">
         Cycle Found is a service operated by Fault Board Co., LLC (“Cycle Found,” “we,”
         “us,” or “our”). These guidelines cover how to use Cycle Found on this site —
-        questions and answers, garages, profiles, and buying or selling when those features
-        are available.
+        questions and answers, garages (bikes, parts, tools, accessories, and related gear),
+        profiles, and buying or selling when those features are available.
       </p>
       <p className="m-0">
         They work alongside our{" "}
@@ -46,13 +46,13 @@ export default function CommunityGuidelinesPage() {
 
       <LegalSection title="1. Purpose">
         <p className="m-0">
-          Cycle Found helps people ask and answer bicycle questions, document bikes and
-          parts in garages, build reputation through helpful contributions, and — when
-          market features are available — connect about used bikes and parts. Advice here is
-          member-to-member. Cycle Found does not guarantee that any answer is complete or
-          correct — verify safety-critical work with a qualified mechanic when needed.
-          Cycle Found does not currently process bike payments, hold funds, or inspect
-          bikes.
+          Cycle Found helps people ask and answer bicycle questions, document bikes, parts,
+          tools, and accessories in garages, build reputation through helpful contributions,
+          and — when market features are available — connect about used bikes and gear.
+          Advice here is member-to-member. Cycle Found does not guarantee that any answer is
+          complete or correct — verify safety-critical work with a qualified mechanic when
+          needed. Cycle Found does not currently process payments, hold funds, or inspect
+          items.
         </p>
       </LegalSection>
 
@@ -93,7 +93,10 @@ export default function CommunityGuidelinesPage() {
 
       <LegalSection title="4. Garages, items, and photographs">
         <ul className="m-0 list-disc space-y-1.5 pl-5">
-          <li>Document bikes and parts you own or are clearly authorized to represent.</li>
+          <li>
+            Document bikes, parts, tools, accessories, or related gear you own or are
+            clearly authorized to represent.
+          </li>
           <li>Use current photos of the actual item when you can.</li>
           <li>Get brand, model, size, and year as close as you can.</li>
           <li>Do not use photos or text you do not have the right to use.</li>
@@ -114,11 +117,11 @@ export default function CommunityGuidelinesPage() {
         <p className="m-0 font-semibold text-ink">Listings and ownership</p>
         <ul className="m-0 list-disc space-y-1.5 pl-5">
           <li>
-            Only list a bike or part you own or are clearly authorized to sell. If you are
-            selling for someone else, say so.
+            Only list a bike, part, tool, accessory, or related item you own or are clearly
+            authorized to sell. If you are selling for someone else, say so.
           </li>
           <li>
-            Stolen bikes and fraudulently obtained goods are not allowed — ever. Report
+            Stolen goods and fraudulently obtained items are not allowed — ever. Report
             suspicions to{" "}
             <a href={`mailto:${LEGAL.supportEmail}`} className={linkClass}>
               {LEGAL.supportEmail}
@@ -126,11 +129,12 @@ export default function CommunityGuidelinesPage() {
             and, when appropriate, local authorities.
           </li>
           <li>
-            Use current photos of the actual item. Show the whole bike and close-ups of
-            wear, damage, or custom parts.
+            Use current photos of the actual item. For bikes, show the whole bike and
+            close-ups of wear, damage, or custom parts. For parts, tools, and accessories,
+            show condition clearly.
           </li>
           <li>
-            Disclose damage, repairs, crash history you know about, missing parts, and
+            Disclose damage, repairs, crash history you know about, missing pieces, and
             major modifications that affect value, fit, or safety.
           </li>
           <li>
@@ -146,8 +150,8 @@ export default function CommunityGuidelinesPage() {
         <ul className="m-0 list-disc space-y-1.5 pl-5">
           <li>
             Meet in a public, well-lit place when you can. Consider bringing a friend.
-            Inspect the bike before paying. Check serial numbers and that the seller appears
-            authorized to sell.
+            Inspect the item before paying. For bikes, check serial numbers and that the
+            seller appears authorized to sell.
           </li>
           <li>
             Be cautious with overpayment, fake payment apps, or pressure tactics. Cycle
@@ -168,7 +172,7 @@ export default function CommunityGuidelinesPage() {
       <LegalSection title="6. Ownership, stolen property, and prohibited content">
         <p className="m-0">
           Do not use Cycle Found to fence stolen goods, identify theft targets, or run
-          scams. Stolen bikes are not allowed — ever.
+          scams. Stolen bikes and stolen gear are not allowed — ever.
         </p>
         <p className="m-0">Also prohibited:</p>
         <ul className="m-0 list-disc space-y-1.5 pl-5">

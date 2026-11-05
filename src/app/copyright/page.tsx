@@ -12,7 +12,7 @@ import { LEGAL } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Copyright / DMCA",
   description:
-    "How to submit a copyright complaint under the DMCA for Cycle Found Community.",
+    "How to submit a copyright complaint under the DMCA for Cycle Found on community.cyclefound.com.",
   alternates: { canonical: "https://community.cyclefound.com/copyright" },
 };
 
@@ -21,15 +21,15 @@ export default function CopyrightPage() {
     <LegalPage
       eyebrow="Legal"
       title="Copyright / DMCA"
-      effectiveDate="October 27, 2026"
+      effectiveDate="November 5, 2026"
     >
       <LegalP>
         Cycle Found is a service operated by Fault Board Co., LLC (“Cycle Found,” “we,”
         “us,” or “our”). Cycle Found respects intellectual property rights and expects
-        users to do the same. This page covers the Cycle Found Service, including Community
-        (questions, answers, garages, and profiles) and the marketplace. It describes how
-        to submit a copyright complaint under the Digital Millennium Copyright Act (DMCA).
-        The same process appears in our{" "}
+        users to do the same. This page covers Cycle Found on community.cyclefound.com —
+        including questions, answers, garages, profiles, and listings. It describes how to
+        submit a copyright complaint under the Digital Millennium Copyright Act (DMCA). The
+        same process appears in our{" "}
         <LegalLink href={LEGAL.terms}>Terms of Service</LegalLink>.
       </LegalP>
 

@@ -12,13 +12,13 @@ import { LEGAL } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Terms of Service for Cycle Found Community and related Cycle Found services.",
+    "Terms of Service for Cycle Found on community.cyclefound.com — Ask · Share · Ride.",
   alternates: { canonical: "https://community.cyclefound.com/terms" },
 };
 
 export default function TermsPage() {
   return (
-    <LegalPage eyebrow="Legal" title="Terms of Service" effectiveDate="October 27, 2026">
+    <LegalPage eyebrow="Legal" title="Terms of Service" effectiveDate="November 5, 2026">
       <p className="m-0 rounded-[10px] border border-line bg-ground px-3.5 py-3 text-[14px] font-semibold leading-[1.5] text-ink">
         PLEASE READ SECTION 20. IT REQUIRES MOST DISPUTES TO BE RESOLVED BY INDIVIDUAL
         ARBITRATION AND WAIVES CLASS ACTIONS AND JURY TRIALS. YOU MAY OPT OUT WITHIN 30
@@ -31,58 +31,78 @@ export default function TermsPage() {
           between you and Fault Board Co., LLC. Cycle Found is a service operated by Fault
           Board Co., LLC (“Cycle Found,” “we,” “us,” or “our”). Cycle Found is a DBA / trade
           name of Fault Board Co., LLC, a California limited liability company. These Terms
-          cover the Cycle Found website, marketplace tools, Community, and related services
-          (collectively, the “Service”).
+          cover Cycle Found on community.cyclefound.com and related services we operate
+          under the Cycle Found name (collectively, the “Service”). Tagline: Ask · Share ·
+          Ride.
         </LegalP>
         <LegalP>
-          Cycle Found helps people browse, list, document, and connect about used bicycles,
-          parts, tools, and bike accessories, and includes Community for questions,
-          answers, and garages. The Service is currently in beta / Pre-Alpha and focused on
-          Northern California, while available to users in the United States.
+          Cycle Found helps people ask and answer bicycle questions, document garages
+          (bikes, parts, tools, accessories, and related gear), build reputation through
+          helpful contributions, and — when market features are available — browse, list,
+          and connect about used bikes and gear. The Service is currently in beta /
+          Pre-Alpha and focused on Northern California, while available to users in the
+          United States.
         </LegalP>
         <LegalP>
           By creating an account, accessing the Service, or using any Cycle Found feature,
           you agree to these Terms and our{" "}
           <LegalLink href={LEGAL.privacy}>Privacy Policy</LegalLink>. If you do not agree,
-          do not use the Service. Terms version identifier: 2026-10-27.
+          do not use the Service. Terms version identifier: 2026-11-05.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="2. Beta / Pre-Alpha service">
+      <LegalSection title="2. Pre-Alpha / beta service">
         <LegalP>
-          Cycle Found is offered as a beta / early-access service. Community
-          (community.cyclefound.com) may additionally be labeled Pre-Alpha. Features may
-          change, be limited, or be discontinued without notice. The Service may contain
-          errors, incomplete functionality, or demo / sample content used for product
-          testing. During beta or Pre-Alpha, we do not make uptime, availability, or
-          performance commitments. Your use of the Service during these stages is at your
-          own risk, subject to these Terms.
+          Cycle Found is offered as a Pre-Alpha / early-access service. Features may change,
+          be limited, or be discontinued without notice. The Service may contain errors,
+          incomplete functionality, or demo / sample content used for product testing.
+          During Pre-Alpha or beta, we do not make uptime, availability, or performance
+          commitments. Your use of the Service during these stages is at your own risk,
+          subject to these Terms.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="2A. Community (Ask · Share · Ride)">
+      <LegalSection title="3. How the Service works (Ask · Share · Ride)">
         <LegalP>
-          Community is where members ask and answer bicycle questions, document garages and
-          parts, and build reputation through helpful contributions. Community content is
-          member-generated. Cycle Found does not guarantee that any question, answer,
-          garage entry, or reputation signal is complete, accurate, or safe to follow.
+          Members may ask and answer questions, document garage items, and share what they
+          know. Content is member-generated. Cycle Found does not guarantee that any
+          question, answer, garage entry, listing, or reputation signal is complete,
+          accurate, or safe to follow.
         </LegalP>
         <LegalP>
-          Repair, fit, torque, structural, braking, and similar advice on Community is not
-          professional mechanical service. For safety-critical work, verify with a
-          qualified mechanic. Market values shown on Community (when enabled) are estimates
-          only and include an estimate disclaimer — they are not appraisals or offers to
-          buy or sell.
+          Repair, fit, torque, structural, braking, and similar advice is not professional
+          mechanical service. For safety-critical work, verify with a qualified mechanic.
+          Market values shown on the Service (when enabled) are estimates only — they are
+          not appraisals or offers to buy or sell.
         </LegalP>
         <LegalP>
-          How you use Cycle Found — including questions and answers, garages, and buying or
-          selling when those features are available — is also subject to our{" "}
-          <LegalLink href={LEGAL.communityGuidelines}>Community Guidelines</LegalLink>. The
-          same Cycle Found account may work across related Cycle Found surfaces.
+          When buying or selling features are available, Cycle Found is a platform that
+          helps members connect. Cycle Found is not a party to sales negotiated or completed
+          between users. Unless we clearly state otherwise for a specific feature:
+        </LegalP>
+        <LegalList>
+          <li>Cycle Found does not sell the items listed by users</li>
+          <li>
+            Cycle Found does not currently process purchases, hold buyer funds, or provide
+            escrow
+          </li>
+          <li>
+            Cycle Found does not inspect, certify, authenticate, or guarantee items,
+            sellers, or buyers
+          </li>
+          <li>
+            Payment, pickup, shipping, title/ownership transfer, and related logistics are
+            arranged directly between buyer and seller
+          </li>
+          <li>Basic listings, when offered, are free unless we disclose otherwise</li>
+        </LegalList>
+        <LegalP>
+          How you use the Service is also subject to our{" "}
+          <LegalLink href={LEGAL.communityGuidelines}>Community Guidelines</LegalLink>.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="3. Eligibility and account registration">
+      <LegalSection title="4. Eligibility and account registration">
         <LegalP>
           You must be at least 18 years old and able to form a binding contract under
           applicable law to create an account or use Cycle Found. The Service is intended
@@ -91,10 +111,12 @@ export default function TermsPage() {
         <LegalP>When you register, you agree to:</LegalP>
         <LegalList>
           <li>Provide accurate registration information and keep it current</li>
-          <li>Use a password that meets our minimum security requirements when one is set</li>
           <li>
-            Verify your email address before publishing listings, messaging sellers, or
-            posting in Community when the Service requires it
+            Use a password that meets our minimum security requirements when one is set
+          </li>
+          <li>
+            Verify your email address before posting, listing, or messaging when the Service
+            requires it
           </li>
           <li>
             Accept these Terms and acknowledge our Privacy Policy as part of account
@@ -103,7 +125,7 @@ export default function TermsPage() {
         </LegalList>
       </LegalSection>
 
-      <LegalSection title="4. Account security and user responsibilities">
+      <LegalSection title="5. Account security and user responsibilities">
         <LegalList>
           <li>You are responsible for activity that occurs under your account.</li>
           <li>Keep your login credentials confidential and do not share them.</li>
@@ -121,38 +143,14 @@ export default function TermsPage() {
         </LegalList>
       </LegalSection>
 
-      <LegalSection title="5. Marketplace role and limitations">
+      <LegalSection title="6. Seller and lister responsibilities">
         <LegalP>
-          Cycle Found provides a platform for users to create bicycle listings, browse
-          listings, receive AI-assisted recommendations and listing help, message sellers
-          about bicycle listings in Messages, and send offers or messages about garage parts
-          shown in Parts search. Cycle Found is a marketplace platform and is not a party to
-          bicycle sales negotiated or completed between buyers and sellers.
+          If you list a bike, part, tool, accessory, or related item for sale, trade, or
+          public discovery, you represent and warrant that:
         </LegalP>
-        <LegalP>Unless we clearly state otherwise for a specific feature:</LegalP>
         <LegalList>
-          <li>Cycle Found does not sell the bicycles listed by users</li>
-          <li>
-            Cycle Found does not currently process bicycle purchases, hold buyer funds, or
-            provide escrow
-          </li>
-          <li>
-            Cycle Found does not inspect, certify, authenticate, or guarantee bicycles,
-            sellers, or buyers
-          </li>
-          <li>
-            Payment, pickup, shipping, title/ownership transfer, and related logistics are
-            arranged directly between buyer and seller
-          </li>
-          <li>Basic listings are free</li>
-        </LegalList>
-      </LegalSection>
-
-      <LegalSection title="6. Seller responsibilities and ownership verification">
-        <LegalP>If you list a bicycle, you represent and warrant that:</LegalP>
-        <LegalList>
-          <li>You own the bicycle or are otherwise authorized to sell it</li>
-          <li>The bicycle is not stolen and you have the legal right to transfer it</li>
+          <li>You own the item or are otherwise authorized to sell or offer it</li>
+          <li>The item is not stolen and you have the legal right to transfer it</li>
           <li>
             You will provide accurate identifying information and respond honestly to
             reasonable buyer questions
@@ -168,71 +166,55 @@ export default function TermsPage() {
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="7. Listing accuracy, bicycle condition, and safety disclosures">
-        <LegalP>Sellers must:</LegalP>
+      <LegalSection title="7. Listing and garage accuracy">
+        <LegalP>When you publish a listing or garage item that others can see, you must:</LegalP>
         <LegalList>
           <li>
-            Provide accurate titles, descriptions, photos, condition notes, pricing, and
-            location information
+            Provide accurate titles, descriptions, photos, condition notes, pricing (if
+            any), and location information
           </li>
           <li>
             Disclose known damage, mechanical issues, safety concerns, major repairs,
             modifications, and missing parts that a reasonable buyer would want to know
           </li>
           <li>
-            Review and confirm any AI-suggested identification or listing copy before
-            publishing — sellers are responsible for the final listing
+            Review and confirm any AI-suggested identification or copy before publishing —
+            you are responsible for the final content
           </li>
-          <li>
-            Confirm bicycle identity, ownership or authorization to sell, and listing
-            accuracy when prompted by the Service before publishing
-          </li>
+          <li>Use photos that fairly represent the actual item</li>
         </LegalList>
-        <LegalP>
-          Photographs should fairly represent the bicycle. Do not use misleading stock
-          imagery or photos of a different bike.
-        </LegalP>
       </LegalSection>
 
-      <LegalSection title="8. Buyer responsibilities and independent inspections">
+      <LegalSection title="8. Buyer responsibilities">
         <LegalP>Buyers are responsible for:</LegalP>
         <LegalList>
           <li>Evaluating listings carefully and asking questions before buying</li>
           <li>
-            Inspecting the bicycle in person when reasonably possible, including frame,
-            components, brakes, wheels, and fit
+            Inspecting the item in person when reasonably possible (for bikes: frame,
+            components, brakes, wheels, and fit)
           </li>
           <li>
             Verifying serial numbers, ownership, and other identifying information before
             completing a purchase
           </li>
-          <li>Deciding whether a bicycle is safe and suitable for their intended use</li>
+          <li>Deciding whether an item is safe and suitable for their intended use</li>
           <li>
             Completing payment and meetup or shipping arrangements directly with the seller
           </li>
         </LegalList>
         <LegalP>
-          AI recommendations and listing content are informational aids only. They do not
-          replace independent inspection or professional bike assessment.
+          AI recommendations and listing content are informational aids only when offered.
+          They do not replace independent inspection or professional assessment.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="9. Buyer-to-seller communications">
+      <LegalSection title="9. Communications">
         <LegalP>
-          Buyers may contact sellers about active bicycle listings through Cycle Found’s
-          contact tools. Those listing conversations are stored in the Service so both
-          participants can read and reply in Messages. Listing contact is inquiry-only:
-          there is no in-app offer on a bike listing.
-        </LegalP>
-        <LegalP>
-          For garage parts shown in Parts search, buyers may send an offer and message in
-          Cycle Found. Those conversations are also stored so both participants can read and
-          reply in Messages.
-        </LegalP>
-        <LegalP>
-          We may email a notice that a message or offer is waiting; that notice does not
-          include the sender’s email as a reply-to. Cycle Found does not process payment.
-          Message content is transmitted and stored as described in our Privacy Policy.
+          Members may contact each other through tools Cycle Found provides (for example,
+          email links, forms, or in-app messaging when those features are enabled). When
+          in-app conversations are offered, we may store message text so participants can
+          read and reply, and we may send a notification email that a message is waiting —
+          without exposing the sender’s email as a reply-to.
         </LegalP>
         <LegalP>You agree not to use contact tools to:</LegalP>
         <LegalList>
@@ -243,18 +225,19 @@ export default function TermsPage() {
         </LegalList>
         <LegalP>
           We may rate-limit, block, or disable messaging features to protect users and the
-          Service.
+          Service. Cycle Found does not process payment.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="10. Prohibited activities and fraudulent behavior">
+      <LegalSection title="10. Prohibited activities">
         <LegalP>You agree not to:</LegalP>
         <LegalList>
-          <li>List stolen, counterfeit, or illegally obtained bicycles</li>
-          <li>Post false, misleading, or deceptive listings or prices</li>
+          <li>List stolen, counterfeit, or illegally obtained items</li>
+          <li>Post false, misleading, or deceptive listings, answers, or prices</li>
           <li>Impersonate another person or misrepresent affiliation</li>
           <li>Engage in scams, phishing, payment fraud, or bait-and-switch tactics</li>
           <li>Harass, threaten, or discriminate against other users</li>
+          <li>Game reputation signals (Useful votes, accepted answers, or reviews)</li>
           <li>Scrape, overload, reverse engineer, or interfere with the Service</li>
           <li>Upload malware or attempt unauthorized access to systems or data</li>
           <li>Use the Service for any unlawful purpose</li>
@@ -263,9 +246,9 @@ export default function TermsPage() {
 
       <LegalSection title="11. User-generated content and photo licensing">
         <LegalP>
-          You retain ownership of content you submit, including listing photos,
-          descriptions, profile details, Community questions and answers, garage
-          documentation, and messages you send through the Service (“User Content”).
+          You retain ownership of content you submit, including listing and garage photos,
+          descriptions, profile details, questions and answers, and messages you send
+          through the Service (“User Content”).
         </LegalP>
         <LegalP>
           By submitting User Content, you grant Cycle Found a worldwide, non-exclusive,
@@ -281,29 +264,27 @@ export default function TermsPage() {
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="12. AI-generated content and recommendations">
+      <LegalSection title="12. AI-generated content (when offered)">
         <LegalP>
-          Cycle Found may offer AI-assisted features, including bicycle recommendations (AI
-          Bike Advisor), photo-based identification suggestions, and listing
-          title/description assistance. These features may use third-party AI providers to
-          process prompts, photos, and listing details you submit.
+          Where Cycle Found offers AI-assisted features (for example, recommendations,
+          photo-based identification suggestions, or listing copy assistance), those
+          features may use third-party AI providers to process prompts, photos, and details
+          you submit.
         </LegalP>
         <LegalP>
-          AI output may be incomplete, outdated, or incorrect. AI-generated information may
-          contain inaccuracies. Verify bicycle specifications, sizing, condition, and pricing
-          before making decisions. Sellers are responsible for reviewing and confirming
-          AI-generated descriptions before publishing. Cycle Found does not guarantee AI
-          accuracy and does not automatically write AI guesses into listing details or our
-          bicycle catalog until you choose to apply a suggestion.
+          AI output may be incomplete, outdated, or incorrect. Verify specifications,
+          sizing, condition, pricing, torque, and compatibility before making decisions.
+          You are responsible for reviewing AI-assisted copy before publishing. Cycle Found
+          does not guarantee AI accuracy.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="13. Optional future paid features">
         <LegalP>
-          Basic listings are free. Cycle Found may introduce optional paid features in the
-          future (for example, promotion or other listing enhancements). We will describe any
-          paid feature, price, and applicable terms before you are charged. These Terms do
-          not mean that subscriptions or paid plans are currently offered.
+          Basic use of the Service is free unless we disclose otherwise. Cycle Found may
+          introduce optional paid features in the future. We will describe any paid feature,
+          price, and applicable terms before you are charged. These Terms do not mean that
+          subscriptions or paid plans are currently offered.
         </LegalP>
       </LegalSection>
 
@@ -323,22 +304,23 @@ export default function TermsPage() {
             clear consent and cancellation terms at the time of enrollment
           </li>
           <li>
-            Bicycle purchase payments between buyers and sellers are not processed by Cycle
-            Found under the current Service
+            Purchase payments between buyers and sellers are not processed by Cycle Found
+            under the current Service
           </li>
         </LegalList>
       </LegalSection>
 
       <LegalSection title="15. Reporting, content removal, and account suspension">
         <LegalP>
-          You may report suspicious listings from the listing page using Report this listing
-          (sign-in and email verification required), or email{" "}
+          Email{" "}
           <LegalLink href={`mailto:${LEGAL.supportEmail}`}>
             {LEGAL.supportEmail}
           </LegalLink>{" "}
-          about listings, abusive messages, Community content, or other concerns. We may
-          investigate reports and take action we consider appropriate, including removing
-          content, limiting features, or suspending or terminating accounts.
+          about suspicious listings, abusive messages, unsafe advice, or other concerns
+          (include a page link when you can). When in-product report tools are available,
+          you may use those as well. We may investigate and take action we consider
+          appropriate, including removing content, limiting features, or suspending or
+          terminating accounts.
         </LegalP>
         <LegalP>
           We are not obligated to monitor all content or communications, and we do not
@@ -348,25 +330,22 @@ export default function TermsPage() {
 
       <LegalSection title="16. Intellectual property">
         <LegalP>
-          The Service — including Cycle Found branding, logos, site design, software, and
-          catalog structure — is owned by Cycle Found or its licensors and is protected by
-          intellectual property laws. You may not copy, modify, or distribute our branding or
-          software except as expressly allowed by these Terms or with prior written
-          permission.
+          The Service — including Cycle Found branding, logos, site design, and software —
+          is owned by Cycle Found or its licensors and is protected by intellectual property
+          laws. You may not copy, modify, or distribute our branding or software except as
+          expressly allowed by these Terms or with prior written permission.
         </LegalP>
         <LegalP>
           You are responsible for the photos and other content you upload. Do not post
-          content you do not have the right to use, including listing photos copied from
-          other marketplaces or third parties without authorization.
+          content you do not have the right to use.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="17. Copyright complaints (DMCA)">
         <LegalP>
-          Cycle Found respects intellectual property rights and expects users to do the
-          same. If you believe content on the Service infringes your copyright, you may
-          submit a notice under the Digital Millennium Copyright Act, 17 U.S.C. § 512(c)(3).
-          The same process is described on our{" "}
+          If you believe content on the Service infringes your copyright, you may submit a
+          notice under the Digital Millennium Copyright Act, 17 U.S.C. § 512(c)(3). The same
+          process is described on our{" "}
           <LegalLink href={LEGAL.copyright}>Copyright / DMCA</LegalLink> page.
         </LegalP>
         <LegalP>
@@ -379,81 +358,34 @@ export default function TermsPage() {
           · DMCA registration no. DMCA-1084361
         </LegalP>
         <LegalP>
-          Under 17 U.S.C. § 512(c)(3), a valid notification of claimed infringement must
-          include substantially the following:
-        </LegalP>
-        <LegalList>
-          <li>
-            A physical or electronic signature of a person authorized to act on behalf of
-            the owner of an exclusive right that is allegedly infringed
-          </li>
-          <li>
-            Identification of the copyrighted work claimed to have been infringed (or a
-            representative list if multiple works)
-          </li>
-          <li>
-            Identification of the material claimed to be infringing and information
-            reasonably sufficient to permit us to locate it (for example, a listing URL)
-          </li>
-          <li>
-            Information reasonably sufficient to permit us to contact you, such as an
-            address, telephone number, and email address
-          </li>
-          <li>
-            A statement that you have a good-faith belief that use of the material in the
-            manner complained of is not authorized by the copyright owner, its agent, or the
-            law
-          </li>
-          <li>
-            A statement that the information in the notification is accurate, and under
-            penalty of perjury, that you are authorized to act on behalf of the owner of an
-            exclusive right that is allegedly infringed
-          </li>
-        </LegalList>
-        <LegalP>
-          <strong className="font-semibold text-ink">Counter-notice.</strong> If we remove or
-          disable access to material in response to a DMCA notice, we may notify the user
-          who posted it. That user may submit a counter-notification under 17 U.S.C. §
-          512(g). A counter-notice should include the user’s physical or electronic
-          signature; identification of the material removed and where it appeared before
-          removal; a statement under penalty of perjury that the user has a good-faith
-          belief the material was removed or disabled as a result of mistake or
-          misidentification; the user’s name, address, and telephone number; and a statement
-          that the user consents to the jurisdiction of the federal district court for the
-          user’s address (or for any judicial district in which Cycle Found may be found if
-          outside the U.S.) and will accept service of process from the original
-          complainant.
-        </LegalP>
-        <LegalP>
-          <strong className="font-semibold text-ink">Repeat infringers.</strong> It is our
-          policy to terminate, in appropriate circumstances, accounts of users who are
-          repeat infringers.
+          It is our policy to terminate, in appropriate circumstances, accounts of users who
+          are repeat infringers.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="18. Third-party services">
         <LegalP>
           The Service relies on third-party providers, which currently may include
-          authentication/database/storage hosting, AI processing, transactional email
-          delivery, fonts, and location lookup services. Your use of those services through
-          Cycle Found may be subject to the providers’ terms and privacy practices. Cycle
-          Found is not responsible for third-party outages, errors, or independent practices
-          beyond our reasonable control.
+          authentication/database/storage hosting, optional AI processing, transactional
+          email, fonts, analytics (when you allow it), and other infrastructure. Your use of
+          those services through Cycle Found may be subject to the providers’ terms and
+          privacy practices. Cycle Found is not responsible for third-party outages, errors,
+          or independent practices beyond our reasonable control.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="19. Disclaimers and limitations of liability">
         <LegalP>
-          THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE,” INCLUDING DURING BETA / EARLY
-          ACCESS. TO THE FULLEST EXTENT PERMITTED BY LAW, CYCLE FOUND DISCLAIMS ALL
+          THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE,” INCLUDING DURING PRE-ALPHA /
+          EARLY ACCESS. TO THE FULLEST EXTENT PERMITTED BY LAW, CYCLE FOUND DISCLAIMS ALL
           WARRANTIES, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING MERCHANTABILITY,
           FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
         </LegalP>
         <LegalP>
-          Without limiting the foregoing, Cycle Found does not warrant that listings are
-          accurate, that users are trustworthy, that bicycles are safe or as described, that
-          AI outputs are correct, that local inventory or buyer demand will meet your
-          expectations, or that the Service will be uninterrupted or error-free.
+          Without limiting the foregoing, Cycle Found does not warrant that listings or
+          answers are accurate, that users are trustworthy, that items are safe or as
+          described, that AI outputs are correct (when offered), or that the Service will be
+          uninterrupted or error-free.
         </LegalP>
         <LegalP>
           To the fullest extent permitted by law, Cycle Found will not be liable for
@@ -476,8 +408,7 @@ export default function TermsPage() {
         <LegalP>
           Please read this section carefully. It affects your legal rights, including your
           right to file a lawsuit in court and to have a jury trial. This Section 20 does
-          not apply to disputes that arose or were filed before the effective date of these
-          Terms (October 27, 2026).
+          not apply to disputes that arose or were filed before October 27, 2026.
         </LegalP>
         <LegalP>
           <strong className="font-semibold text-ink">Informal resolution.</strong> Before
@@ -589,15 +520,15 @@ export default function TermsPage() {
       <LegalSection title="Changes (changelog)">
         <LegalP>
           As of October 27, 2026 (terms version 2026-10-27), we: named Fault Board Co., LLC
-          as the operating entity; disclosed Google Analytics 4 and cookie choices; added a
-          DMCA / copyright process; clarified that sellers receive a buyer’s email when
-          contacted; described beta and Northern California focus; and added binding
-          individual arbitration with a 30-day opt-out (draft — requires attorney review).
+          as the operating entity; disclosed analytics and cookie choices; added a DMCA
+          process; described beta focus; and added binding individual arbitration with a
+          30-day opt-out (draft — requires attorney review).
         </LegalP>
         <LegalP>
-          As of October 30, 2026, we described in-app parts offers and bicycle listing
-          messages in Messages (listing contact is inquiry only). Cycle Found still does not
-          process payment.
+          As of November 5, 2026 (terms version 2026-11-05), we aligned these Terms with
+          Cycle Found on community.cyclefound.com as a single Pre-Alpha site (Ask · Share ·
+          Ride): Q&A, garages (bikes, parts, tools, accessories), and buying/selling when
+          enabled — without treating Community and marketplace as separate products.
         </LegalP>
       </LegalSection>
 

@@ -219,7 +219,7 @@ export function SiteFooter() {
           href={LEGAL.communityGuidelines}
           className="text-muted hover:text-accent-hover"
         >
-          Community guidelines
+          Guidelines
         </Link>
         <Feature name="spokesCurrency">
           <Link href="/" className="text-muted hover:text-accent-hover">

@@ -12,57 +12,56 @@ import { LEGAL } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How Cycle Found collects, uses, and shares information on Community and related services.",
+    "How Cycle Found collects, uses, and shares information on community.cyclefound.com.",
   alternates: { canonical: "https://community.cyclefound.com/privacy" },
 };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage eyebrow="Legal" title="Privacy Policy" effectiveDate="October 27, 2026">
+    <LegalPage eyebrow="Legal" title="Privacy Policy" effectiveDate="November 5, 2026">
+      <p className="m-0 rounded-[10px] border border-accent-soft-border bg-accent-soft px-3.5 py-3 text-[14px] leading-[1.5] text-ink">
+        <strong className="font-semibold">Pre-Alpha.</strong> This Policy describes Cycle
+        Found on community.cyclefound.com. Some features described below may be limited,
+        demo-only, or not yet enabled.
+      </p>
       <LegalP>
         This Privacy Policy explains how Cycle Found collects, uses, and shares
         information. Cycle Found is a service operated by Fault Board Co., LLC (“Cycle
-        Found,” “we,” “us,” or “our”). Cycle Found is a DBA / trade name of Fault Board
-        Co., LLC, a California limited liability company. The Policy covers the Cycle Found
-        website and related services (the “Service”), including Community.
+        Found,” “we,” “us,” or “our”). Cycle Found is a DBA / trade name of Fault Board Co.,
+        LLC, a California limited liability company. The Policy covers Cycle Found on
+        community.cyclefound.com and related services we operate under the Cycle Found name
+        (the “Service”).
       </LegalP>
       <LegalP>
-        Cycle Found helps people browse, document, and connect about used bicycles, parts,
-        tools, and bike accessories, and includes Community (Ask · Share · Ride) for
-        questions, answers, and garage documentation. The Service is currently in beta /
-        Pre-Alpha and focused on Northern California, while available to users in the
-        United States. Garage features let signed-in users save bikes, parts, tools,
-        accessories, and related items they own (or are tracking), optionally with photos
-        and notes. Items you keep private stay with your account; items you mark for sale,
-        trade, or public discovery may be visible to other members.
+        Cycle Found helps people ask and answer questions, document garages (bikes, parts,
+        tools, accessories, and related gear), and — when market features are available —
+        browse and connect about used bikes and gear. Tagline: Ask · Share · Ride. The
+        Service is currently in Pre-Alpha / beta and focused on Northern California, while
+        available to users in the United States. Garage features let signed-in users save
+        items they own (or are tracking), optionally with photos and notes. Items you keep
+        private stay with your account; items you mark for sale, trade, or public discovery
+        may be visible to other members.
       </LegalP>
 
       <LegalSection title="1. Information users provide">
         <LegalP>Depending on how you use Cycle Found, you may provide:</LegalP>
         <LegalList>
-          <li>Name and public seller or member display name</li>
-          <li>Email address and password</li>
-          <li>Profile details such as city, state, ZIP code, and seller type</li>
+          <li>Name and public member display name</li>
+          <li>Email address and, if you set one, a password</li>
+          <li>Profile details such as city, bio, skills, or location</li>
           <li>
             Listing or garage details for bikes, parts, tools, or accessories — including
             condition notes, pricing, and location
           </li>
           <li>Photographs of bikes, parts, tools, or accessories</li>
+          <li>Questions, answers, comments, tags, and related photos you post</li>
           <li>
-            Messages you send through our contact tools, including in-app bicycle listing
-            conversations and parts offers
+            Messages you send through contact tools we provide (when those features are
+            enabled)
           </li>
+          <li>Reports you submit about content or accounts</li>
           <li>
-            Community questions, answers, comments, and related photos or tags you post
-          </li>
-          <li>
-            Listing reports you submit (reason, optional details, and related
-            listing/account identifiers)
-          </li>
-          <li>Questions or prompts you send to AI features</li>
-          <li>
-            Garage items — bikes, parts, tools, accessories, or related gear you save
-            (details, photos, notes, and related estimates you choose to generate)
+            Questions or prompts you send to AI features, when AI features are offered
           </li>
           <li>Support emails you send to us</li>
         </LegalList>
@@ -70,98 +69,71 @@ export default function PrivacyPage() {
 
       <LegalSection title="2. Account and authentication information">
         <LegalP>
-          Account creation and sign-in are handled through our authentication provider. We
-          store account identifiers and related profile records linked to your account.
+          Account creation and sign-in are handled through our authentication provider
+          (currently Supabase). We store account identifiers and related profile records
+          linked to your account.
         </LegalP>
         <LegalP>When you create an account, we may also store:</LegalP>
         <LegalList>
           <li>Full name and an initial display name derived from your name</li>
           <li>
-            We record that you confirmed you are 18 or older and accepted our Terms, with
-            the date and time, and the Terms version in effect (currently 2026-10-27)
+            Confirmation that you are 18 or older and accepted our Terms, with the date and
+            time, and the Terms version in effect (currently 2026-11-05)
           </li>
         </LegalList>
         <LegalP>
           Sessions are maintained in your browser so you can stay signed in. Email
-          verification is required before publishing listings, messaging sellers, or
-          reporting listings.
+          verification may be required before posting, listing, messaging, or reporting when
+          the Service requires it.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="3. Bicycle listing information and photographs">
+      <LegalSection title="3. Garage items, listings, and photographs">
         <LegalP>
-          When you create a listing, we collect the information you enter or confirm, which
-          may include title, description, manufacturer/model/category, frame size,
-          condition, asking price, city/state/ZIP, mechanical and cosmetic notes,
-          accessories, and related fields.
+          When you create a garage item or listing, we collect the information you enter or
+          confirm, which may include title, description, category, year, condition, asking
+          price, location, notes, and related fields.
         </LegalP>
         <LegalP>
-          Listing photos are stored in private cloud storage. Active listing photos may be
-          shown to visitors. Draft listings and draft photos are restricted to the listing
-          owner.
+          During Pre-Alpha, some garage and Community content may be stored only in your
+          browser (local storage) for demo purposes until server-backed storage is fully
+          enabled. When server storage is used, photos and item records are kept in cloud
+          infrastructure with access controls. Public items and posts are visible to
+          visitors; private items stay with your account.
         </LegalP>
         <LegalP>
-          Published (“active”) listings are publicly visible. We may also store AI
-          identification suggestions associated with a listing draft for your review. Those
-          suggestions are not written into listing details until you choose to apply them,
-          and they are never automatically written into our bicycle catalog.
-        </LegalP>
-        <LegalP>
-          If you use Garage features, we store the items you add (bike, part, tool,
-          accessory, or related gear details, photos, and notes) so you can manage them in
-          your account. Items you keep private stay with your account. If you choose to
-          show an item for discovery or sale, other people may see a basic description,
-          photo, and any estimate or asking price you make public — not private fields you
-          keep to yourself.
+          If AI identification suggestions are offered for a draft, we may store those
+          suggestions for your review. They are not written into item details until you
+          choose to apply them.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="4. Messaging and communication data">
         <LegalP>
-          Buyer-to-seller contact on Cycle Found uses in-app conversations in Messages.
-          Bicycle listings are inquiry-only (no in-app offer). Garage parts shown in Parts
-          search can include an offer amount plus a message.
+          When Cycle Found offers in-app messaging or offer tools, we may store message text
+          and related records so participants can read and reply, and we may send a
+          notification email that a message is waiting (without using the sender’s email as
+          a reply-to). Participants typically see each other’s display name, not account
+          email.
         </LegalP>
         <LegalP>
-          When a signed-in buyer sends a message about an active listing, or an offer or
-          message about a searchable part:
-        </LegalP>
-        <LegalList>
-          <li>
-            We store the message text and related conversation records so both participants
-            can read and reply in Messages. For parts, we also store the offer amount and
-            offer status
-          </li>
-          <li>
-            We send a notification email to the other participant (currently via Resend)
-            with a link to the conversation. That notice does not include the sender’s email
-            address as a reply-to
-          </li>
-          <li>
-            Participants see each other’s display name in the thread, not each other’s
-            account email
-          </li>
-        </LegalList>
-        <LegalP>
-          Cycle Found does not process payment for parts or bikes. We apply limits and
-          access controls to reduce abuse. We do not claim that contact or in-app messages
+          On Community today, member contact may also use simpler tools (for example,
+          mailto links). Cycle Found does not process payment. We do not claim that messages
           are end-to-end encrypted.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="5. Approximate location and listing location information">
+      <LegalSection title="5. Location information">
         <LegalP>We may collect location-related information in these ways:</LegalP>
         <LegalList>
           <li>
-            Listing location: city, state/region, and ZIP code you enter for a bicycle
-            listing (shown publicly on active listings)
+            Location you enter for a profile, garage item, or listing (which may be shown
+            publicly when you publish it)
           </li>
-          <li>Profile location: optional city, state, and ZIP on your seller profile</li>
           <li>
-            “Near Me” search: if you choose that option, your browser may share approximate
-            coordinates with the Service. We use a third-party reverse-geocoding service
-            (currently BigDataCloud) to estimate city/state/ZIP for search filtering. You
-            can decline location permission and pick a city instead.
+            Optional “Near Me” or similar search — only if we enable that feature and you
+            choose to share approximate coordinates. A third-party reverse-geocoding service
+            may be used to estimate city/state/ZIP. You can decline location permission.
           </li>
         </LegalList>
         <LegalP>
@@ -181,32 +153,27 @@ export default function PrivacyPage() {
 
       <LegalSection title="7. Cookies, analytics, and tracking technologies">
         <LegalP>
-          Cycle Found uses browser storage for authentication sessions, local draft listing
-          state, your analytics preference, and — on Community during Pre-Alpha — optional
-          local demo state (for example, mock questions, answers, garage items, or a soft
-          invite-gate unlock stored in the browser). That local demo data stays on your
-          device unless you clear site data. We use Google Analytics 4 to understand site
-          usage and measure marketing campaigns when you allow analytics.
+          Cycle Found uses browser storage for authentication sessions, your analytics
+          preference, Pre-Alpha invite-gate unlock state (when the soft gate is enabled),
+          and optional local demo Community data (for example, mock or locally created
+          questions, answers, or garage items). That local data stays on your device unless
+          you clear site data for community.cyclefound.com.
         </LegalP>
         <LegalP>
-          Google Analytics uses cookies and similar technologies and may collect device and
-          browser information, approximate location derived from IP address, pages viewed,
-          referral source, and interactions with the Service.
-        </LegalP>
-        <LegalP>
-          Learn more about how Google uses information from sites or apps that use its
-          services and Google’s Privacy Policy. You can also install the Google Analytics
-          opt-out browser add-on where available.
+          When you allow analytics and a measurement ID is configured, we may use Google
+          Analytics 4 to understand site usage. Google Analytics uses cookies and similar
+          technologies and may collect device and browser information, approximate location
+          derived from IP address, pages viewed, referral source, and interactions with the
+          Service.
         </LegalP>
         <LegalP>
           We configure Google Analytics so that Google Signals and ad personalization
-          signals are disabled for Cycle Found. We do not currently run a Reddit advertising
-          pixel, Meta (Facebook) Pixel, or similar third-party advertising pixel on Cycle
-          Found.
+          signals are disabled. We do not currently run a Reddit advertising pixel, Meta
+          (Facebook) Pixel, or similar third-party advertising pixel on Cycle Found.
         </LegalP>
         <LegalP>
           <strong className="font-semibold text-ink">Your choices.</strong> On first visit
-          we show a non-blocking cookie / analytics notice. You can choose OK (allow
+          we may show a non-blocking cookie / analytics notice. You can choose OK (allow
           analytics) or Turn off analytics. We store that choice in your browser’s local
           storage. You can reopen the notice anytime via Cookie settings in the site footer.
           If you turn analytics off, we do not load Google Analytics for that browser.
@@ -215,40 +182,30 @@ export default function PrivacyPage() {
           <strong className="font-semibold text-ink">
             Do Not Track and Global Privacy Control.
           </strong>{" "}
-          Some browsers send a “Do Not Track” (DNT) signal. There is no consistent industry
-          standard for responding to DNT, and Cycle Found does not currently alter its
-          practices solely based on DNT. We do honor Global Privacy Control (GPC) signals:
-          if your browser sends GPC, we disable analytics for that browser and do not load
-          Google Analytics.
+          There is no consistent industry standard for Do Not Track, and Cycle Found does
+          not currently alter its practices solely based on DNT. We do honor Global Privacy
+          Control (GPC): if your browser sends GPC, we disable analytics for that browser.
         </LegalP>
         <LegalP>
-          Third parties your browser may contact when you use the Service can include Google
-          Analytics / Google (if analytics is allowed), Google Fonts, our authentication and
-          hosting providers (currently Supabase and our web host), BigDataCloud (only if you
-          use optional “Near Me” search), and OpenAI or Resend when you use AI or email
-          features described in this Policy.
+          Third parties your browser may contact can include Google Analytics / Google (if
+          analytics is allowed), Google Fonts, our authentication and hosting providers
+          (currently Supabase and our web host), and — only if you use those features —
+          optional AI, email, or geocoding providers described in this Policy.
         </LegalP>
       </LegalSection>
 
-      <LegalSection title="8. AI processing and third-party AI providers">
+      <LegalSection title="8. AI processing (when offered)">
         <LegalP>
-          Cycle Found uses AI features for bicycle recommendations, optional photo-based
-          identification suggestions, and listing copy assistance. These features currently
-          rely on OpenAI models operated through our server-side integrations.
+          Where Cycle Found offers AI features, they may rely on third-party models (for
+          example, OpenAI) operated through our server-side integrations. Depending on the
+          feature, we may send natural-language prompts, selected photos, or listing/garage
+          context you submit.
         </LegalP>
-        <LegalP>Depending on the feature, we may send:</LegalP>
-        <LegalList>
-          <li>Your natural-language questions to the AI Bike Advisor</li>
-          <li>Selected listing photos and context for identification suggestions</li>
-          <li>
-            Confirmed listing details (and style preferences) for title and description
-            suggestions
-          </li>
-        </LegalList>
         <LegalP>
-          AI features are informational only and may be inaccurate. We do not currently use
-          AI to generate or monitor buyer–seller messages. Do not submit sensitive personal
-          information in AI prompts unless it is necessary for the feature you are using.
+          AI features are informational only and may be inaccurate. Do not submit sensitive
+          personal information in AI prompts unless it is necessary for the feature you are
+          using. Pre-Alpha Community may not offer all AI features described historically
+          for Cycle Found.
         </LegalP>
       </LegalSection>
 
@@ -256,59 +213,38 @@ export default function PrivacyPage() {
         <LegalP>We use information to:</LegalP>
         <LegalList>
           <li>Create and manage accounts and profiles</li>
-          <li>Host, display, and manage bicycle listings and photos</li>
-          <li>Enable search, browsing, and seller contact</li>
-          <li>Operate Community questions, answers, and garage features</li>
-          <li>Provide AI recommendations and listing assistance</li>
+          <li>Host questions, answers, garages, listings, and photos</li>
+          <li>Enable search, browsing, and member contact tools when available</li>
+          <li>Provide AI assistance when those features are offered</li>
+          <li>Send transactional emails (verification, password reset, and similar notices)</li>
           <li>
-            Send transactional emails (verification, password reset, and notices that a
-            listing or parts message is waiting)
-          </li>
-          <li>
-            Contact you about your account and the Service — for example, security or abuse
-            notices, material changes to the Terms or this Privacy Policy, important Service
-            updates, and replies to requests you send us. This is a normal use of the email
-            address you provide when you sign up
+            Contact you about your account and the Service — security or abuse notices,
+            material changes to the Terms or this Privacy Policy, important Service updates,
+            and replies to requests you send us
           </li>
           <li>Enforce Terms, prevent fraud and abuse, and improve safety</li>
           <li>Operate, secure, debug, and improve the Service</li>
-          <li>
-            Measure traffic and usage with Google Analytics so we can understand how the
-            Service is used and improve it
-          </li>
+          <li>Measure traffic with Google Analytics when you allow it</li>
           <li>Respond to support requests and legal obligations</li>
         </LegalList>
-        <LegalP>
-          Account and Service notices are not optional marketing mail. If we later send
-          promotional emails unrelated to your account or the operation of the Service, we
-          will provide any required opt-out and update this Policy as needed.
-        </LegalP>
       </LegalSection>
 
       <LegalSection title="10. How information is shared">
         <LegalP>We share information in these limited ways:</LegalP>
         <LegalList>
           <li>
-            Public listings and public Community content: active listing details and photos,
-            and public questions/answers/profiles you choose to publish, are visible to
-            visitors
+            Public content: questions, answers, profiles, and garage/listing details you
+            publish are visible to visitors
           </li>
           <li>
-            Buyer–seller contact: conversation records for bicycle listings and garage parts
-            are visible to the two participants in Messages. We may email a notice that a
-            message or offer is waiting; that notice does not include the sender’s email as
-            a reply-to
+            Member contact: when messaging features are enabled, conversation records are
+            visible to the participants; notification emails do not include the sender’s
+            email as a reply-to
           </li>
           <li>
-            Service providers: we use processors such as Supabase (authentication, database,
-            storage), Google Analytics / Google (site analytics), OpenAI (AI features),
-            Resend (transactional email), BigDataCloud (optional reverse geocoding), and
-            font/hosting providers
-          </li>
-          <li>
-            Analytics: when you visit Cycle Found pages, Google Analytics may receive
-            cookies, device/browser information, pages viewed, and related usage data as
-            described in Section 7
+            Service providers: processors such as Supabase (authentication, database,
+            storage), Google Analytics / Google (if allowed), optional OpenAI (AI), optional
+            email delivery, optional geocoding, and font/hosting providers
           </li>
           <li>
             Legal and safety: we may disclose information if we believe it is required by
@@ -321,37 +257,17 @@ export default function PrivacyPage() {
         </LegalList>
         <LegalP>
           We do not sell personal information, and we do not share personal information for
-          cross-context behavioral advertising. We use Google Analytics with Google Signals
-          and ad personalization signals disabled. We do not currently run a Reddit
-          advertising pixel, Meta Pixel, or similar advertising pixel on Cycle Found. If
-          that changes, we will update this Policy and provide any required opt-out
-          mechanism.
+          cross-context behavioral advertising.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="11. Data storage and security">
         <LegalP>
           We use managed cloud infrastructure with access controls intended to limit who can
-          see or change information. In general:
+          see or change information. Public Community content is visible to visitors.
+          During Pre-Alpha, some demo content may exist only in your browser’s local
+          storage until server-backed Community data is fully enabled.
         </LegalP>
-        <LegalList>
-          <li>Users can access and update their own account profile</li>
-          <li>
-            Listing owners manage their drafts; the public can view active listings
-          </li>
-          <li>
-            Listing photos are stored privately, with access limited so owners can manage
-            their media and visitors can view photos for active listings
-          </li>
-          <li>
-            Public Community questions, answers, and profile information you publish are
-            visible to visitors of Community
-          </li>
-          <li>
-            During Pre-Alpha, some Community demo content may exist only in your browser’s
-            local storage until server-backed Community data is fully enabled
-          </li>
-        </LegalList>
         <LegalP>
           No method of transmission or storage is completely secure. We cannot guarantee
           absolute security, and you use the Service understanding that residual risk
@@ -361,52 +277,44 @@ export default function PrivacyPage() {
 
       <LegalSection title="12. Message access and moderation">
         <LegalP>
-          Bicycle listing and parts conversations are stored in our application database and
-          are visible to the two participants in Messages. Authorized Cycle Found personnel
-          may process message content as needed to deliver notification emails, operate the
-          in-app inbox, apply access controls, investigate abuse or security issues, provide
-          support, or comply with law.
-        </LegalP>
-        <LegalP>
-          We do not claim that administrators routinely monitor all conversations. We also
-          do not claim end-to-end encryption.
+          When in-app conversations are stored, authorized Cycle Found personnel may process
+          message content as needed to deliver notifications, operate the feature, apply
+          access controls, investigate abuse, provide support, or comply with law. We do not
+          claim that administrators routinely monitor all conversations or that messages
+          are end-to-end encrypted.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="13. Data retention">
         <LegalP>
           We retain information for as long as needed to operate the Service, maintain
-          listings and accounts, meet legal obligations, resolve disputes, and enforce our
+          accounts and content, meet legal obligations, resolve disputes, and enforce our
           agreements. Exact retention periods are not yet formalized in an automated
           retention schedule.
         </LegalP>
         <LegalP>
-          Local draft listing data may also remain in your browser storage until cleared.
-          Email providers and AI processors may retain data according to their own retention
-          practices.
+          Local browser demo data remains until you clear site data. Email and AI processors
+          may retain data according to their own practices when those features are used.
         </LegalP>
       </LegalSection>
 
       <LegalSection title="14. Account deletion and privacy requests">
         <LegalP>
-          You can permanently delete your account from Your Account (Delete account).
-          Deletion removes your profile, marketplace listings, uploaded listing photos,
-          bikes, parts, tools, accessories, or related garage items you saved, listing or
-          parts conversations tied to your account, and Community content we control that
-          is tied to your account
-          (such as questions and answers stored on our servers), along with related account
-          data we control. Local browser demo data on Community is cleared when you clear
-          site data for community.cyclefound.com. To request access, correction, or help
-          with deletion, or to ask privacy questions, email{" "}
+          To request access, correction, or permanent deletion of your account and related
+          data we control, email{" "}
           <LegalLink href={`mailto:${LEGAL.supportEmail}`}>
             {LEGAL.supportEmail}
           </LegalLink>
-          .
+          . When an in-product delete-account control is available on Community, you may use
+          that as well. Deletion removes profile and account data we control, server-stored
+          Community content tied to your account (such as questions and answers), and
+          garage/listing records we host — subject to legal retention needs. Local browser
+          demo data on community.cyclefound.com is cleared when you clear site data for this
+          host.
         </LegalP>
         <LegalP>
           We may need to verify your request and retain certain information when required
-          for legal, security, fraud-prevention, or legitimate business purposes (for
-          example, records of a completed support investigation).
+          for legal, security, fraud-prevention, or legitimate business purposes.
         </LegalP>
       </LegalSection>
 
@@ -414,8 +322,7 @@ export default function PrivacyPage() {
         <LegalP>
           If you are a California resident, you may have rights under the California
           Consumer Privacy Act (CCPA), as amended by the California Privacy Rights Act
-          (CPRA), depending on whether those laws apply to Cycle Found at a given time (for
-          example, based on revenue or data processing thresholds).
+          (CPRA), depending on whether those laws apply to Cycle Found at a given time.
         </LegalP>
         <LegalP>
           Subject to applicability and verification, those rights may include the right to
@@ -459,17 +366,14 @@ export default function PrivacyPage() {
 
       <LegalSection title="Changes (changelog)">
         <LegalP>
-          As of October 27, 2026, we: named Fault Board Co., LLC as the operating entity;
-          updated this Policy to accurately describe Google Analytics 4, cookie choices, Do
-          Not Track, and Global Privacy Control; stated that we do not sell personal
-          information or share it for cross-context behavioral advertising; clarified garage
-          items; stated that we may contact you about your account and the Service; and
-          removed unnecessary implementation jargon.
+          As of October 27, 2026, we named Fault Board Co., LLC as the operating entity and
+          described analytics, cookie choices, GPC, and related practices.
         </LegalP>
         <LegalP>
-          As of October 30, 2026, we described in-app parts offers and bicycle listing
-          messages (stored conversation records and notification email; listing contact is
-          inquiry only).
+          As of November 5, 2026, we aligned this Policy with Cycle Found on
+          community.cyclefound.com as a single Pre-Alpha site: Q&A, garages (bikes, parts,
+          tools, accessories), optional buy/sell, local demo storage, Cookie settings, and
+          deletion via email until in-product account deletion is available.
         </LegalP>
       </LegalSection>
 
