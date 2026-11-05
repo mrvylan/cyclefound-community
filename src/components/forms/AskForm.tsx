@@ -13,6 +13,9 @@ import {
   tagSuggestions,
 } from "@/lib/data/local-store";
 
+const MIN_TITLE = 12;
+const MIN_DETAILS = 20;
+
 export function AskForm() {
   const router = useRouter();
   const [handle, setHandle] = useState(getSessionHandle());
@@ -29,6 +32,8 @@ export function AskForm() {
 
   const garageItems = useMemo(() => getGarageItemsFor(handle), [handle]);
   const suggestions = tagSuggestions().filter((t) => !tags.includes(t));
+  const titleLen = title.trim().length;
+  const bodyLen = body.trim().length;
 
   function addTag(raw: string) {
     const t = raw.trim().toLowerCase().replace(/\s+/g, "-");
@@ -39,12 +44,16 @@ export function AskForm() {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || title.trim().length < 12) {
-      setError("Add a clearer title (at least a short sentence).");
+    if (titleLen < MIN_TITLE) {
+      setError(
+        `Title needs at least ${MIN_TITLE} characters (you have ${titleLen}). Make it a short, specific sentence.`,
+      );
       return;
     }
-    if (!body.trim() || body.trim().length < 20) {
-      setError("Add a bit more detail so people can help.");
+    if (bodyLen < MIN_DETAILS) {
+      setError(
+        `Details need at least ${MIN_DETAILS} characters (you have ${bodyLen}). Add what you’ve tried, bike year/make if relevant, and what a good answer looks like.`,
+      );
       return;
     }
     setError("");
@@ -77,10 +86,17 @@ export function AskForm() {
           <input
             id="q-title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (error) setError("");
+            }}
             placeholder="What’s stuck — be specific"
+            aria-describedby="q-title-help"
             className="h-12 rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent"
           />
+          <p id="q-title-help" className="m-0 text-[13px] leading-[1.45] text-muted">
+            At least {MIN_TITLE} characters. One clear sentence beats a vague subject line.
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -91,10 +107,26 @@ export function AskForm() {
             id="q-body"
             rows={6}
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(e) => {
+              setBody(e.target.value);
+              if (error) setError("");
+            }}
             placeholder="What you’ve tried, year/make if relevant, and what a good answer looks like."
+            aria-describedby="q-body-help"
             className="rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 py-3 text-[16px] leading-[1.55] text-ink outline-none focus:border-accent"
           />
+          <p id="q-body-help" className="m-0 text-[13px] leading-[1.45] text-muted">
+            At least {MIN_DETAILS} characters. Include what you’ve already tried, bike year/make if
+            it matters, and what “solved” looks like for you.
+            {bodyLen > 0 ? (
+              <>
+                {" "}
+                <span className="font-mono text-[12px]">
+                  {bodyLen}/{MIN_DETAILS}
+                </span>
+              </>
+            ) : null}
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -164,7 +196,14 @@ export function AskForm() {
           ) : null}
         </div>
 
-        {error ? <p className="m-0 text-[14px] font-medium text-[#9B2C2C]">{error}</p> : null}
+        {error ? (
+          <p
+            role="alert"
+            className="m-0 rounded-[10px] border border-[#E8C4C4] bg-[#FBF1F1] px-3.5 py-3 text-[14px] leading-[1.45] font-medium text-[#9B2C2C]"
+          >
+            {error}
+          </p>
+        ) : null}
 
         <div className="flex flex-wrap gap-2.5 border-t border-line-soft pt-4">
           <button
