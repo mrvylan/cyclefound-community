@@ -79,7 +79,7 @@ export function SiteHeader() {
   }, [menuOpen]);
 
   return (
-    <header className="border-b border-line bg-white/90 text-ink backdrop-blur-[10px]">
+    <header className="relative z-50 border-b border-line bg-white/90 text-ink backdrop-blur-[10px]">
       <div className="mx-auto flex max-w-[1280px] items-center gap-x-5 px-8 py-3 lg:gap-x-7">
         <Link href="/" aria-label="Cycle Found home" className="shrink-0">
           <Image
