@@ -16,7 +16,12 @@ import {
   subscribeStore,
 } from "@/lib/data/local-store";
 import { createClient } from "@/lib/supabase/client";
-import { prepareAvatar, uploadAvatarToStorage } from "@/lib/profile/avatarUpload";
+import {
+  prepareAvatar,
+  prepareCover,
+  uploadAvatarToStorage,
+  uploadCoverToStorage,
+} from "@/lib/profile/avatarUpload";
 import { profileService } from "@/lib/profile/profileService";
 import { colorForId, initialsFromName } from "@/lib/auth/user";
 
@@ -36,10 +41,12 @@ export function ProfileEditForm() {
   const router = useRouter();
   const { ready, user, profile, refresh } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
 
   const [handle, setHandle] = useState(getSessionHandle());
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
   const [city, setCity] = useState("");
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -60,6 +67,7 @@ export function ProfileEditForm() {
       setSkills(person.skills);
       setWantedText(getWantedLines(h).join("\n"));
       setAvatarUrl(person.avatarUrl || "");
+      setCoverUrl(person.coverUrl || "");
       return;
     }
     if (profile && handleFromAuthProfile(profile) === h) {
@@ -135,6 +143,36 @@ export function ProfileEditForm() {
     }
   }
 
+  async function onPickCover(file: File | null) {
+    if (!file) return;
+    setError("");
+    setHint("");
+    setUploading(true);
+    try {
+      const prepared = await prepareCover(file);
+      let nextUrl = prepared.dataUrl;
+
+      if (user) {
+        try {
+          nextUrl = await uploadCoverToStorage(user.id, prepared.blob);
+        } catch (err) {
+          setHint(
+            err instanceof Error
+              ? err.message
+              : "Cover saved on this device. Cloud storage isn’t available yet.",
+          );
+          nextUrl = prepared.dataUrl;
+        }
+      }
+
+      setCoverUrl(nextUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not use that cover photo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -157,6 +195,7 @@ export function ProfileEditForm() {
           .map((l) => l.trim())
           .filter(Boolean),
         avatarUrl: avatarUrl || undefined,
+        coverUrl: coverUrl || undefined,
       });
 
       if (user && profile) {
@@ -209,52 +248,102 @@ export function ProfileEditForm() {
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-center gap-5 rounded-[14px] border border-line bg-white p-5">
-          <div className="relative">
-            <Avatar
-              init={previewInit}
-              bg={previewBg}
-              size={96}
-              src={avatarUrl || null}
-              label="Profile photo"
-            />
-            {avatarUrl ? (
-              <button
-                type="button"
-                aria-label="Remove profile photo"
-                onClick={() => {
-                  setAvatarUrl("");
-                  setHint("");
-                }}
-                className="absolute -right-1 -top-1 inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-ink shadow-sm"
-              >
-                <X className="size-3.5" aria-hidden />
-              </button>
-            ) : null}
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <p className="m-0 text-[14px] font-semibold text-ink">Profile photo</p>
-            <p className="m-0 text-[13px] text-muted">
-              Shown on your profile and in the header. Square photos work best.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={uploading}
-                onClick={() => fileRef.current?.click()}
-                className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink hover:bg-ground disabled:opacity-60"
-              >
-                <Camera className="size-4" aria-hidden />
-                {uploading ? "Processing…" : avatarUrl ? "Change photo" : "Upload photo"}
-              </button>
+        <div className="flex flex-col gap-4 rounded-[14px] border border-line bg-white p-5">
+          <div className="flex flex-wrap items-center gap-5">
+            <div className="relative">
+              <Avatar
+                init={previewInit}
+                bg={previewBg}
+                size={96}
+                src={avatarUrl || null}
+                label="Profile photo"
+              />
+              {avatarUrl ? (
+                <button
+                  type="button"
+                  aria-label="Remove profile photo"
+                  onClick={() => {
+                    setAvatarUrl("");
+                    setHint("");
+                  }}
+                  className="absolute -right-1 -top-1 inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-ink shadow-sm"
+                >
+                  <X className="size-3.5" aria-hidden />
+                </button>
+              ) : null}
             </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <p className="m-0 text-[14px] font-semibold text-ink">Profile photo</p>
+              <p className="m-0 text-[13px] text-muted">
+                Shown on your profile and in the header. Square photos work best.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink hover:bg-ground disabled:opacity-60"
+                >
+                  <Camera className="size-4" aria-hidden />
+                  {uploading ? "Processing…" : avatarUrl ? "Change photo" : "Upload photo"}
+                </button>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/*"
+                className="sr-only"
+                onChange={(e) => {
+                  void onPickAvatar(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-line-soft pt-4">
+            <p className="m-0 text-[14px] font-semibold text-ink">Cover photo</p>
+            <p className="mt-1 mb-3 text-[13px] text-muted">
+              Wide banner at the top of your profile (workshop, garage, ride). Optional.
+            </p>
+            <div className="relative mb-3 h-28 overflow-hidden rounded-[10px] border border-line bg-ground">
+              {coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <div className="flex size-full items-end justify-start p-3">
+                  <span className="rounded-md bg-white px-2 py-1 font-mono text-[11px] text-ink">
+                    No cover yet
+                  </span>
+                </div>
+              )}
+              {coverUrl ? (
+                <button
+                  type="button"
+                  aria-label="Remove cover photo"
+                  onClick={() => setCoverUrl("")}
+                  className="absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-full border border-line bg-white text-ink shadow-sm"
+                >
+                  <X className="size-3.5" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => coverRef.current?.click()}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink hover:bg-ground disabled:opacity-60"
+            >
+              <Camera className="size-4" aria-hidden />
+              {uploading ? "Processing…" : coverUrl ? "Change cover" : "Upload cover"}
+            </button>
             <input
-              ref={fileRef}
+              ref={coverRef}
               type="file"
               accept="image/jpeg,image/png,image/webp,image/*"
               className="sr-only"
               onChange={(e) => {
-                void onPickAvatar(e.target.files?.[0] ?? null);
+                void onPickCover(e.target.files?.[0] ?? null);
                 e.target.value = "";
               }}
             />

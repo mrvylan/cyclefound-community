@@ -35,6 +35,9 @@ export function ProfileIdentity({
     return subscribeStore(sync);
   }, [handle]);
 
+  /* ~5% of 148px circle overlaps the cover (~7–8px). */
+  const overlap = "-mt-2";
+
   if (identity.avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -43,14 +46,14 @@ export function ProfileIdentity({
         alt=""
         width={148}
         height={148}
-        className="-mt-[74px] size-[148px] shrink-0 rounded-full border-[6px] border-ink object-cover"
+        className={`${overlap} size-[148px] shrink-0 rounded-full border-[6px] border-ink object-cover`}
       />
     );
   }
 
   return (
     <span
-      className="font-display -mt-[74px] inline-flex size-[148px] shrink-0 items-center justify-center rounded-full border-[6px] border-ink text-[52px] text-white"
+      className={`font-display ${overlap} inline-flex size-[148px] shrink-0 items-center justify-center rounded-full border-[6px] border-ink text-[52px] text-white`}
       style={{ background: identity.bg }}
       aria-hidden
     >

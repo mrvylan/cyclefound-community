@@ -26,6 +26,8 @@ export type Person = {
   memberSince: string;
   /** Optional profile photo URL (data URL or storage public URL). */
   avatarUrl?: string;
+  /** Optional profile cover / workshop banner. */
+  coverUrl?: string;
 };
 
 export type Garage = {

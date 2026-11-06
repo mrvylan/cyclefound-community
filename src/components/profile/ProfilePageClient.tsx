@@ -6,6 +6,7 @@ import { ShieldCheck, Star } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { MessageMember } from "@/components/messaging/MessageMember";
+import { ProfileCover } from "@/components/profile/ProfileCover";
 import {
   ProfileDisplayName,
   ProfileIdentity,
@@ -90,12 +91,11 @@ export function ProfilePageClient({
   return (
     <>
       <section className="bg-ink text-white">
-        <PlaceholderPhoto
-          dark
-          label={`Cover photo: ${firstName}'s workshop`}
-          className="h-[200px] justify-end"
+        <ProfileCover
+          handle={handle}
+          fallbackLabel={`Cover photo: ${firstName}'s workshop`}
         />
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-end gap-x-8 gap-y-6 px-8 pb-8">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-end gap-x-8 gap-y-6 px-8 pb-8 pt-2">
           <ProfileIdentity
             handle={handle}
             fallback={{
@@ -105,7 +105,7 @@ export function ProfilePageClient({
               avatarUrl: person.avatarUrl,
             }}
           />
-          <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-2 pt-4">
+          <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-2 pt-1">
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">
               <ProfileDisplayName
                 handle={handle}

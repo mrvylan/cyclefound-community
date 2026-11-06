@@ -28,6 +28,8 @@ export type LocalProfilePatch = {
   wantedLines?: string[];
   /** Profile photo — data URL or remote URL. */
   avatarUrl?: string;
+  /** Cover / workshop banner — data URL or remote URL. */
+  coverUrl?: string;
 };
 
 function initialsFromDisplayName(name: string) {
@@ -123,6 +125,7 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
     memberSince: "2026",
     roleBadge: "Member",
     avatarUrl: patch?.avatarUrl || undefined,
+    coverUrl: patch?.coverUrl || undefined,
   };
 }
 
@@ -144,6 +147,7 @@ export function getMergedPerson(handle: string): Person | undefined {
     bio: patch.bio ?? base.bio,
     skills: patch.skills ?? base.skills,
     avatarUrl: patch.avatarUrl ?? base.avatarUrl,
+    coverUrl: patch.coverUrl ?? base.coverUrl,
   };
 }
 
