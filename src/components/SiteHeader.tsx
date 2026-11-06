@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, Search, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AccountMenu } from "./auth/AccountMenu";
 import { MockDataControl } from "./MockDataControl";
+import { SearchTrigger } from "./search/SearchOverlay";
 import { Feature } from "./Feature";
 import { openCookieSettings } from "@/lib/cookie-consent";
 import {
@@ -68,7 +69,8 @@ export function activeNavFromPath(pathname: string): NavItem["match"] | null {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/messages") ||
     pathname.startsWith("/account") ||
-    pathname.startsWith("/settings")
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/search")
   ) {
     return null;
   }
@@ -147,26 +149,7 @@ export function SiteHeader() {
           </nav>
         ) : null}
 
-        {!onAuth ? (
-          <form
-            role="search"
-            className="flex h-[42px] min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-ground px-3"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <Search className="size-[18px] shrink-0 text-muted" aria-hidden />
-            <label htmlFor="gsearch" className="sr-only">
-              Search Cycle Found
-            </label>
-            <input
-              id="gsearch"
-              type="search"
-              placeholder="Search Cycle Found"
-              className="min-w-0 flex-1 border-0 bg-transparent text-[14px] text-ink outline-none placeholder:text-[#929792]"
-            />
-          </form>
-        ) : (
-          <div className="min-w-0 flex-1" />
-        )}
+        {!onAuth ? <SearchTrigger /> : <div className="min-w-0 flex-1" />}
 
         {!onAuth ? (
           <Link
