@@ -66,18 +66,13 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
         aria-label={`Account menu, ${profile.displayName}`}
         onClick={() => setOpen((v) => !v)}
       >
-        {profile.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={profile.avatarUrl}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 rounded-full object-cover"
-          />
-        ) : (
-          <Avatar init={profile.initials} bg={profile.avatarColor} size={40} />
-        )}
+        <Avatar
+          init={profile.initials}
+          bg={profile.avatarColor}
+          size={40}
+          src={profile.avatarUrl || null}
+          label={profile.displayName}
+        />
         <span className="hidden max-w-[7rem] truncate text-[14px] font-semibold text-ink sm:inline">
           {profile.displayName}
         </span>

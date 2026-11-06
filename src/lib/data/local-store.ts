@@ -23,7 +23,23 @@ export type LocalProfilePatch = {
   bio?: string;
   skills?: string[];
   wantedLines?: string[];
+  /** Profile photo — data URL or remote URL. */
+  avatarUrl?: string;
 };
+
+function initialsFromDisplayName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0]!}${parts[1]![0]!}`.toUpperCase();
+  }
+  if (parts.length === 1 && parts[0]!.length >= 2) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  if (parts.length === 1) {
+    return `${parts[0]![0]!}${parts[0]![0]!}`.toUpperCase();
+  }
+  return "CF";
+}
 
 type LocalStore = {
   sessionHandle: string;
@@ -87,15 +103,10 @@ export function getMergedPerson(handle: string): Person | undefined {
     if (!patch?.name) return undefined;
     // Auth / demo actor with no seed row — enough for post attribution.
     const name = patch.name;
-    const parts = name.trim().split(/\s+/);
-    const init =
-      parts.length >= 2
-        ? `${parts[0]![0]!}${parts[1]![0]!}`.toUpperCase()
-        : name.slice(0, 2).toUpperCase();
     return {
       handle,
       name,
-      init,
+      init: initialsFromDisplayName(name),
       bg: "#527D31",
       role: "Member",
       loc: patch.loc ?? "",
@@ -113,15 +124,19 @@ export function getMergedPerson(handle: string): Person | undefined {
       verified: false,
       memberSince: "2026",
       roleBadge: "Member",
+      avatarUrl: patch.avatarUrl || undefined,
     };
   }
   if (!patch) return base;
+  const name = patch.name ?? base.name;
   return {
     ...base,
-    name: patch.name ?? base.name,
+    name,
+    init: patch.name ? initialsFromDisplayName(name) : base.init,
     loc: patch.loc ?? base.loc,
     bio: patch.bio ?? base.bio,
     skills: patch.skills ?? base.skills,
+    avatarUrl: patch.avatarUrl ?? base.avatarUrl,
   };
 }
 

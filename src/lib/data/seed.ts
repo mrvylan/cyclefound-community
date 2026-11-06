@@ -24,6 +24,8 @@ export type Person = {
   /** Optional manual badge shown when verifiedBadges feature is off (e.g. "Founding expert"). */
   roleBadge?: string;
   memberSince: string;
+  /** Optional profile photo URL (data URL or storage public URL). */
+  avatarUrl?: string;
 };
 
 export type Garage = {

@@ -8,14 +8,29 @@ export function Avatar({
   size = 40,
   href,
   label,
+  src,
 }: {
   init: string;
   bg: string;
   size?: number;
   href?: string;
   label?: string;
+  /** When set, shows a photo instead of initials. */
+  src?: string | null;
 }) {
-  const el = (
+  const el = src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className="shrink-0 rounded-full object-cover"
+      style={{ width: size, height: size }}
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+    />
+  ) : (
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
       style={{

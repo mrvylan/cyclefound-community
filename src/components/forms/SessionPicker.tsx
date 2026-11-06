@@ -34,8 +34,11 @@ export function SessionPicker({ className = "" }: { className?: string }) {
 
     if (profile) {
       const next = handleFromAuthProfile(profile);
-      const name = profile.fullName || profile.displayName;
-      saveProfilePatch(next, { name });
+      const name = profile.displayName || profile.fullName;
+      saveProfilePatch(next, {
+        name,
+        ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
+      });
       if (getSessionHandle() !== next) setSessionHandle(next);
       setHandle(next);
       return;
@@ -50,7 +53,7 @@ export function SessionPicker({ className = "" }: { className?: string }) {
       <p className={`m-0 text-[13px] text-muted ${className}`}>
         Posting as{" "}
         <span className="font-semibold text-ink">
-          {profile.fullName || profile.displayName}
+          {profile.displayName || profile.fullName}
         </span>
       </p>
     );

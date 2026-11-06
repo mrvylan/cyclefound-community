@@ -1,0 +1,115 @@
+/**
+ * Duplicated from Cycle-Found-Website profileService.
+ * Shared `profiles` table via RLS. Keep in sync until repos merge.
+ */
+import { createClient } from "@/lib/supabase/client";
+
+export type SellerProfile = {
+  id: string;
+  fullName: string;
+  displayName: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  avatarUrl: string;
+  sellerType: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+function normalizeProfile(row: Record<string, unknown> | null): SellerProfile | null {
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    fullName: String(row.full_name ?? ""),
+    displayName: String(row.display_name ?? ""),
+    city: String(row.city ?? ""),
+    state: String(row.state ?? ""),
+    zipCode: String(row.zip_code ?? ""),
+    avatarUrl: String(row.avatar_url ?? ""),
+    sellerType: String(row.seller_type ?? "individual"),
+    createdAt: (row.created_at as string | null) ?? null,
+    updatedAt: (row.updated_at as string | null) ?? null,
+  };
+}
+
+const SELECT =
+  "id, full_name, display_name, city, state, zip_code, avatar_url, seller_type, created_at, updated_at";
+
+export const profileService = {
+  async getMyProfile() {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(SELECT)
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    return normalizeProfile(data as Record<string, unknown> | null);
+  },
+
+  async updateMyProfile(updates: {
+    fullName?: string;
+    displayName?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    avatarUrl?: string | null;
+    sellerType?: string;
+  }) {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error("You must be signed in to update your profile.");
+
+    const payload: Record<string, string | null> = {};
+    if (updates.fullName !== undefined) payload.full_name = String(updates.fullName).trim();
+    if (updates.displayName !== undefined) {
+      payload.display_name = String(updates.displayName).trim();
+    }
+    if (updates.city !== undefined) payload.city = String(updates.city).trim() || null;
+    if (updates.state !== undefined) payload.state = String(updates.state).trim() || null;
+    if (updates.zipCode !== undefined) {
+      payload.zip_code = String(updates.zipCode).trim() || null;
+    }
+    if (updates.avatarUrl !== undefined) {
+      payload.avatar_url = String(updates.avatarUrl || "").trim() || null;
+    }
+    if (updates.sellerType !== undefined) {
+      const sellerType = String(updates.sellerType).trim();
+      if (!["individual", "business"].includes(sellerType)) {
+        throw new Error("Seller type must be Individual or Business.");
+      }
+      payload.seller_type = sellerType;
+    }
+
+    if (payload.display_name !== undefined && !payload.display_name) {
+      throw new Error("Display name is required.");
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", user.id)
+      .select(SELECT)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      throw new Error(
+        "No profile row found for this account. Sign out and back in, or contact support if this continues.",
+      );
+    }
+    return normalizeProfile(data as Record<string, unknown>);
+  },
+};

@@ -4,6 +4,10 @@ import { ShieldCheck, Star } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { MessageMember } from "@/components/messaging/MessageMember";
+import {
+  ProfileDisplayName,
+  ProfileIdentity,
+} from "@/components/profile/ProfileIdentity";
 import { WantedList } from "@/components/WantedList";
 import {
   Avatar,
@@ -73,17 +77,22 @@ export default async function ProfilePage({
           className="h-[200px] justify-end"
         />
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-end gap-x-8 gap-y-6 px-8 pb-8">
-          <span
-            className="font-display -mt-[74px] inline-flex size-[148px] shrink-0 items-center justify-center rounded-full border-[6px] border-ink text-[52px] text-white"
-            style={{ background: person.bg }}
-          >
-            {person.init}
-          </span>
+          <ProfileIdentity
+            handle={handle}
+            fallback={{
+              name: person.name,
+              init: person.init,
+              bg: person.bg,
+              avatarUrl: person.avatarUrl,
+            }}
+          />
           <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-2 pt-4">
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">
-              <h1 className="font-display m-0 text-[clamp(36px,5vw,54px)] leading-none">
-                {person.name}
-              </h1>
+              <ProfileDisplayName
+                handle={handle}
+                fallback={person.name}
+                className="font-display m-0 text-[clamp(36px,5vw,54px)] leading-none"
+              />
               <Feature name="spokesLevels">
                 <LevelBadge level={person.level} bright />
               </Feature>
