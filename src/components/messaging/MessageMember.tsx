@@ -13,9 +13,11 @@ type Props = {
   handle: string;
   name: string;
   variant?: "light" | "dark";
-  /** When set, renders an accent Ask CTA that opens the same message popover. */
+  /** When set, renders an accent Ask CTA with its own popover. */
   askLabel?: string;
 };
+
+type Panel = "ask" | "message" | null;
 
 export function MessageMember({
   handle,
@@ -26,7 +28,7 @@ export function MessageMember({
   const { ready, configured, user, profile } = useAuth();
   const router = useRouter();
   const [sessionHandle, setSessionHandleState] = useState("");
-  const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState<Panel>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
@@ -38,7 +40,9 @@ export function MessageMember({
 
   const actor = ready ? buildGarageActor(user, profile, sessionHandle) : null;
   const isSelf = Boolean(actor?.handle && actor.handle === handle);
+  const firstName = name.split(" ")[0] || name;
   const nextPath = `/u/${handle}`;
+  const askHref = `/ask?to=${encodeURIComponent(handle)}`;
   const needsLogin = ready && configured && !user && !sessionHandle;
   const needsVerify = Boolean(user) && !user?.email_confirmed_at;
 
@@ -50,8 +54,9 @@ export function MessageMember({
   const askBtnClass =
     "inline-flex h-[46px] items-center rounded-[10px] bg-accent px-[22px] font-semibold text-white hover:bg-accent-hover";
 
-  function toggleOpen() {
-    setOpen((v) => !v);
+  function openPanel(next: "ask" | "message") {
+    setError("");
+    setPanel((cur) => (cur === next ? null : next));
   }
 
   async function onSubmit(event: React.FormEvent) {
@@ -70,6 +75,7 @@ export function MessageMember({
         name,
       });
       setMessage("");
+      setPanel(null);
       router.push(`/messages?id=${encodeURIComponent(result.threadId)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send the message.");
@@ -96,14 +102,46 @@ export function MessageMember({
   return (
     <div className="relative flex flex-wrap gap-2.5">
       {askLabel ? (
-        <button type="button" onClick={toggleOpen} className={askBtnClass}>
+        <button type="button" onClick={() => openPanel("ask")} className={askBtnClass}>
           {askLabel}
         </button>
       ) : null}
-      <button type="button" onClick={toggleOpen} className={messageBtnClass}>
+      <button
+        type="button"
+        onClick={() => openPanel("message")}
+        className={messageBtnClass}
+      >
         Message
       </button>
-      {open ? (
+
+      {panel === "ask" ? (
+        <div className="absolute right-0 top-full z-40 mt-2 w-[min(100vw-2rem,340px)] rounded-[14px] border border-line bg-white p-4 text-ink shadow-[0_12px_32px_rgba(16,23,27,0.12)]">
+          <p className="m-0 mb-3 text-[14px] leading-snug text-muted-2">
+            {isSelf
+              ? "This is your profile. Ask the community from the workbench."
+              : needsLogin
+                ? "Log in to ask this member a question."
+                : `Ask ${firstName}. Your question will be posted.`}
+          </p>
+          {needsLogin ? (
+            <Link
+              href={authHref("login", nextPath)}
+              className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+            >
+              Log in to ask
+            </Link>
+          ) : (
+            <Link
+              href={isSelf ? "/ask" : askHref}
+              className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+            >
+              Ask
+            </Link>
+          )}
+        </div>
+      ) : null}
+
+      {panel === "message" ? (
         <div className="absolute right-0 top-full z-40 mt-2 w-[min(100vw-2rem,340px)] rounded-[14px] border border-line bg-white p-4 text-ink shadow-[0_12px_32px_rgba(16,23,27,0.12)]">
           <p className="m-0 mb-3 text-[14px] leading-snug text-muted-2">
             {isSelf
@@ -112,7 +150,7 @@ export function MessageMember({
                 ? "Log in to message this member in Cycle Found."
                 : needsVerify
                   ? "Verify your email before messaging members."
-                  : `Message ${name.split(" ")[0]}. Conversation continues in Messages.`}
+                  : `Message ${firstName}. Conversation continues in Messages.`}
           </p>
           {needsLogin ? (
             <Link
@@ -155,7 +193,7 @@ export function MessageMember({
                 disabled={sending}
                 className="h-11 rounded-[10px] border-0 bg-accent text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
               >
-                {sending ? "Sending…" : "Send message"}
+                {sending ? "Sending…" : "Message"}
               </button>
             </form>
           ) : null}

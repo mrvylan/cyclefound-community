@@ -8,8 +8,8 @@ export function EmptyState({
 }: {
   title: string;
   description?: string;
-  actionLabel: string;
-  actionHref: string;
+  actionLabel?: string;
+  actionHref?: string;
 }) {
   return (
     <div className="flex flex-col items-start gap-3 rounded-[14px] border border-dashed border-line bg-surface px-6 py-10">
@@ -19,12 +19,14 @@ export function EmptyState({
           {description}
         </p>
       ) : null}
-      <Link
-        href={actionHref}
-        className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-      >
-        {actionLabel}
-      </Link>
+      {actionLabel && actionHref ? (
+        <Link
+          href={actionHref}
+          className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+        >
+          {actionLabel}
+        </Link>
+      ) : null}
     </div>
   );
 }

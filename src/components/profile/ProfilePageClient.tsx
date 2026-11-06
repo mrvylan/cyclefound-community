@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import {
   getGarageItemsFor,
+  getSessionHandle,
   isMockDataEnabled,
   resolvePerson,
   subscribeStore,
@@ -35,15 +36,21 @@ export function ProfilePageClient({
 }) {
   const [tick, setTick] = useState(0);
   const [ready, setReady] = useState(false);
+  const [sessionHandle, setSessionHandle] = useState("");
 
   useEffect(() => {
     setReady(true);
-    return subscribeStore(() => setTick((t) => t + 1));
+    setSessionHandle(getSessionHandle());
+    return subscribeStore(() => {
+      setSessionHandle(getSessionHandle());
+      setTick((t) => t + 1);
+    });
   }, []);
 
   void tick;
 
   const person = ready ? resolvePerson(handle) : undefined;
+  const isOwnProfile = Boolean(sessionHandle && sessionHandle === handle);
   const tab = tabParam || "Garage";
   const ownedItems = ready ? getGarageItemsFor(handle) : [];
   const profile =
@@ -144,12 +151,14 @@ export function ProfilePageClient({
             ) : null}
           </div>
           <div className="flex flex-[1_1_280px] flex-wrap justify-end gap-2.5">
-            <Link
-              href="/settings/profile"
-              className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-white px-[18px] font-semibold text-ink no-underline hover:text-ink"
-            >
-              Edit profile
-            </Link>
+            {isOwnProfile ? (
+              <Link
+                href="/settings/profile"
+                className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-white px-[18px] font-semibold text-ink no-underline hover:text-ink"
+              >
+                Edit profile
+              </Link>
+            ) : null}
             <MessageMember
               handle={person.handle}
               name={person.name}
@@ -209,10 +218,15 @@ export function ProfilePageClient({
             <h2 className="font-display mb-4 mt-0 text-[22px]">Expertise</h2>
             {person.skills.length === 0 && !profile ? (
               <p className="m-0 text-[14px] text-muted-2">
-                No expertise tags yet.{" "}
-                <Link href="/settings/profile" className="font-semibold text-accent">
-                  Edit profile
-                </Link>
+                No expertise tags yet.
+                {isOwnProfile ? (
+                  <>
+                    {" "}
+                    <Link href="/settings/profile" className="font-semibold text-accent">
+                      Edit profile
+                    </Link>
+                  </>
+                ) : null}
               </p>
             ) : (
               <ul className="m-0 flex list-none flex-col gap-3.5 p-0">

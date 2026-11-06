@@ -15,6 +15,7 @@ import {
 import { FEATURES } from "@/lib/features";
 import {
   getGarageItemsFor,
+  getSessionHandle,
   getWantedLines,
   resolvePerson,
   subscribeStore,
@@ -39,17 +40,23 @@ export default function GaragePage({
   const { handle } = use(params);
   const [tick, setTick] = useState(0);
   const [ready, setReady] = useState(false);
+  const [sessionHandle, setSessionHandle] = useState("");
   const [cat, setCat] = useState("All");
   const [view, setView] = useState("Grid");
   const [availability, setAvailability] = useState("Everything");
 
   useEffect(() => {
     setReady(true);
-    return subscribeStore(() => setTick((t) => t + 1));
+    setSessionHandle(getSessionHandle());
+    return subscribeStore(() => {
+      setSessionHandle(getSessionHandle());
+      setTick((t) => t + 1);
+    });
   }, []);
   void tick;
 
   const person = ready ? resolvePerson(handle) : undefined;
+  const isOwnGarage = Boolean(sessionHandle && sessionHandle === handle);
   const garage = getGarage(handle);
   const ownerWanted = ready ? getWantedLines(handle) : [];
 
@@ -344,9 +351,13 @@ export default function GaragePage({
             ) : (
               <EmptyState
                 title="No wanted parts yet"
-                description="Add plain-text lines for parts you’re looking for."
-                actionLabel="Edit profile"
-                actionHref="/settings/profile"
+                description={
+                  isOwnGarage
+                    ? "Add plain-text lines for parts you’re looking for."
+                    : `${person.name.split(" ")[0]} hasn’t listed wanted parts yet.`
+                }
+                actionLabel={isOwnGarage ? "Edit profile" : undefined}
+                actionHref={isOwnGarage ? "/settings/profile" : undefined}
               />
             )}
           </section>
