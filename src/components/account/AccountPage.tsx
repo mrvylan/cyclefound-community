@@ -16,9 +16,6 @@ import { deleteMyAccount } from "@/lib/profile/deleteAccountApi";
 import { profileService } from "@/lib/profile/profileService";
 import { normalizeUsStateCode, US_STATES } from "@/lib/usStates";
 
-const MARKETPLACE_ACCOUNT = "https://www.cyclefound.com/account.html";
-const MARKETPLACE_SELL = "https://www.cyclefound.com/sell.html";
-
 const field =
   "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent";
 const selectField =
@@ -225,8 +222,7 @@ export function AccountPage() {
         <p className="eyebrow m-0">Account</p>
         <h1 className="font-display m-0 mt-2 text-[clamp(36px,5vw,56px)]">Your account</h1>
         <p className="mt-3 text-[16px] text-muted-2">
-          Manage your garage, marketplace listings, and the details others see. Your email
-          stays private.
+          Manage your garage and the details others see. Your email stays private.
         </p>
       </div>
 
@@ -289,32 +285,6 @@ export function AccountPage() {
             >
               Add item
             </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-[14px] border border-line bg-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display m-0 text-[22px]">My listings</h2>
-            <p className="mt-1 mb-0 text-[14px] text-muted-2">
-              Edit, pause, archive, restore, or remove drafts and published bikes on Cycle
-              Found marketplace.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <a
-              href={MARKETPLACE_ACCOUNT}
-              className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline"
-            >
-              Manage listings
-            </a>
-            <a
-              href={MARKETPLACE_SELL}
-              className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-            >
-              Create listing
-            </a>
           </div>
         </div>
       </section>
