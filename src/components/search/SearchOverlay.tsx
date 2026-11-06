@@ -61,6 +61,8 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
     return subscribeStore(() => setTick((t) => t + 1));
   }, []);
 
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+
   useEffect(() => {
     if (!open) return;
     setQuery(initialQuery);
@@ -73,6 +75,19 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
       document.body.style.overflow = prev;
     };
   }, [open, initialQuery]);
+
+  // Capture-phase Escape: type=search inputs often swallow Esc before React sees it.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open, close]);
 
   void tick;
 
@@ -87,8 +102,6 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
   useEffect(() => {
     setActiveIndex(0);
   }, [query]);
-
-  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
   const goTo = useCallback(
     (href: string) => {
@@ -110,11 +123,6 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      close();
-      return;
-    }
     if (event.key === "ArrowDown") {
       event.preventDefault();
       if (!flat.length) return;
@@ -145,19 +153,23 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
   );
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[min(12vh,7rem)] sm:px-6">
-      <button
-        type="button"
-        aria-label="Close search"
-        className="absolute inset-0 border-0 bg-ink/40 backdrop-blur-[2px]"
-        onClick={close}
-      />
-
+    <div
+      className="fixed inset-0 z-[80] flex items-start justify-center bg-ink/40 px-4 pt-[min(12vh,7rem)] backdrop-blur-[2px] sm:px-6"
+      onMouseDown={(event) => {
+        // Close when pressing outside the card (mousedown so it wins over focus quirks).
+        if (event.target === event.currentTarget) close();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         className="relative z-[81] flex w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] border border-line bg-white shadow-[0_24px_64px_rgba(16,23,27,0.22)]"
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
         <h2 id={titleId} className="sr-only">
           Search Cycle Found

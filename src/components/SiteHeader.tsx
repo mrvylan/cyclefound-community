@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { AccountMenu } from "./auth/AccountMenu";
-import { MockDataControl } from "./MockDataControl";
 import { SearchTrigger } from "./search/SearchOverlay";
 import { Feature } from "./Feature";
 import { openCookieSettings } from "@/lib/cookie-consent";
@@ -161,7 +160,6 @@ export function SiteHeader() {
         ) : null}
 
         <div className="flex shrink-0 items-center gap-2">
-          {!onAuth ? <MockDataControl /> : null}
           {!onAuth ? (
             <button
               type="button"
