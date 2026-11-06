@@ -16,6 +16,8 @@ type Props = {
   handle: string;
   name: string;
   variant?: "light" | "dark";
+  /** When set, renders an accent Ask CTA that opens the same message popover. */
+  askLabel?: string;
 };
 
 function buildActor(
@@ -43,7 +45,12 @@ function buildActor(
   return null;
 }
 
-export function MessageMember({ handle, name, variant = "dark" }: Props) {
+export function MessageMember({
+  handle,
+  name,
+  variant = "dark",
+  askLabel,
+}: Props) {
   const { ready, configured, user, profile } = useAuth();
   const router = useRouter();
   const [sessionHandle, setSessionHandleState] = useState("");
@@ -63,10 +70,17 @@ export function MessageMember({ handle, name, variant = "dark" }: Props) {
   const needsLogin = ready && configured && !user && !sessionHandle;
   const needsVerify = Boolean(user) && !user?.email_confirmed_at;
 
-  const btnClass =
+  const messageBtnClass =
     variant === "dark"
       ? "inline-flex h-[46px] items-center rounded-[10px] border border-[#4A4F57] bg-transparent px-[18px] font-semibold text-white hover:bg-white/5"
       : "inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 font-semibold text-ink";
+
+  const askBtnClass =
+    "inline-flex h-[46px] items-center rounded-[10px] bg-accent px-[22px] font-semibold text-white hover:bg-accent-hover";
+
+  function toggleOpen() {
+    setOpen((v) => !v);
+  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -94,22 +108,34 @@ export function MessageMember({ handle, name, variant = "dark" }: Props) {
 
   if (!ready) {
     return (
-      <button type="button" disabled className={`${btnClass} opacity-70`}>
-        Message
-      </button>
+      <div className="relative flex flex-wrap gap-2.5">
+        {askLabel ? (
+          <button type="button" disabled className={`${askBtnClass} opacity-70`}>
+            {askLabel}
+          </button>
+        ) : null}
+        <button type="button" disabled className={`${messageBtnClass} opacity-70`}>
+          Message
+        </button>
+      </div>
     );
   }
 
   return (
-    <div className="relative">
-      <button type="button" onClick={() => setOpen((v) => !v)} className={btnClass}>
+    <div className="relative flex flex-wrap gap-2.5">
+      {askLabel ? (
+        <button type="button" onClick={toggleOpen} className={askBtnClass}>
+          {askLabel}
+        </button>
+      ) : null}
+      <button type="button" onClick={toggleOpen} className={messageBtnClass}>
         Message
       </button>
       {open ? (
-        <div className="absolute right-0 z-40 mt-2 w-[min(100vw-2rem,340px)] rounded-[14px] border border-line bg-white p-4 text-ink shadow-[0_12px_32px_rgba(16,23,27,0.12)]">
+        <div className="absolute right-0 top-full z-40 mt-2 w-[min(100vw-2rem,340px)] rounded-[14px] border border-line bg-white p-4 text-ink shadow-[0_12px_32px_rgba(16,23,27,0.12)]">
           <p className="m-0 mb-3 text-[14px] leading-snug text-muted-2">
             {isSelf
-              ? "This is your profile."
+              ? "This is your profile. When someone messages you, the conversation shows up in Messages."
               : needsLogin
                 ? "Log in to message this member in Cycle Found."
                 : needsVerify
@@ -122,6 +148,14 @@ export function MessageMember({ handle, name, variant = "dark" }: Props) {
               className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
             >
               Log in to message
+            </Link>
+          ) : null}
+          {isSelf && !needsLogin ? (
+            <Link
+              href="/messages"
+              className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline hover:bg-ground"
+            >
+              Open Messages
             </Link>
           ) : null}
           {!isSelf && !needsLogin && !needsVerify ? (

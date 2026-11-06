@@ -7,6 +7,7 @@ import {
   items as seedItems,
   people,
   questions as seedQuestions,
+  SOLO_SEED_HANDLE,
   type Answer,
   type GarageItem,
   type ItemStatus,
@@ -17,6 +18,12 @@ import {
 import { isValidMemberHandle } from "./handles";
 
 export { isValidMemberHandle } from "./handles";
+export { SOLO_SEED_HANDLE } from "./seed";
+
+/** Solo Dylan seed is always available for the default signed-in view. */
+function soloSeedVisible(handle?: string) {
+  return Boolean(handle && handle === SOLO_SEED_HANDLE);
+}
 
 const STORAGE_KEY = "cf_beta_v1";
 
@@ -120,15 +127,18 @@ export function insertMockData() {
 export function clearMockData() {
   const store = readStore();
   store.mockDataEnabled = false;
-  const seedHandles = new Set(people.map((p) => p.handle));
-  if (store.sessionHandle && seedHandles.has(store.sessionHandle)) {
+  // Drop demo actor sessions (ben_carver, etc.) but keep the solo Dylan handle.
+  const demoHandles = new Set(
+    people.map((p) => p.handle).filter((h) => h !== SOLO_SEED_HANDLE),
+  );
+  if (store.sessionHandle && demoHandles.has(store.sessionHandle)) {
     store.sessionHandle = "";
   }
   writeStore(store);
 }
 
 function seedPerson(handle: string): Person | undefined {
-  if (!isMockDataEnabled()) return undefined;
+  if (!isMockDataEnabled() && !soloSeedVisible(handle)) return undefined;
   return getPerson(handle);
 }
 
@@ -203,7 +213,7 @@ export function resolvePerson(handle: string): Person | undefined {
 export function getWantedLines(handle: string): string[] {
   const patch = readStore().profilePatches[handle];
   if (patch?.wantedLines) return patch.wantedLines;
-  if (!isMockDataEnabled()) return [];
+  if (!isMockDataEnabled() && !soloSeedVisible(handle)) return [];
   return seedWanted.filter((w) => w.ownerHandle === handle).map((w) => w.part);
 }
 
@@ -218,7 +228,9 @@ export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
 
 export function getAllQuestions(): Question[] {
   const store = readStore();
-  const seeded = isMockDataEnabled() ? seedQuestions : [];
+  const seeded = isMockDataEnabled()
+    ? seedQuestions
+    : seedQuestions.filter((q) => q.askerHandle === SOLO_SEED_HANDLE);
   let all = [...seeded, ...store.extraQuestions];
   if (!isMockDataEnabled()) {
     const me = store.sessionHandle;
@@ -243,7 +255,12 @@ export function getQuestionLocal(id: string): Question | undefined {
 
 export function getAllAnswers(questionId: string): Answer[] {
   const store = readStore();
-  const seeded = isMockDataEnabled()
+  const allowSeed =
+    isMockDataEnabled() ||
+    seedQuestions.some(
+      (q) => q.id === questionId && q.askerHandle === SOLO_SEED_HANDLE,
+    );
+  const seeded = allowSeed
     ? seedAnswers.filter((a) => a.questionId === questionId)
     : [];
   const merged = [
@@ -264,13 +281,16 @@ export function getAllAnswers(questionId: string): Answer[] {
 
 export function getGarageItemsFor(handle: string): GarageItem[] {
   const store = readStore();
-  const seeded = isMockDataEnabled() ? seedItemsByOwner(handle) : [];
+  const seeded =
+    isMockDataEnabled() || soloSeedVisible(handle) ? seedItemsByOwner(handle) : [];
   return [...seeded, ...store.extraItems.filter((i) => i.ownerHandle === handle)];
 }
 
 export function getAllItems(): GarageItem[] {
   const store = readStore();
-  const seeded = isMockDataEnabled() ? seedItems : [];
+  const seeded = isMockDataEnabled()
+    ? seedItems
+    : seedItems.filter((i) => i.ownerHandle === SOLO_SEED_HANDLE);
   let all = [...seeded, ...store.extraItems];
   if (!isMockDataEnabled()) {
     const me = store.sessionHandle;
@@ -421,7 +441,11 @@ export function listMembers(): Person[] {
   if (isMockDataEnabled()) return people;
   const me = getSessionHandle();
   if (!me) return [];
-  const person = getMergedPerson(me) ?? stubPersonFromHandle(me, readStore().profilePatches[me]);
+  // Default view: only the signed-in member — Dylan uses the rich solo seed row.
+  const person =
+    getMergedPerson(me) ??
+    (soloSeedVisible(me) ? getPerson(me) : undefined) ??
+    stubPersonFromHandle(me, readStore().profilePatches[me]);
   return person ? [person] : [];
 }
 

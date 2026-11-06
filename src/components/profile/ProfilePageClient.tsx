@@ -145,18 +145,17 @@ export function ProfilePageClient({
           </div>
           <div className="flex flex-[1_1_280px] flex-wrap justify-end gap-2.5">
             <Link
-              href="/ask"
-              className="inline-flex h-[46px] items-center rounded-[10px] bg-accent px-[22px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-            >
-              Ask {firstName}
-            </Link>
-            <Link
               href="/settings/profile"
               className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-white px-[18px] font-semibold text-ink no-underline hover:text-ink"
             >
               Edit profile
             </Link>
-            <MessageMember handle={person.handle} name={person.name} variant="dark" />
+            <MessageMember
+              handle={person.handle}
+              name={person.name}
+              variant="dark"
+              askLabel={`Ask ${firstName}`}
+            />
             <Feature name="followGarage">
               <button
                 type="button"

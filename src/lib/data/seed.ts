@@ -102,7 +102,35 @@ export type Answer = {
 
 const MARKET_STATUSES: ItemStatus[] = ["For sale", "Open to offers", "Trade only"];
 
+/**
+ * Single profile used in the default (non–mock-data) view for UI + messaging tests.
+ * Full seed cast still loads via Insert Mock Data.
+ */
+export const SOLO_SEED_HANDLE = "dsimpson";
+
 export const people: Person[] = [
+  {
+    handle: SOLO_SEED_HANDLE,
+    name: "Dylan Simpson",
+    init: "DS",
+    bg: "#527D31",
+    role: "Founder · Cycle Found",
+    loc: "San Francisco Bay Area",
+    level: "PRO",
+    rating: "New",
+    reviews: 0,
+    spokes: "0",
+    spokesNum: 0,
+    accepted: 0,
+    items: 2,
+    reply: "within 1 day",
+    bio: "Building Cycle Found — a place for bike people to ask, share, and ride. Documenting my own garage while we shape the community.",
+    skills: ["Community", "Vintage steel", "Product"],
+    consult: "",
+    verified: true,
+    roleBadge: "Founding expert",
+    memberSince: "2026",
+  },
   {
     handle: "lugged_marco",
     name: "Marco Reyes",
@@ -384,6 +412,14 @@ export const people: Person[] = [
 
 export const garages: Garage[] = [
   {
+    ownerHandle: SOLO_SEED_HANDLE,
+    name: "Dylan’s garage",
+    description:
+      "A working stash for Cycle Found demos — a couple of bikes and parts to exercise profiles, garages, and messaging.",
+    location: "San Francisco Bay Area",
+    updated: "today",
+  },
+  {
     ownerHandle: "lugged_marco",
     name: "Lugged & Loved",
     description:
@@ -451,6 +487,34 @@ export const garages: Garage[] = [
 
 /** Canonical item inventory — every garage page and the Market read from this. */
 export const items: GarageItem[] = [
+  {
+    id: "dylan-steel-road-1985",
+    ownerHandle: SOLO_SEED_HANDLE,
+    catShort: "Complete bikes",
+    cat: "COMPLETE BIKE",
+    year: "1985",
+    name: "Lugged steel road bike, 54 cm",
+    cond: "Good",
+    mkt: "$600–900",
+    ask: "$750",
+    status: "Open to offers",
+    links: "0 guides · 0 threads",
+    trend: "Flat",
+  },
+  {
+    id: "dylan-campy-nr-crank",
+    ownerHandle: SOLO_SEED_HANDLE,
+    catShort: "Groupsets",
+    cat: "GROUPSET",
+    year: "1982",
+    name: "Campagnolo Nuovo Record crankset, 170 mm",
+    cond: "Excellent",
+    mkt: "$180–260",
+    ask: "$220",
+    status: "For sale",
+    links: "0 guides · 0 threads",
+    trend: "Flat",
+  },
   {
     id: "colnago-super-1984",
     ownerHandle: "lugged_marco",
@@ -926,6 +990,28 @@ export const answers: Answer[] = [
 export const questionAnswers = answers.filter((a) => a.questionId === "seized-seatpost");
 
 const questionsRaw: Omit<Question, "answers" | "solved" | "expert">[] = [
+  {
+    id: "dylan-bottom-bracket",
+    votes: 2,
+    tags: ["repair", "bottom-bracket", "vintage-steel"],
+    title: "Creaking bottom bracket on a mid-80s steel frame — grease, replace, or chase threads?",
+    excerpt:
+      "Light creak under load after a wet ride. English BB, cups look fine. Looking for a second opinion before I pull the spindle.",
+    body: [
+      "Mid-80s lugged steel, English bottom bracket. Started creaking under seated climbs after a rainy weekend.",
+      "Cups aren’t obviously loose. Wondering whether a clean/regrease is enough or if I should swap the spindle while I’m in there.",
+    ],
+    asker: "Dylan Simpson",
+    askerHandle: SOLO_SEED_HANDLE,
+    init: "DS",
+    bg: "#527D31",
+    time: "1d ago",
+    linked: "Lugged steel road bike, 54 cm",
+    linkedItemId: "dylan-steel-road-1985",
+    views: 42,
+    following: 1,
+    bounty: 0,
+  },
   {
     id: "seized-seatpost",
     votes: 48,
