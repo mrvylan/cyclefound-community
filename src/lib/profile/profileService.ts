@@ -55,6 +55,25 @@ export const profileService = {
     return normalizeProfile(data as Record<string, unknown> | null);
   },
 
+  /**
+   * Ensure a profile row exists for the current user.
+   * Rows are created by the security-definer DB trigger (no client INSERT policy).
+   */
+  async ensureMyProfile() {
+    const existing = await this.getMyProfile();
+    if (existing) return existing;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+      const profile = await this.getMyProfile();
+      if (profile) return profile;
+    }
+
+    throw new Error(
+      "Your account was created, but the profile is not ready yet. Refresh in a moment.",
+    );
+  },
+
   async updateMyProfile(updates: {
     fullName?: string;
     displayName?: string;

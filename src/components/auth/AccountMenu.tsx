@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
+import { handleFromAuthProfile } from "@/lib/demo-session";
 import { Avatar } from "@/components/ui";
 
 export function AccountMenu({ nextPath }: { nextPath: string }) {
@@ -106,11 +107,27 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
           </Link>
           <Link
             role="menuitem"
+            href={`/u/${handleFromAuthProfile(profile)}`}
+            className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
+            onClick={() => setOpen(false)}
+          >
+            My profile
+          </Link>
+          <Link
+            role="menuitem"
             href="/settings/profile"
             className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
             onClick={() => setOpen(false)}
           >
             Edit profile
+          </Link>
+          <Link
+            role="menuitem"
+            href="/account"
+            className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
+            onClick={() => setOpen(false)}
+          >
+            Account
           </Link>
           <Link
             role="menuitem"
