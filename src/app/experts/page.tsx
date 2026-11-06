@@ -64,7 +64,7 @@ export default function ExpertsPage() {
             </label>
             <select
               id="rad"
-              className="h-11 rounded-lg border border-[#D4D3CD] bg-white px-2.5 text-[14px]"
+              className="cf-select h-11 rounded-lg border border-[#D4D3CD] bg-white pl-2.5 text-[14px]"
             >
               <option>Within 25 miles</option>
               <option>Within 50 miles</option>
@@ -133,7 +133,7 @@ export default function ExpertsPage() {
             </p>
             <label className="inline-flex items-center gap-2 text-[14px] text-muted">
               Sort
-              <select className="h-10 rounded-lg border border-[#D4D3CD] bg-white px-2.5 text-ink">
+              <select className="cf-select h-10 rounded-lg border border-[#D4D3CD] bg-white pl-2.5 text-ink">
                 <option>Most helpful</option>
                 <option>Highest rated</option>
                 <option>Most Spokes</option>

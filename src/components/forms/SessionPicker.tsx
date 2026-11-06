@@ -67,7 +67,7 @@ export function SessionPicker({ className = "" }: { className?: string }) {
       <select
         value={handle}
         onChange={(e) => setSessionHandle(e.target.value)}
-        className="h-10 min-w-[10rem] rounded-[10px] border border-[#D4D3CD] bg-white px-2.5 text-[14px] text-ink"
+        className="cf-select h-10 min-w-[10rem] rounded-[10px] border border-[#D4D3CD] bg-white pl-2.5 text-[14px] text-ink"
       >
         {members.map((m) => (
           <option key={m.handle} value={m.handle}>

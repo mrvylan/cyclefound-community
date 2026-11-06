@@ -222,7 +222,7 @@ export default function QuestionPage({
             <Feature name="answerSort">
               <label className="inline-flex items-center gap-2 text-[14px] text-muted">
                 Sort by
-                <select className="h-10 rounded-lg border border-[#D4D3CD] bg-white px-2.5 text-ink">
+                <select className="cf-select h-10 rounded-lg border border-[#D4D3CD] bg-white pl-2.5 text-ink">
                   <option>Expert rating</option>
                   <option>Most useful</option>
                   <option>Newest</option>

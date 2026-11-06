@@ -180,7 +180,7 @@ export function AskForm() {
             id="q-item"
             value={linkedItemId}
             onChange={(e) => setLinkedItemId(e.target.value)}
-            className="h-12 rounded-[10px] border border-[#D4D3CD] bg-white px-3 text-[15px] outline-none focus:border-accent"
+            className="cf-select h-12 rounded-[10px] border border-[#D4D3CD] bg-white pl-3 text-[15px] outline-none focus:border-accent"
           >
             <option value="">No linked item</option>
             {garageItems.map((item) => (

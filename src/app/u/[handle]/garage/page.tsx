@@ -229,7 +229,7 @@ export default function GaragePage({
             <select
               value={availability}
               onChange={(e) => setAvailability(e.target.value)}
-              className="h-10 rounded-lg border border-[#D4D3CD] bg-white px-2.5 text-ink"
+              className="cf-select h-10 rounded-lg border border-[#D4D3CD] bg-white pl-2.5 text-ink"
             >
               <option>Everything</option>
               <option>Available only</option>

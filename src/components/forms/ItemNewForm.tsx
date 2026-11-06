@@ -69,6 +69,8 @@ export function ItemNewForm() {
 
   const field =
     "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent";
+  const selectField =
+    "cf-select h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white pl-3.5 text-[16px] text-ink outline-none focus:border-accent";
   const label = "text-[14px] font-semibold";
 
   return (
@@ -77,7 +79,7 @@ export function ItemNewForm() {
         <p className="eyebrow m-0">Your garage</p>
         <h1 className="font-display m-0 text-[clamp(32px,8vw,48px)]">Add an item</h1>
         <p className="m-0 text-[15px] leading-[1.5] text-muted-2">
-          Photos, basics, status — aim for under two minutes on your phone.
+          Photos, details, and status — aim for under two minutes.
         </p>
         <SessionPicker />
       </div>
@@ -111,7 +113,7 @@ export function ItemNewForm() {
               id="item-cat"
               value={category}
               onChange={(e) => setCategory(e.target.value as (typeof CATEGORIES)[number])}
-              className={field}
+              className={selectField}
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -143,7 +145,7 @@ export function ItemNewForm() {
             id="item-cond"
             value={condition}
             onChange={(e) => setCondition(e.target.value as (typeof CONDITIONS)[number])}
-            className={field}
+            className={selectField}
           >
             {CONDITIONS.map((c) => (
               <option key={c} value={c}>
@@ -227,7 +229,7 @@ export function ItemNewForm() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="item-prov" className={label}>
-            Provenance <span className="font-normal text-muted">(optional free text)</span>
+            Where it came from <span className="font-normal text-muted">(optional)</span>
           </label>
           <textarea
             id="item-prov"
