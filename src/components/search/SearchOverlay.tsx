@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   useCallback,
   useEffect,
@@ -52,10 +53,16 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
   const router = useRouter();
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState(initialQuery);
   const [activeIndex, setActiveIndex] = useState(0);
   const [tick, setTick] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     return subscribeStore(() => setTick((t) => t + 1));
@@ -89,11 +96,31 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, close]);
 
+  // Outside click/tap — listen on document so header stacking / backdrop-blur can't trap hits.
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panel.contains(target)) return;
+      close();
+    }
+    // Defer so the opening click on the trigger doesn't immediately close.
+    const id = window.setTimeout(() => {
+      document.addEventListener("pointerdown", onPointerDown, true);
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [open, close]);
+
   void tick;
 
   const hits = useMemo(() => searchLocal(query).slice(0, 12), [query, tick]);
   const grouped = useMemo(() => groupSearchHits(hits), [hits]);
-  // Keyboard order matches visual section order (Members → Questions → Items).
   const flat = useMemo(
     () => [...grouped.members, ...grouped.questions, ...grouped.items],
     [grouped],
@@ -145,31 +172,26 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
     el?.scrollIntoView({ block: "nearest" });
   }, [activeIndex, flat.length, open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const trimmed = query.trim();
   const indexByKey = new Map<string, number>(
     flat.map((hit, index) => [`${hit.kind}-${hit.id}`, index]),
   );
 
-  return (
-    <div
-      className="fixed inset-0 z-[80] flex items-start justify-center bg-ink/40 px-4 pt-[min(12vh,7rem)] backdrop-blur-[2px] sm:px-6"
-      onMouseDown={(event) => {
-        // Close when pressing outside the card (mousedown so it wins over focus quirks).
-        if (event.target === event.currentTarget) close();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
-    >
+  const overlay = (
+    <div className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[min(12vh,7rem)] sm:px-6">
       <div
+        aria-hidden
+        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+      />
+
+      <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-[81] flex w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] border border-line bg-white shadow-[0_24px_64px_rgba(16,23,27,0.22)]"
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={(event) => event.stopPropagation()}
+        className="relative z-[1] flex w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] border border-line bg-white shadow-[0_24px_64px_rgba(16,23,27,0.22)]"
       >
         <h2 id={titleId} className="sr-only">
           Search Cycle Found
@@ -193,7 +215,9 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
             aria-autocomplete="list"
             aria-controls="search-results"
             aria-activedescendant={
-              flat[activeIndex] ? `search-hit-${flat[activeIndex]!.kind}-${flat[activeIndex]!.id}` : undefined
+              flat[activeIndex]
+                ? `search-hit-${flat[activeIndex]!.kind}-${flat[activeIndex]!.id}`
+                : undefined
             }
             className="min-w-0 flex-1 border-0 bg-transparent text-[16px] text-ink outline-none placeholder:text-[#929792]"
           />
@@ -290,7 +314,9 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
                               onMouseEnter={() => setActiveIndex(index)}
                               onClick={() => goTo(hit.href)}
                               className={`flex w-full items-center gap-3 rounded-[10px] border-0 px-2.5 py-2.5 text-left ${
-                                active ? "bg-accent-soft text-ink" : "bg-transparent text-ink"
+                                active
+                                  ? "bg-accent-soft text-ink"
+                                  : "bg-transparent text-ink"
                               }`}
                             >
                               {hit.kind === "member" ? (
@@ -356,6 +382,8 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
       </div>
     </div>
   );
+
+  return createPortal(overlay, document.body);
 }
 
 /** Compact header control that opens the search card. */
@@ -364,7 +392,9 @@ export function SearchTrigger({ className = "" }: { className?: string }) {
   const [shortcut, setShortcut] = useState("⌘K");
 
   useEffect(() => {
-    const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+    const isApple = /Mac|iPhone|iPad|iPod/i.test(
+      navigator.platform || navigator.userAgent,
+    );
     setShortcut(isApple ? "⌘K" : "Ctrl K");
   }, []);
 
