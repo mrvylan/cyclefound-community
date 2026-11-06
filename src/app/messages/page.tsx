@@ -174,13 +174,16 @@ function MessagesInner() {
           </h1>
           {detail ? (
             <p className="mt-2 text-[14px] text-muted-2">
-              {[detail.subject.priceLabel, statusLabel(detail.thread.status)]
+              {[
+                detail.kind === "member" ? "Direct message" : detail.subject.priceLabel,
+                statusLabel(detail.thread.status),
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
           ) : (
             <p className="mt-2 text-[15px] text-muted-2">
-              Inquiry only. Cycle Found does not process payment — arrange that directly.
+              Message members and garage owners. Conversations stay in Cycle Found.
             </p>
           )}
         </div>
@@ -207,12 +210,16 @@ function MessagesInner() {
             <p className="text-[14px] text-muted">Loading…</p>
           ) : rows.length === 0 ? (
             <div className="rounded-[14px] border border-line bg-white p-5 text-[15px] text-muted-2">
-              No conversations yet. Message an owner from a garage item — replies show up here.
+              No conversations yet. Message a member or garage owner — replies show up here.
             </div>
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {rows.map((row) => {
                 const active = row.threadId === threadId;
+                const metaBits =
+                  row.kind === "member"
+                    ? [roleLabel(row), statusLabel(row.status)]
+                    : [roleLabel(row), statusLabel(row.status), row.otherDisplayName];
                 return (
                   <li key={row.threadId}>
                     <Link
@@ -233,9 +240,7 @@ function MessagesInner() {
                         {row.title}
                       </p>
                       <p className="m-0 mt-0.5 text-[12px] text-muted">
-                        {[roleLabel(row), statusLabel(row.status), row.otherDisplayName]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {metaBits.filter(Boolean).join(" · ")}
                       </p>
                       <p className="m-0 mt-1 line-clamp-2 text-[13px] text-muted-2">
                         {row.lastBody || "No messages yet."}
@@ -251,7 +256,7 @@ function MessagesInner() {
         <section className="min-w-[280px] flex-[2_1_420px]">
           {!threadId ? (
             <div className="rounded-[14px] border border-dashed border-line bg-white p-8 text-[15px] text-muted-2">
-              Select a conversation, or message someone from a garage item.
+              Select a conversation, or message a member or garage owner.
             </div>
           ) : detail ? (
             <div className="rounded-[14px] border border-line bg-white">
@@ -266,9 +271,15 @@ function MessagesInner() {
                 >
                   View {detail.kind === "member" ? "profile" : "item"}
                 </Link>
-                <p className="mt-3 rounded-[8px] bg-blue-soft px-3 py-2 text-[13px] text-blue">
-                  Inquiry only. Cycle Found does not process payment — arrange that directly.
-                </p>
+                {detail.kind === "member" ? (
+                  <p className="mt-3 rounded-[8px] bg-ground px-3 py-2 text-[13px] text-muted-2">
+                    Private message. They will not see your email address.
+                  </p>
+                ) : (
+                  <p className="mt-3 rounded-[8px] bg-blue-soft px-3 py-2 text-[13px] text-blue">
+                    Inquiry only. Cycle Found does not process payment — arrange that directly.
+                  </p>
+                )}
               </div>
 
               <div className="flex max-h-[420px] flex-col gap-3 overflow-y-auto px-5 py-4">

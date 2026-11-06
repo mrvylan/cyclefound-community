@@ -18,6 +18,8 @@ export type GarageThreadRecord = {
   ownerName: string;
   buyerId: string;
   buyerName: string;
+  /** Present when the buyer has a community handle (demo / signed-in). */
+  buyerHandle?: string;
   status: "open" | "closed";
   createdAt: string;
   updatedAt: string;
@@ -171,6 +173,7 @@ export const garageMessagingService = {
       ownerName,
       buyerId: actor.id,
       buyerName: actor.name,
+      ...(actor.handle ? { buyerHandle: actor.handle } : {}),
       status: "open",
       createdAt: now,
       updatedAt: now,
@@ -190,6 +193,7 @@ export const garageMessagingService = {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .map((t) => {
         const role = roleFor(t, viewer);
+        const otherName = role === "buyer" ? t.ownerName : t.buyerName;
         return {
           kind: t.kind,
           threadId: t.id,
@@ -197,9 +201,9 @@ export const garageMessagingService = {
           role,
           status: t.status,
           updatedAt: t.updatedAt,
-          title: t.itemTitle,
+          title: t.kind === "member" ? otherName : t.itemTitle,
           lastBody: lastBody(t),
-          otherDisplayName: role === "buyer" ? t.ownerName : t.buyerName,
+          otherDisplayName: otherName,
           coverUrl: "",
           priceLabel: t.priceLabel,
           unread: isUnread(t, viewer.id),
@@ -220,21 +224,27 @@ export const garageMessagingService = {
     t.readAtBy[viewer.id] = now;
     writeStore(store);
 
+    const role = roleFor(t, viewer);
+    const otherName = role === "buyer" ? t.ownerName : t.buyerName;
+    const otherHandle = role === "buyer" ? t.ownerHandle : t.buyerHandle;
+    const href =
+      t.kind === "member" && otherHandle ? `/u/${otherHandle}` : t.itemHref;
+
     return {
       kind: t.kind,
       thread: {
         id: t.id,
         status: t.status,
-        viewer_role: roleFor(t, viewer),
+        viewer_role: role,
         item_id: t.itemId,
         owner_handle: t.ownerHandle,
       },
       subject: {
-        title: t.itemTitle,
-        href: t.itemHref,
-        priceLabel: t.priceLabel,
+        title: t.kind === "member" ? otherName : t.itemTitle,
+        href,
+        priceLabel: t.kind === "member" ? "" : t.priceLabel,
         coverUrl: "",
-        meta: t.ownerName,
+        meta: otherHandle ? `@${otherHandle}` : otherName,
       },
       messages: t.messages,
       viewerId: viewer.id,
