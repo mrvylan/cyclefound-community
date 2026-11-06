@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import {
   getGarageItemsFor,
+  isMockDataEnabled,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
@@ -45,7 +46,8 @@ export function ProfilePageClient({
   const person = ready ? resolvePerson(handle) : undefined;
   const tab = tabParam || "Garage";
   const ownedItems = ready ? getGarageItemsFor(handle) : [];
-  const profile = handle === "lugged_marco" ? marcoProfile : null;
+  const profile =
+    ready && isMockDataEnabled() && handle === "lugged_marco" ? marcoProfile : null;
   const tabs = [
     ["Garage", ownedItems.length],
     ["Answers", profile?.answers.length ?? 0],

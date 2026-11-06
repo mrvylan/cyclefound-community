@@ -48,6 +48,8 @@ function initialsFromDisplayName(name: string) {
 
 type LocalStore = {
   sessionHandle: string;
+  /** When true, seed/mock community data is visible for UI demos. Off by default. */
+  mockDataEnabled: boolean;
   extraQuestions: Question[];
   extraAnswers: Answer[];
   extraItems: GarageItem[];
@@ -57,7 +59,8 @@ type LocalStore = {
 };
 
 const defaultStore = (): LocalStore => ({
-  sessionHandle: "ben_carver",
+  sessionHandle: "",
+  mockDataEnabled: false,
   extraQuestions: [],
   extraAnswers: [],
   extraItems: [],
@@ -101,6 +104,34 @@ export function setSessionHandle(handle: string) {
   writeStore(store);
 }
 
+export function isMockDataEnabled(): boolean {
+  return Boolean(readStore().mockDataEnabled);
+}
+
+/** Reveal seed/mock members, questions, and garage items for UI demos. */
+export function insertMockData() {
+  const store = readStore();
+  store.mockDataEnabled = true;
+  if (!store.sessionHandle) store.sessionHandle = "ben_carver";
+  writeStore(store);
+}
+
+/** Hide seed/mock data again; keeps the signed-in user’s own posts and items. */
+export function clearMockData() {
+  const store = readStore();
+  store.mockDataEnabled = false;
+  const seedHandles = new Set(people.map((p) => p.handle));
+  if (store.sessionHandle && seedHandles.has(store.sessionHandle)) {
+    store.sessionHandle = "";
+  }
+  writeStore(store);
+}
+
+function seedPerson(handle: string): Person | undefined {
+  if (!isMockDataEnabled()) return undefined;
+  return getPerson(handle);
+}
+
 function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
   const name = patch?.name?.trim() || handle;
   return {
@@ -130,7 +161,8 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
 }
 
 export function getMergedPerson(handle: string): Person | undefined {
-  const base = getPerson(handle);
+  if (!handle) return undefined;
+  const base = seedPerson(handle);
   const patch = readStore().profilePatches[handle];
   if (!base) {
     if (!patch?.name) return undefined;
@@ -152,21 +184,26 @@ export function getMergedPerson(handle: string): Person | undefined {
 }
 
 /**
- * Resolve a profile for /u/[handle] — seed member, local patch, or a stub
- * for valid auth handles that aren't in seed data (avoids 404 after signup).
+ * Resolve a profile for /u/[handle] — seed (when mock on), local patch, or a stub
+ * for the signed-in member’s own handle.
  */
 export function resolvePerson(handle: string): Person | undefined {
   const key = String(handle || "").trim();
   if (!isValidMemberHandle(key)) return undefined;
   const merged = getMergedPerson(key);
   if (merged) return merged;
-  if (getPerson(key)) return getPerson(key);
-  return stubPersonFromHandle(key, readStore().profilePatches[key]);
+  if (isMockDataEnabled() && getPerson(key)) return getPerson(key);
+  // Own account stub even before a name patch exists.
+  if (key === getSessionHandle()) {
+    return stubPersonFromHandle(key, readStore().profilePatches[key]);
+  }
+  return undefined;
 }
 
 export function getWantedLines(handle: string): string[] {
   const patch = readStore().profilePatches[handle];
   if (patch?.wantedLines) return patch.wantedLines;
+  if (!isMockDataEnabled()) return [];
   return seedWanted.filter((w) => w.ownerHandle === handle).map((w) => w.part);
 }
 
@@ -181,7 +218,13 @@ export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
 
 export function getAllQuestions(): Question[] {
   const store = readStore();
-  const all = [...seedQuestions, ...store.extraQuestions];
+  const seeded = isMockDataEnabled() ? seedQuestions : [];
+  let all = [...seeded, ...store.extraQuestions];
+  if (!isMockDataEnabled()) {
+    const me = store.sessionHandle;
+    if (!me) return [];
+    all = all.filter((q) => q.askerHandle === me);
+  }
   return all.map((q) => {
     const thread = getAllAnswers(q.id);
     const accepted = thread.find((a) => a.accepted);
@@ -200,8 +243,11 @@ export function getQuestionLocal(id: string): Question | undefined {
 
 export function getAllAnswers(questionId: string): Answer[] {
   const store = readStore();
+  const seeded = isMockDataEnabled()
+    ? seedAnswers.filter((a) => a.questionId === questionId)
+    : [];
   const merged = [
-    ...seedAnswers.filter((a) => a.questionId === questionId),
+    ...seeded,
     ...store.extraAnswers.filter((a) => a.questionId === questionId),
   ];
   const acceptedId = store.acceptedByQuestion[questionId];
@@ -218,15 +264,20 @@ export function getAllAnswers(questionId: string): Answer[] {
 
 export function getGarageItemsFor(handle: string): GarageItem[] {
   const store = readStore();
-  return [
-    ...seedItemsByOwner(handle),
-    ...store.extraItems.filter((i) => i.ownerHandle === handle),
-  ];
+  const seeded = isMockDataEnabled() ? seedItemsByOwner(handle) : [];
+  return [...seeded, ...store.extraItems.filter((i) => i.ownerHandle === handle)];
 }
 
 export function getAllItems(): GarageItem[] {
   const store = readStore();
-  return [...seedItems, ...store.extraItems];
+  const seeded = isMockDataEnabled() ? seedItems : [];
+  let all = [...seeded, ...store.extraItems];
+  if (!isMockDataEnabled()) {
+    const me = store.sessionHandle;
+    if (!me) return [];
+    all = all.filter((i) => i.ownerHandle === me);
+  }
+  return all;
 }
 
 export function getItemLocal(id: string): GarageItem | undefined {
@@ -366,8 +417,17 @@ export function postItem(input: {
   return item;
 }
 
-export function listMembers() {
-  return people;
+export function listMembers(): Person[] {
+  if (isMockDataEnabled()) return people;
+  const me = getSessionHandle();
+  if (!me) return [];
+  const person = getMergedPerson(me) ?? stubPersonFromHandle(me, readStore().profilePatches[me]);
+  return person ? [person] : [];
+}
+
+/** Verified experts — seed roster when mock is on, otherwise the signed-in member only if verified. */
+export function getExpertsLocal(): Person[] {
+  return listMembers().filter((p) => p.verified);
 }
 
 export function tagSuggestions(): string[] {

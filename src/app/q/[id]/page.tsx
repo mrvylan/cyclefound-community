@@ -18,13 +18,14 @@ import {
 import {
   acceptAnswer,
   getAllAnswers,
+  getExpertsLocal,
   getItemLocal,
   getMergedPerson,
   getQuestionLocal,
   getSessionHandle,
+  isMockDataEnabled,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { getExperts } from "@/lib/data/seed";
 
 export default function QuestionPage({
   params,
@@ -62,7 +63,8 @@ export default function QuestionPage({
   if (!q) notFound();
 
   const thread = getAllAnswers(id);
-  const sidebarExperts = getExperts().slice(0, 3);
+  const sidebarExperts = getExpertsLocal().slice(0, 3);
+  const showMockRelated = isMockDataEnabled();
   const linkedItem = q.linkedItemId ? getItemLocal(q.linkedItemId) : undefined;
   const linkedOwner = linkedItem ? getMergedPerson(linkedItem.ownerHandle) : undefined;
   const isAsker = sessionHandle === q.askerHandle;
@@ -368,27 +370,29 @@ export default function QuestionPage({
         </div>
 
         <aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
-          <section className="rounded-2xl border border-line bg-surface p-5">
-            <h2 className="font-display mb-3 mt-0 text-[22px]">Members on this topic</h2>
-            <ul className="m-0 flex list-none flex-col gap-3 p-0">
-              {sidebarExperts.map((e) => (
-                <li key={e.handle}>
-                  <Link
-                    href={`/u/${e.handle}`}
-                    className="flex items-center gap-3 text-ink no-underline hover:text-accent-hover"
-                  >
-                    <Avatar init={e.init} bg={e.bg} size={40} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold">{e.name}</span>
-                      <span className="block text-[13px] text-muted">
-                        {e.roleBadge ?? e.skills[0]}
+          {sidebarExperts.length > 0 ? (
+            <section className="rounded-2xl border border-line bg-surface p-5">
+              <h2 className="font-display mb-3 mt-0 text-[22px]">Members on this topic</h2>
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {sidebarExperts.map((e) => (
+                  <li key={e.handle}>
+                    <Link
+                      href={`/u/${e.handle}`}
+                      className="flex items-center gap-3 text-ink no-underline hover:text-accent-hover"
+                    >
+                      <Avatar init={e.init} bg={e.bg} size={40} src={e.avatarUrl} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold">{e.name}</span>
+                        <span className="block text-[13px] text-muted">
+                          {e.roleBadge ?? e.skills[0]}
+                        </span>
                       </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <Feature name="partsInGarages">
             <section className="rounded-2xl border border-line bg-surface p-5">
@@ -413,27 +417,29 @@ export default function QuestionPage({
             </section>
           </Feature>
 
-          <section className="rounded-2xl border border-line bg-surface p-5">
-            <h2 className="font-display mb-3 mt-0 text-[22px]">Related</h2>
-            <ul className="m-0 flex list-none flex-col gap-2.5 p-0 text-[14px]">
-              <li>
-                <Link
-                  href="/q/mavic-spoke-length"
-                  className="font-semibold text-ink no-underline hover:text-accent-hover"
-                >
-                  Rebuilding Mavic Open Pro rims to modern hubs
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/q/super-record-cage"
-                  className="font-semibold text-ink no-underline hover:text-accent-hover"
-                >
-                  1st-gen Super Record rear derailleur cage
-                </Link>
-              </li>
-            </ul>
-          </section>
+          {showMockRelated ? (
+            <section className="rounded-2xl border border-line bg-surface p-5">
+              <h2 className="font-display mb-3 mt-0 text-[22px]">Related</h2>
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0 text-[14px]">
+                <li>
+                  <Link
+                    href="/q/mavic-spoke-length"
+                    className="font-semibold text-ink no-underline hover:text-accent-hover"
+                  >
+                    Rebuilding Mavic Open Pro rims to modern hubs
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/q/super-record-cage"
+                    className="font-semibold text-ink no-underline hover:text-accent-hover"
+                  >
+                    1st-gen Super Record rear derailleur cage
+                  </Link>
+                </li>
+              </ul>
+            </section>
+          ) : null}
         </aside>
       </div>
     </div>

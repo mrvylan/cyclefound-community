@@ -6,8 +6,15 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, Search, X } from "lucide-react";
 import { AccountMenu } from "./auth/AccountMenu";
+import { MockDataControl } from "./MockDataControl";
 import { Feature } from "./Feature";
 import { openCookieSettings } from "@/lib/cookie-consent";
+import {
+  getSessionHandle,
+  isMockDataEnabled,
+  listMembers,
+  subscribeStore,
+} from "@/lib/data/local-store";
 import { FEATURES } from "@/lib/features";
 import { LEGAL } from "@/lib/legal";
 
@@ -17,12 +24,24 @@ type NavItem = {
   match: "community" | "garages" | "members" | "experts" | "resources" | "market";
 };
 
-const betaNav: NavItem[] = [
-  { href: "/", label: "Community", match: "community" },
-  { href: "/u/lugged_marco/garage", label: "Garages", match: "garages" },
-  { href: "/members", label: "Members", match: "members" },
-  { href: "/market", label: "Market", match: "market" },
-];
+function garageNavHref() {
+  const me = getSessionHandle();
+  if (me) return `/u/${me}/garage`;
+  if (isMockDataEnabled()) {
+    const first = listMembers()[0];
+    if (first) return `/u/${first.handle}/garage`;
+  }
+  return "/members";
+}
+
+function betaNav(): NavItem[] {
+  return [
+    { href: "/", label: "Community", match: "community" },
+    { href: garageNavHref(), label: "Garages", match: "garages" },
+    { href: "/members", label: "Members", match: "members" },
+    { href: "/market", label: "Market", match: "market" },
+  ];
+}
 
 /** Deferred nav items — kept for when flags flip back on. */
 const deferredNav: NavItem[] = [
@@ -31,7 +50,7 @@ const deferredNav: NavItem[] = [
 ];
 
 function navItems(): NavItem[] {
-  const items = [...betaNav];
+  const items = [...betaNav()];
   if (FEATURES.expertsDirectory) {
     const membersIdx = items.findIndex((i) => i.match === "members");
     if (membersIdx >= 0) items.splice(membersIdx, 1);
@@ -70,11 +89,16 @@ export function SiteHeader() {
   const nextPath = onAuth ? "/" : pathname || "/";
   const active = activeNavFromPath(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
-  const nav = navItems();
+  const [nav, setNav] = useState<NavItem[]>(() => navItems());
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    setNav(navItems());
+    return subscribeStore(() => setNav(navItems()));
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -154,6 +178,7 @@ export function SiteHeader() {
         ) : null}
 
         <div className="flex shrink-0 items-center gap-2">
+          {!onAuth ? <MockDataControl /> : null}
           {!onAuth ? (
             <button
               type="button"

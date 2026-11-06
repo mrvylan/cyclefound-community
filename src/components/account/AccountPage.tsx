@@ -292,8 +292,7 @@ export function AccountPage() {
       <section>
         <h2 className="font-display m-0 text-[22px]">Member profile</h2>
         <p className="mt-1 text-[14px] text-muted-2">
-          Shared with Cycle Found marketplace. Display name is what others see — not your
-          email.
+          Display name is what others see — not your email.
         </p>
         <p className="mt-2 text-[14px]">
           <Link href="/settings/profile" className="font-semibold">
