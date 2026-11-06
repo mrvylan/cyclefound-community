@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ShieldCheck, Star } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
+import { MessageMember } from "@/components/messaging/MessageMember";
 import { WantedList } from "@/components/WantedList";
 import {
   Avatar,
@@ -121,12 +122,7 @@ export default async function ProfilePage({
             >
               Edit profile
             </Link>
-            <a
-              href={`mailto:?subject=${encodeURIComponent(`Cycle Found: message for ${person.name}`)}`}
-              className="inline-flex h-[46px] items-center rounded-[10px] border border-[#4A4F57] bg-transparent px-[18px] font-semibold text-white no-underline hover:text-white"
-            >
-              Message
-            </a>
+            <MessageMember handle={person.handle} name={person.name} variant="dark" />
             <Feature name="followGarage">
               <button
                 type="button"

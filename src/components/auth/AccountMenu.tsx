@@ -103,6 +103,14 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
           </Link>
           <Link
             role="menuitem"
+            href="/messages"
+            className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
+            onClick={() => setOpen(false)}
+          >
+            Messages
+          </Link>
+          <Link
+            role="menuitem"
             href="/settings/profile"
             className="block px-3.5 py-2.5 text-[14px] font-medium text-ink no-underline hover:bg-ground"
             onClick={() => setOpen(false)}

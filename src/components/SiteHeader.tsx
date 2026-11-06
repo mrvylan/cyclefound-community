@@ -45,7 +45,7 @@ function navItems(): NavItem[] {
 
 /** Derive the active primary nav section from the current path. */
 export function activeNavFromPath(pathname: string): NavItem["match"] | null {
-  if (pathname.startsWith("/auth")) return null;
+  if (pathname.startsWith("/auth") || pathname.startsWith("/messages")) return null;
   if (pathname === "/" || pathname.startsWith("/q/")) return "community";
   if (pathname.startsWith("/i/") || pathname.includes("/garage")) return "garages";
   if (pathname.startsWith("/members")) return "members";

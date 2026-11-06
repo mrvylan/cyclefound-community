@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Feature } from "@/components/Feature";
+import { MessageOwner } from "@/components/messaging/MessageOwner";
 import {
   Avatar,
   LevelBadge,
@@ -54,11 +55,6 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     notFound();
   }
 
-  const mailSubject = encodeURIComponent(`Cycle Found: ${item.name}`);
-  const mailBody = encodeURIComponent(
-    `Hi ${owner.name},\n\nI'm interested in your garage item "${item.name}" (${item.status}).\n\n`,
-  );
-  const mailto = `mailto:?subject=${mailSubject}&body=${mailBody}`;
   const itemPhotosRaw =
     typeof window !== "undefined"
       ? sessionStorage.getItem(`cf_i_photos_${id}`)
@@ -294,7 +290,13 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 {item.status}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <MessageOwner
+              itemId={item.id}
+              itemName={item.name}
+              priceLabel={item.ask}
+              ownerHandle={owner.handle}
+              ownerName={owner.name}
+            >
               <Feature name="makeOffer">
                 {item.status !== "Not for sale" ? (
                   <button
@@ -305,15 +307,9 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   </button>
                 ) : null}
               </Feature>
-              <a
-                href={mailto}
-                className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-              >
-                Message owner
-              </a>
               <Link
                 href="/ask"
-                className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] bg-ink text-[15px] font-semibold text-white no-underline hover:text-white"
+                className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] bg-ink px-4 text-[15px] font-semibold text-white no-underline hover:text-white"
               >
                 Ask about this
               </Link>
@@ -326,7 +322,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   {watching ? "Watching" : "Watch"}
                 </button>
               </Feature>
-            </div>
+            </MessageOwner>
           </section>
 
           {showRichDetail ? (
