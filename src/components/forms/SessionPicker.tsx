@@ -16,7 +16,7 @@ import {
 } from "@/lib/data/local-store";
 
 /**
- * Demo mode + mock data: pick which mock member you’re acting as.
+ * Demo mode: pick which member you’re acting as (full mock cast, or Dylan ↔ partner).
  * Otherwise sync to the signed-in user (or hide when logged out).
  */
 export function SessionPicker({ className = "" }: { className?: string }) {
@@ -36,13 +36,10 @@ export function SessionPicker({ className = "" }: { className?: string }) {
     return subscribeStore(syncMembers);
   }, []);
 
+  const canSwitchActors = demo && members.length > 1;
+
   useEffect(() => {
     if (!ready) return;
-
-    if (demo && mock) {
-      setHandle(getSessionHandle());
-      return;
-    }
 
     if (profile) {
       const next = handleFromAuthProfile(profile);
@@ -51,15 +48,27 @@ export function SessionPicker({ className = "" }: { className?: string }) {
         name,
         ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
       });
+    }
+
+    if (canSwitchActors) {
+      if (!getSessionHandle() && profile) {
+        setSessionHandle(handleFromAuthProfile(profile));
+      }
+      setHandle(getSessionHandle());
+      return;
+    }
+
+    if (profile) {
+      const next = handleFromAuthProfile(profile);
       if (getSessionHandle() !== next) setSessionHandle(next);
       setHandle(next);
       return;
     }
 
     setHandle(getSessionHandle());
-  }, [demo, mock, profile, ready]);
+  }, [canSwitchActors, demo, mock, profile, ready]);
 
-  if (!demo || !mock) {
+  if (!canSwitchActors) {
     if (!ready || !profile) return null;
     return (
       <p className={`m-0 text-[13px] text-muted ${className}`}>

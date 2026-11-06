@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
-import {
-  getMergedPerson,
-  getSessionHandle,
-  subscribeStore,
-} from "@/lib/data/local-store";
-import { messagingService, type GarageActor } from "@/lib/messaging";
+import { getSessionHandle, subscribeStore } from "@/lib/data/local-store";
+import { messagingService } from "@/lib/messaging";
+import { buildGarageActor } from "@/lib/messaging/actor";
 
 type Props = {
   itemId: string;
@@ -22,31 +19,6 @@ type Props = {
   /** Extra CTAs rendered in the same button row (Ask about this, Watch, etc.). */
   children?: React.ReactNode;
 };
-
-function buildActor(
-  user: ReturnType<typeof useAuth>["user"],
-  profile: ReturnType<typeof useAuth>["profile"],
-  sessionHandle: string,
-): GarageActor | null {
-  if (user && profile) {
-    return {
-      id: user.id,
-      name: profile.displayName,
-      handle: sessionHandle || undefined,
-      emailVerified: Boolean(user.email_confirmed_at),
-    };
-  }
-  if (sessionHandle) {
-    const person = getMergedPerson(sessionHandle);
-    return {
-      id: `handle:${sessionHandle}`,
-      name: person?.name || sessionHandle,
-      handle: sessionHandle,
-      emailVerified: true,
-    };
-  }
-  return null;
-}
 
 export function MessageOwner({
   itemId,
@@ -70,7 +42,7 @@ export function MessageOwner({
     return subscribeStore(() => setSessionHandle(getSessionHandle()));
   }, []);
 
-  const actor = ready ? buildActor(user, profile, sessionHandle) : null;
+  const actor = ready ? buildGarageActor(user, profile, sessionHandle) : null;
   const isOwner =
     Boolean(actor?.handle && actor.handle === ownerHandle) ||
     Boolean(actor?.id === ownerHandle);

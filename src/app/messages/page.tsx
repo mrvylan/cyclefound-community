@@ -5,18 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
-import {
-  getMergedPerson,
-  getSessionHandle,
-  subscribeStore,
-} from "@/lib/data/local-store";
+import { SessionPicker } from "@/components/forms/SessionPicker";
+import { getSessionHandle, subscribeStore } from "@/lib/data/local-store";
 import {
   messagingService,
   subscribeMessages,
-  type GarageActor,
   type ThreadDetail,
   type ThreadListItem,
 } from "@/lib/messaging";
+import { buildGarageActor } from "@/lib/messaging/actor";
 
 function formatWhen(value: string) {
   if (!value) return "";
@@ -45,31 +42,6 @@ function roleLabel(row: ThreadListItem) {
   return row.role === "seller" ? "Your item" : "Your inquiry";
 }
 
-function buildActor(
-  user: ReturnType<typeof useAuth>["user"],
-  profile: ReturnType<typeof useAuth>["profile"],
-  sessionHandle: string,
-): GarageActor | null {
-  if (user && profile) {
-    return {
-      id: user.id,
-      name: profile.displayName,
-      handle: sessionHandle || undefined,
-      emailVerified: Boolean(user.email_confirmed_at),
-    };
-  }
-  if (sessionHandle) {
-    const person = getMergedPerson(sessionHandle);
-    return {
-      id: `handle:${sessionHandle}`,
-      name: person?.name || sessionHandle,
-      handle: sessionHandle,
-      emailVerified: true,
-    };
-  }
-  return null;
-}
-
 function MessagesInner() {
   const { ready, configured, user, profile } = useAuth();
   const router = useRouter();
@@ -90,12 +62,12 @@ function MessagesInner() {
     return subscribeStore(() => setSessionHandle(getSessionHandle()));
   }, []);
 
-  const actor = ready ? buildActor(user, profile, sessionHandle) : null;
+  const actor = ready ? buildGarageActor(user, profile, sessionHandle) : null;
   const actorId = actor?.id ?? "";
   const needsLogin = ready && configured && !user && !sessionHandle;
 
   const refresh = useCallback(async () => {
-    const nextActor = buildActor(user, profile, sessionHandle);
+    const nextActor = buildGarageActor(user, profile, sessionHandle);
     if (!nextActor) {
       setRows([]);
       setDetail(null);
@@ -189,6 +161,9 @@ function MessagesInner() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-8 py-10">
+      <div className="mb-4">
+        <SessionPicker />
+      </div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">

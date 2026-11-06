@@ -103,10 +103,18 @@ export type Answer = {
 const MARKET_STATUSES: ItemStatus[] = ["For sale", "Open to offers", "Trade only"];
 
 /**
- * Single profile used in the default (non–mock-data) view for UI + messaging tests.
+ * Profiles always available in the default (non–mock-data) signed-in view
+ * so you can message between your account and one mock member.
  * Full seed cast still loads via Insert Mock Data.
  */
 export const SOLO_SEED_HANDLE = "dsimpson";
+/** Mock messaging partner in the default view. */
+export const PARTNER_SEED_HANDLE = "ben_carver";
+export const DEFAULT_SEED_HANDLES = [SOLO_SEED_HANDLE, PARTNER_SEED_HANDLE] as const;
+
+export function isDefaultSeedHandle(handle?: string | null) {
+  return Boolean(handle && (DEFAULT_SEED_HANDLES as readonly string[]).includes(handle));
+}
 
 export const people: Person[] = [
   {

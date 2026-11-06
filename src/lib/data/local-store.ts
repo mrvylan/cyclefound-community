@@ -2,12 +2,13 @@
 
 import {
   answers as seedAnswers,
+  DEFAULT_SEED_HANDLES,
   getItemsByOwner as seedItemsByOwner,
   getPerson,
+  isDefaultSeedHandle,
   items as seedItems,
   people,
   questions as seedQuestions,
-  SOLO_SEED_HANDLE,
   type Answer,
   type GarageItem,
   type ItemStatus,
@@ -18,11 +19,16 @@ import {
 import { isValidMemberHandle } from "./handles";
 
 export { isValidMemberHandle } from "./handles";
-export { SOLO_SEED_HANDLE } from "./seed";
+export {
+  DEFAULT_SEED_HANDLES,
+  isDefaultSeedHandle,
+  PARTNER_SEED_HANDLE,
+  SOLO_SEED_HANDLE,
+} from "./seed";
 
-/** Solo Dylan seed is always available for the default signed-in view. */
-function soloSeedVisible(handle?: string) {
-  return Boolean(handle && handle === SOLO_SEED_HANDLE);
+/** Dylan + mock partner are available in the default signed-in view. */
+function defaultSeedVisible(handle?: string | null) {
+  return isDefaultSeedHandle(handle);
 }
 
 const STORAGE_KEY = "cf_beta_v1";
@@ -127,9 +133,9 @@ export function insertMockData() {
 export function clearMockData() {
   const store = readStore();
   store.mockDataEnabled = false;
-  // Drop demo actor sessions (ben_carver, etc.) but keep the solo Dylan handle.
+  // Drop full-cast demo actors; keep default-seed handles (Dylan + messaging partner).
   const demoHandles = new Set(
-    people.map((p) => p.handle).filter((h) => h !== SOLO_SEED_HANDLE),
+    people.map((p) => p.handle).filter((h) => !isDefaultSeedHandle(h)),
   );
   if (store.sessionHandle && demoHandles.has(store.sessionHandle)) {
     store.sessionHandle = "";
@@ -138,7 +144,7 @@ export function clearMockData() {
 }
 
 function seedPerson(handle: string): Person | undefined {
-  if (!isMockDataEnabled() && !soloSeedVisible(handle)) return undefined;
+  if (!isMockDataEnabled() && !defaultSeedVisible(handle)) return undefined;
   return getPerson(handle);
 }
 
@@ -213,7 +219,7 @@ export function resolvePerson(handle: string): Person | undefined {
 export function getWantedLines(handle: string): string[] {
   const patch = readStore().profilePatches[handle];
   if (patch?.wantedLines) return patch.wantedLines;
-  if (!isMockDataEnabled() && !soloSeedVisible(handle)) return [];
+  if (!isMockDataEnabled() && !defaultSeedVisible(handle)) return [];
   return seedWanted.filter((w) => w.ownerHandle === handle).map((w) => w.part);
 }
 
@@ -230,12 +236,14 @@ export function getAllQuestions(): Question[] {
   const store = readStore();
   const seeded = isMockDataEnabled()
     ? seedQuestions
-    : seedQuestions.filter((q) => q.askerHandle === SOLO_SEED_HANDLE);
+    : seedQuestions.filter((q) => defaultSeedVisible(q.askerHandle));
   let all = [...seeded, ...store.extraQuestions];
   if (!isMockDataEnabled()) {
     const me = store.sessionHandle;
     if (!me) return [];
-    all = all.filter((q) => q.askerHandle === me);
+    all = all.filter(
+      (q) => q.askerHandle === me || defaultSeedVisible(q.askerHandle),
+    );
   }
   return all.map((q) => {
     const thread = getAllAnswers(q.id);
@@ -258,7 +266,7 @@ export function getAllAnswers(questionId: string): Answer[] {
   const allowSeed =
     isMockDataEnabled() ||
     seedQuestions.some(
-      (q) => q.id === questionId && q.askerHandle === SOLO_SEED_HANDLE,
+      (q) => q.id === questionId && defaultSeedVisible(q.askerHandle),
     );
   const seeded = allowSeed
     ? seedAnswers.filter((a) => a.questionId === questionId)
@@ -282,7 +290,9 @@ export function getAllAnswers(questionId: string): Answer[] {
 export function getGarageItemsFor(handle: string): GarageItem[] {
   const store = readStore();
   const seeded =
-    isMockDataEnabled() || soloSeedVisible(handle) ? seedItemsByOwner(handle) : [];
+    isMockDataEnabled() || defaultSeedVisible(handle)
+      ? seedItemsByOwner(handle)
+      : [];
   return [...seeded, ...store.extraItems.filter((i) => i.ownerHandle === handle)];
 }
 
@@ -290,12 +300,14 @@ export function getAllItems(): GarageItem[] {
   const store = readStore();
   const seeded = isMockDataEnabled()
     ? seedItems
-    : seedItems.filter((i) => i.ownerHandle === SOLO_SEED_HANDLE);
+    : seedItems.filter((i) => defaultSeedVisible(i.ownerHandle));
   let all = [...seeded, ...store.extraItems];
   if (!isMockDataEnabled()) {
     const me = store.sessionHandle;
     if (!me) return [];
-    all = all.filter((i) => i.ownerHandle === me);
+    all = all.filter(
+      (i) => i.ownerHandle === me || defaultSeedVisible(i.ownerHandle),
+    );
   }
   return all;
 }
@@ -441,12 +453,28 @@ export function listMembers(): Person[] {
   if (isMockDataEnabled()) return people;
   const me = getSessionHandle();
   if (!me) return [];
-  // Default view: only the signed-in member — Dylan uses the rich solo seed row.
-  const person =
+
+  const out: Person[] = [];
+  const seen = new Set<string>();
+
+  function push(person: Person | undefined) {
+    if (!person || seen.has(person.handle)) return;
+    seen.add(person.handle);
+    out.push(person);
+  }
+
+  push(
     getMergedPerson(me) ??
-    (soloSeedVisible(me) ? getPerson(me) : undefined) ??
-    stubPersonFromHandle(me, readStore().profilePatches[me]);
-  return person ? [person] : [];
+      (defaultSeedVisible(me) ? getPerson(me) : undefined) ??
+      stubPersonFromHandle(me, readStore().profilePatches[me]),
+  );
+
+  // Always include the default messaging pair (Dylan + Ben) when signed in.
+  for (const handle of DEFAULT_SEED_HANDLES) {
+    push(getMergedPerson(handle) ?? getPerson(handle));
+  }
+
+  return out;
 }
 
 /** Verified experts — seed roster when mock is on, otherwise the signed-in member only if verified. */

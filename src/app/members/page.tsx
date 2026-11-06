@@ -49,7 +49,7 @@ export default function MembersPage() {
             {mock
               ? "Browse people by expertise tag. Open a profile to see their garage and what they’ve answered."
               : signedIn
-                ? "Your profile is listed below. Insert mock data from the header to explore sample members."
+                ? "You and one mock member are listed so you can test messaging. Insert mock data from the header for the full sample roster."
                 : "Log in to see your profile here, or insert mock data from the header to explore the UI."}
           </p>
           {tags.length > 1 ? (

@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
-import {
-  getMergedPerson,
-  getSessionHandle,
-  subscribeStore,
-} from "@/lib/data/local-store";
-import { messagingService, type GarageActor } from "@/lib/messaging";
+import { getSessionHandle, subscribeStore } from "@/lib/data/local-store";
+import { messagingService } from "@/lib/messaging";
+import { buildGarageActor } from "@/lib/messaging/actor";
 
 type Props = {
   handle: string;
@@ -19,31 +16,6 @@ type Props = {
   /** When set, renders an accent Ask CTA that opens the same message popover. */
   askLabel?: string;
 };
-
-function buildActor(
-  user: ReturnType<typeof useAuth>["user"],
-  profile: ReturnType<typeof useAuth>["profile"],
-  sessionHandle: string,
-): GarageActor | null {
-  if (user && profile) {
-    return {
-      id: user.id,
-      name: profile.displayName,
-      handle: sessionHandle || undefined,
-      emailVerified: Boolean(user.email_confirmed_at),
-    };
-  }
-  if (sessionHandle) {
-    const person = getMergedPerson(sessionHandle);
-    return {
-      id: `handle:${sessionHandle}`,
-      name: person?.name || sessionHandle,
-      handle: sessionHandle,
-      emailVerified: true,
-    };
-  }
-  return null;
-}
 
 export function MessageMember({
   handle,
@@ -64,7 +36,7 @@ export function MessageMember({
     return subscribeStore(() => setSessionHandleState(getSessionHandle()));
   }, []);
 
-  const actor = ready ? buildActor(user, profile, sessionHandle) : null;
+  const actor = ready ? buildGarageActor(user, profile, sessionHandle) : null;
   const isSelf = Boolean(actor?.handle && actor.handle === handle);
   const nextPath = `/u/${handle}`;
   const needsLogin = ready && configured && !user && !sessionHandle;
