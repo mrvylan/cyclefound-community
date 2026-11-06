@@ -21,11 +21,11 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
     try {
-      setBannerDismissed(sessionStorage.getItem("cf_prealpha_banner_dismissed") === "1");
+      // Banner is permanent in Pre-Alpha — clear any prior dismiss preference.
+      sessionStorage.removeItem("cf_prealpha_banner_dismissed");
     } catch {
       /* ignore */
     }
@@ -57,15 +57,6 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
       return;
     }
     setError("That password doesn’t match. Ask for the Pre-Alpha invite code.");
-  }
-
-  function dismissBanner() {
-    setBannerDismissed(true);
-    try {
-      sessionStorage.setItem("cf_prealpha_banner_dismissed", "1");
-    } catch {
-      /* ignore */
-    }
   }
 
   if (!ready) {
@@ -158,29 +149,18 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!bannerDismissed ? (
-        <div className="border-b border-accent-soft-border bg-accent-soft px-4 py-2.5 text-[13px] leading-[1.45] text-ink">
-          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-8">
-            <p className="m-0 min-w-0 flex-1">
-              <span className="font-mono text-[12px] font-medium tracking-wide uppercase text-accent-hover">
-                Pre-Alpha
-              </span>
-              <span className="mx-2 text-muted">·</span>
-              Demo content for testing — not production community data.
-            </p>
-            <div className="flex shrink-0 flex-wrap items-center gap-3">
-              <MockDataControl variant="banner" />
-              <button
-                type="button"
-                onClick={dismissBanner}
-                className="border-0 bg-transparent p-0 text-[13px] font-semibold text-accent-hover underline-offset-2 hover:underline"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
+      <div className="border-b border-accent-soft-border bg-accent-soft px-4 py-2.5 text-[13px] leading-[1.45] text-ink">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-8">
+          <p className="m-0 min-w-0 flex-1">
+            <span className="font-mono text-[12px] font-medium tracking-wide uppercase text-accent-hover">
+              Pre-Alpha
+            </span>
+            <span className="mx-2 text-muted">·</span>
+            Demo content for testing — not production community data.
+          </p>
+          <MockDataControl variant="banner" />
         </div>
-      ) : null}
+      </div>
       {children}
     </>
   );
