@@ -14,6 +14,9 @@ import {
   type Question,
   wanted as seedWanted,
 } from "./seed";
+import { isValidMemberHandle } from "./handles";
+
+export { isValidMemberHandle } from "./handles";
 
 const STORAGE_KEY = "cf_beta_v1";
 
@@ -96,36 +99,40 @@ export function setSessionHandle(handle: string) {
   writeStore(store);
 }
 
+function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
+  const name = patch?.name?.trim() || handle;
+  return {
+    handle,
+    name,
+    init: initialsFromDisplayName(name),
+    bg: "#527D31",
+    role: "Member",
+    loc: patch?.loc ?? "",
+    level: "RIDER",
+    skills: patch?.skills ?? [],
+    bio: patch?.bio ?? "",
+    rating: "New",
+    reviews: 0,
+    spokes: "0",
+    spokesNum: 0,
+    accepted: 0,
+    items: 0,
+    reply: "—",
+    consult: "",
+    verified: false,
+    memberSince: "2026",
+    roleBadge: "Member",
+    avatarUrl: patch?.avatarUrl || undefined,
+  };
+}
+
 export function getMergedPerson(handle: string): Person | undefined {
   const base = getPerson(handle);
   const patch = readStore().profilePatches[handle];
   if (!base) {
     if (!patch?.name) return undefined;
     // Auth / demo actor with no seed row — enough for post attribution.
-    const name = patch.name;
-    return {
-      handle,
-      name,
-      init: initialsFromDisplayName(name),
-      bg: "#527D31",
-      role: "Member",
-      loc: patch.loc ?? "",
-      level: "RIDER",
-      skills: patch.skills ?? [],
-      bio: patch.bio ?? "",
-      rating: "New",
-      reviews: 0,
-      spokes: "0",
-      spokesNum: 0,
-      accepted: 0,
-      items: 0,
-      reply: "—",
-      consult: "",
-      verified: false,
-      memberSince: "2026",
-      roleBadge: "Member",
-      avatarUrl: patch.avatarUrl || undefined,
-    };
+    return stubPersonFromHandle(handle, patch);
   }
   if (!patch) return base;
   const name = patch.name ?? base.name;
@@ -138,6 +145,19 @@ export function getMergedPerson(handle: string): Person | undefined {
     skills: patch.skills ?? base.skills,
     avatarUrl: patch.avatarUrl ?? base.avatarUrl,
   };
+}
+
+/**
+ * Resolve a profile for /u/[handle] — seed member, local patch, or a stub
+ * for valid auth handles that aren't in seed data (avoids 404 after signup).
+ */
+export function resolvePerson(handle: string): Person | undefined {
+  const key = String(handle || "").trim();
+  if (!isValidMemberHandle(key)) return undefined;
+  const merged = getMergedPerson(key);
+  if (merged) return merged;
+  if (getPerson(key)) return getPerson(key);
+  return stubPersonFromHandle(key, readStore().profilePatches[key]);
 }
 
 export function getWantedLines(handle: string): string[] {

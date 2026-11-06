@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMergedPerson, subscribeStore } from "@/lib/data/local-store";
+import { resolvePerson, subscribeStore } from "@/lib/data/local-store";
 
 type Identity = {
   name: string;
@@ -22,7 +22,7 @@ export function ProfileIdentity({
 
   useEffect(() => {
     function sync() {
-      const merged = getMergedPerson(handle);
+      const merged = resolvePerson(handle);
       if (!merged) return;
       setIdentity({
         name: merged.name,
@@ -72,7 +72,7 @@ export function ProfileDisplayName({
 
   useEffect(() => {
     function sync() {
-      const merged = getMergedPerson(handle);
+      const merged = resolvePerson(handle);
       if (merged?.name) setName(merged.name);
     }
     sync();

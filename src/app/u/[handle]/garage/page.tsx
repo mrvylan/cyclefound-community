@@ -16,9 +16,10 @@ import { FEATURES } from "@/lib/features";
 import {
   getGarageItemsFor,
   getWantedLines,
+  resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { getGarage, getPerson } from "@/lib/data/seed";
+import { getGarage } from "@/lib/data/seed";
 
 const categories = [
   "All",
@@ -36,19 +37,24 @@ export default function GaragePage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = use(params);
-  const person = getPerson(handle);
-  const garage = getGarage(handle);
   const [tick, setTick] = useState(0);
+  const [ready, setReady] = useState(false);
   const [cat, setCat] = useState("All");
   const [view, setView] = useState("Grid");
   const [availability, setAvailability] = useState("Everything");
 
-  useEffect(() => subscribeStore(() => setTick((t) => t + 1)), []);
+  useEffect(() => {
+    setReady(true);
+    return subscribeStore(() => setTick((t) => t + 1));
+  }, []);
   void tick;
 
-  const ownerWanted = getWantedLines(handle);
+  const person = ready ? resolvePerson(handle) : undefined;
+  const garage = getGarage(handle);
+  const ownerWanted = ready ? getWantedLines(handle) : [];
 
   const items = useMemo(() => {
+    if (!ready) return [];
     return getGarageItemsFor(handle).filter((item) => {
       if (cat !== "All" && item.catShort !== cat) return false;
       if (availability === "Available only") {
@@ -59,7 +65,15 @@ export default function GaragePage({
       }
       return true;
     });
-  }, [handle, cat, availability, tick]);
+  }, [handle, cat, availability, tick, ready]);
+
+  if (!ready) {
+    return (
+      <div className="mx-auto max-w-[1280px] px-8 py-16 text-[15px] text-muted">
+        Loading garage…
+      </div>
+    );
+  }
 
   if (!person) notFound();
   const garageName = garage?.name ?? `${person.name.split(" ")[0]}'s garage`;
