@@ -17,6 +17,7 @@ import {
   validateEmail,
   validatePassword,
 } from "@/lib/auth/user";
+import { PasswordInput } from "@/components/forms/PasswordInput";
 import { useAuth } from "./AuthProvider";
 import { OAuthButtons } from "./OAuthButtons";
 
@@ -596,10 +597,9 @@ export function AuthForm() {
             />
           </Field>
           <Field id="password" label="Password">
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              className={inputClass}
+              inputClassName={inputClass}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -668,10 +668,9 @@ export function AuthForm() {
       {mode === "set-password" ? (
         <form className="mt-7 space-y-4" onSubmit={onSetPassword}>
           <Field id="password" label={`New password (${MIN_PASSWORD_LENGTH}+ characters)`}>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              className={inputClass}
+              inputClassName={inputClass}
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -679,10 +678,9 @@ export function AuthForm() {
             />
           </Field>
           <Field id="confirmPassword" label="Confirm password">
-            <input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
-              className={inputClass}
+              inputClassName={inputClass}
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

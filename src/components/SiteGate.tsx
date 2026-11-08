@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { PasswordInput } from "@/components/forms/PasswordInput";
 import {
   getSiteGatePassword,
   isSiteGateEnabled,
@@ -18,7 +18,6 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(!enabled);
   const [unlocked, setUnlocked] = useState(!enabled);
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -90,34 +89,18 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
             <label htmlFor="site-gate-password" className="text-[14px] font-semibold">
               Invite password
             </label>
-            <div className="relative">
-              <input
-                id="site-gate-password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                autoFocus
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (error) setError("");
-                }}
-                placeholder="Enter the Pre-Alpha password"
-                className="h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white py-0 pr-12 pl-3.5 text-[16px] text-ink outline-none focus:border-accent"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                className="absolute top-1/2 right-1.5 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg border-0 bg-transparent text-muted hover:bg-ground hover:text-ink"
-              >
-                {showPassword ? (
-                  <EyeOff className="size-4 stroke-[2]" aria-hidden />
-                ) : (
-                  <Eye className="size-4 stroke-[2]" aria-hidden />
-                )}
-              </button>
-            </div>
+            <PasswordInput
+              id="site-gate-password"
+              autoComplete="current-password"
+              autoFocus
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError("");
+              }}
+              placeholder="Enter the Pre-Alpha password"
+              inputClassName="h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white py-0 pl-3.5 text-[16px] text-ink outline-none focus:border-accent"
+            />
             {error ? (
               <p role="alert" className="m-0 text-[14px] font-medium text-[#9B2C2C]">
                 {error}
