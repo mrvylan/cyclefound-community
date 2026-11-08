@@ -94,7 +94,28 @@ Keep community + localhost. Supabase callback URI unchanged:
 - `LEGAL_ORIGIN` / legal canonicals → `https://www.cyclefound.com`
 - Listing message deep-links → `https://classic.cyclefound.com/listing.html?id=…`
 
-## Smoke checklist (after IONOS + Supabase)
+## Status
+
+| Step | Status |
+|---|---|
+| Marketplace archive + git tag | Done |
+| Vercel `cyclefound-classic` deploy | Done (`cyclefound-classic.vercel.app`) |
+| Community redirects + legal host strings | Done (commit `ce1ac44`) |
+| Attach `www` / apex / `classic` in Vercel | Done |
+| IONOS DNS records | **You** — login required (records above) |
+| Supabase Site URL + Redirect URLs | **You** — dashboard login required |
+| Google OAuth JS origins | **You** — Cloud Console |
+
+## Smoke checklist
+
+### Verified without classic DNS
+
+- [x] `https://cyclefound-classic.vercel.app/listing.html?id=27c9b283-…` → HTTP 200
+- [x] `https://cyclefound-classic.vercel.app/listing.html?id=b92c337c-…` → HTTP 200
+- [x] `https://community.cyclefound.com/listing.html?id=27c9b283-…` → 308 → classic
+- [x] `https://community.cyclefound.com/` → HTTP 200 (Community)
+
+### After IONOS + Supabase (operator)
 
 - [ ] `https://classic.cyclefound.com/listing.html?id=27c9b283-b71b-4e8a-8f46-65faf05e9af6` loads listing
 - [ ] `https://classic.cyclefound.com/listing.html?id=b92c337c-5556-42c8-90e5-8eabdab07a31` loads listing
