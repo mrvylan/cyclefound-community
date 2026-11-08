@@ -14,12 +14,16 @@ export function isDemoSessionEnabled(): boolean {
   return process.env.NODE_ENV === "development";
 }
 
-/** Show Insert Mock Data in the Pre-Alpha banner (testers / local only). */
+/**
+ * Show Insert Mock Data in the Pre-Alpha banner.
+ * Default on for Pre-Alpha (local + community.cyclefound.com). Opt out with
+ * NEXT_PUBLIC_SHOW_MOCK_CONTROLS=0 when you no longer want testers seeding mock data.
+ */
 export function showMockDataControls(): boolean {
   const v = process.env.NEXT_PUBLIC_SHOW_MOCK_CONTROLS?.trim().toLowerCase();
   if (v === "0" || v === "false" || v === "off") return false;
   if (v === "1" || v === "true" || v === "on") return true;
-  return isDemoSessionEnabled();
+  return true;
 }
 
 /**
