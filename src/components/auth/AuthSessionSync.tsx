@@ -3,19 +3,16 @@
 import { useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { communityHandleFromProfile } from "@/lib/community/handles";
-import { isDemoSessionEnabled } from "@/lib/demo-session";
 import { profileService } from "@/lib/profile/profileService";
 import {
   getSessionHandle,
-  isDefaultSeedHandle,
-  isMockDataEnabled,
   saveProfilePatch,
   setSessionHandle,
 } from "@/lib/data/local-store";
 
 /**
- * Keep the local session handle aligned with auth when mock/demo actor switching
- * is not in play. Handle matches the public Supabase directory.
+ * Keep the local session handle aligned with the signed-in Supabase user.
+ * Handle matches the public community directory.
  */
 export function AuthSessionSync() {
   const { ready, profile } = useAuth();
@@ -45,20 +42,11 @@ export function AuthSessionSync() {
           ...(avatarUrl ? { avatarUrl } : {}),
         });
 
-        const demo = isDemoSessionEnabled();
-        const current = getSessionHandle();
-        if (demo && (isMockDataEnabled() || isDefaultSeedHandle(current))) {
-          if (!current) setSessionHandle(next);
-          return;
-        }
-
-        if (current !== next) setSessionHandle(next);
+        if (getSessionHandle() !== next) setSessionHandle(next);
         return;
       }
 
-      if (!isMockDataEnabled() && getSessionHandle()) {
-        setSessionHandle("");
-      }
+      if (getSessionHandle()) setSessionHandle("");
     }
 
     void sync();

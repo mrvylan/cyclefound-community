@@ -101,7 +101,8 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const labels = itemDetail.photoLabels;
   const sameModels = resolveSameModelCards();
   const compatibleParts = resolveCompatibleParts();
-  const showRichDetail = item.id === "colnago-super-1984";
+  // Seed-only rich detail (e.g. Colnago demo item) is retired with mock data.
+  const showRichDetail = false;
   const basicSpecs = [
     { k: "Category", v: item.catShort },
     ...(yearLabel ? [{ k: "Year", v: yearLabel }] : []),
@@ -111,7 +112,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     ...(FEATURES.marketValues ? [{ k: "Market", v: item.mkt }] : []),
     { k: "Asking", v: formatAskPrice(item.ask) },
   ];
-  const rawSpecs = showRichDetail ? itemDetail.specs : basicSpecs;
+  const rawSpecs = basicSpecs;
   const specs = FEATURES.verifiedBadges
     ? rawSpecs
     : rawSpecs.filter((s) => !/originality/i.test(s.k));

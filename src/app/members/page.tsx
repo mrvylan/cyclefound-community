@@ -9,7 +9,6 @@ import { Feature } from "@/components/Feature";
 import {
   getGarageItemsFor,
   getSessionHandle,
-  isMockDataEnabled,
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
@@ -41,7 +40,6 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Person[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
   const [signedIn, setSignedIn] = useState(false);
-  const [mock, setMock] = useState(false);
 
   useEffect(() => {
     function sync() {
@@ -51,7 +49,6 @@ export default function MembersPage() {
         Object.fromEntries(list.map((p) => [p.handle, getGarageItemsFor(p.handle).length])),
       );
       setSignedIn(Boolean(getSessionHandle()));
-      setMock(isMockDataEnabled());
     }
     sync();
     return subscribeStore(sync);
@@ -111,11 +108,9 @@ export default function MembersPage() {
         <div className="mx-auto flex max-w-[1280px] flex-col gap-[18px] px-8 pb-8 pt-12">
           <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">Members</h1>
           <p className="m-0 max-w-[640px] text-[18px] leading-[1.55] text-muted-2">
-            {mock
-              ? "Browse people by expertise. Open a profile to see their garage and what they’ve answered."
-              : signedIn
-                ? "Find riders by what they know — open a profile to see their garage and answers."
-                : "Log in to see your profile here, or browse once members start joining."}
+            {signedIn
+              ? "Find riders by what they know — open a profile to see their garage and answers."
+              : "Browse members as they join. Log in to appear here with your garage."}
           </p>
 
           {members.length > 0 ? (

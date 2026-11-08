@@ -28,7 +28,7 @@ import {
 import { abbreviatedDisplayName } from "@/lib/auth/user";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 
-/** Home side panels that use seed/mock people — empty until Insert Mock Data. */
+/** Home side panels for verified experts and market highlights (empty when none). */
 export function HomeExpertsOnline() {
   const [online, setOnline] = useState<ReturnType<typeof getExpertsLocal>>([]);
 

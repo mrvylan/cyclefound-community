@@ -83,7 +83,7 @@ export default function GaragesIndexPage() {
         <div className="rounded-[14px] border border-line bg-surface p-8 text-center">
           <p className="m-0 text-[16px] font-semibold text-ink">No garages to show yet</p>
           <p className="mt-2 text-[14px] text-muted-2">
-            Insert mock data from the Pre-Alpha banner, or sign in and add your first item.
+            Sign in and add your first item to start a garage.
           </p>
         </div>
       ) : (

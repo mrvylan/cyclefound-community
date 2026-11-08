@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import { ProfilePageClient } from "@/components/profile/ProfilePageClient";
 import { isValidMemberHandle } from "@/lib/data/handles";
-import { getPerson, people } from "@/lib/data/seed";
 
 export function generateStaticParams() {
-  return people.map((p) => ({ handle: p.handle }));
+  return [] as { handle: string }[];
 }
 
 export async function generateMetadata({
@@ -13,8 +12,7 @@ export async function generateMetadata({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
-  const person = getPerson(handle);
-  return { title: person?.name ?? `@${handle}` };
+  return { title: `@${handle}` };
 }
 
 export default async function ProfilePage({

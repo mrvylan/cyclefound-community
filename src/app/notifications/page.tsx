@@ -13,7 +13,7 @@ import {
   subscribeNotifications,
   type AppNotification,
 } from "@/lib/notifications/store";
-import { getSessionHandle, isMockDataEnabled, subscribeStore } from "@/lib/data/local-store";
+import { getSessionHandle, subscribeStore } from "@/lib/data/local-store";
 
 function kindIcon(kind: AppNotification["kind"]) {
   if (kind === "message") return MessageSquare;
@@ -29,7 +29,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     const sync = () => {
       setHasSession(Boolean(profile) || Boolean(getSessionHandle()));
-      if (isMockDataEnabled()) ensureDemoNotifications();
+      ensureDemoNotifications();
       setItems(listNotifications());
     };
     sync();

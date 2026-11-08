@@ -33,7 +33,7 @@ function JoinValuePanel() {
         ))}
       </ul>
       <p className="m-0 font-mono text-[12px] tracking-wide text-muted uppercase">
-        Pre-Alpha · demo community
+        Pre-Alpha
       </p>
     </aside>
   );

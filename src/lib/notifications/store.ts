@@ -88,39 +88,12 @@ export function pushNotification(
   return item;
 }
 
-/** Seed a few demo notifications when mock data is on and inbox is empty. */
+/** Demo notification seeding is retired with mock data. */
 export function ensureDemoNotifications() {
-  if (readAll().length) return;
-  const now = Date.now();
-  writeAll([
-    {
-      id: "n_demo_answer",
-      kind: "answer",
-      title: "New answer on your question",
-      body: "Someone replied to “Creaking bottom bracket on a mid-80s steel frame”",
-      href: "/q/dylan-bottom-bracket",
-      createdAt: new Date(now - 1000 * 60 * 40).toISOString(),
-      read: false,
-    },
-    {
-      id: "n_demo_msg",
-      kind: "message",
-      title: "New message",
-      body: "Ben Carver sent you a message",
-      href: "/messages",
-      createdAt: new Date(now - 1000 * 60 * 120).toISOString(),
-      read: false,
-    },
-    {
-      id: "n_demo_accept",
-      kind: "accepted",
-      title: "Answer accepted",
-      body: "Your answer was marked as the solution",
-      href: "/q/seized-seatpost",
-      createdAt: new Date(now - 1000 * 60 * 60 * 26).toISOString(),
-      read: true,
-    },
-  ]);
+  // Clear leftover demo rows from older clients.
+  const all = readAll();
+  const next = all.filter((n) => !String(n.id || "").startsWith("n_demo_"));
+  if (next.length !== all.length) writeAll(next);
 }
 
 export function subscribeNotifications(listener: Listener) {

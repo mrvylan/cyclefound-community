@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   getAllQuestions,
   getSessionHandle,
-  isMockDataEnabled,
   subscribeStore,
 } from "@/lib/data/local-store";
 import type { Question } from "@/lib/data/seed";
@@ -62,13 +61,11 @@ export function HomeFeed() {
   const [ready, setReady] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [signedIn, setSignedIn] = useState(false);
-  const [mock, setMock] = useState(false);
 
   useEffect(() => {
     function sync() {
       setQuestions(getAllQuestions());
       setSignedIn(Boolean(getSessionHandle()));
-      setMock(isMockDataEnabled());
       setReady(true);
     }
     sync();
@@ -96,7 +93,7 @@ export function HomeFeed() {
 
   const empty =
     filtered.length === 0
-      ? mock || questions.length > 0
+      ? questions.length > 0
         ? {
             title: "No questions in this view",
             description:
@@ -107,15 +104,13 @@ export function HomeFeed() {
         : signedIn
           ? {
               title: "Your workbench is empty",
-              description:
-                "Ask a question, or insert mock data from the header to explore sample threads.",
+              description: "Ask a question to get help from the community.",
               actionLabel: "Ask the community",
               actionHref: "/ask",
             }
           : {
               title: "No questions yet",
-              description:
-                "Log in to see your posts, or insert mock data from the header to explore the UI.",
+              description: "Log in to ask the community and follow threads.",
               actionLabel: "Log in",
               actionHref: "/auth?mode=login&next=/",
             }

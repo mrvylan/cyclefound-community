@@ -171,7 +171,7 @@ export function ExpertsDirectory() {
           {experts.length === 0 ? (
             <EmptyState
               title="No experts to show"
-              description="Log in or insert mock data from the header to explore the experts directory."
+              description="Verified experts will appear here as members earn badges. Browse members in the meantime."
               actionLabel="Browse members"
               actionHref="/members"
             />

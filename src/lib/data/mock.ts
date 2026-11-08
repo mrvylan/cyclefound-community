@@ -1,2 +1,2 @@
-/** Canonical mock data for the beta UI. Prefer importing from here going forward. */
+/** @deprecated Seed catalogs are empty — prefer directory + local-store. */
 export * from "./seed";

@@ -16,7 +16,6 @@ import {
   LevelBadge,
   PlaceholderPhoto,
   StatusChip,
-  TagChip,
 } from "@/components/ui";
 import {
   hydrateCommunityDirectory,
@@ -28,12 +27,10 @@ import {
   getGarageItemsFor,
   getItemPhotoUrls,
   getSessionHandle,
-  isMockDataEnabled,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
 import { itemYearLabel } from "@/lib/garage/itemFields";
-import { marcoProfile } from "@/lib/data/seed";
 
 /** Words from a skill label that can be matched against question tags/titles. */
 function skillTokens(skill: string) {
@@ -76,12 +73,10 @@ export function ProfilePageClient({
   /** Owner chrome (edit links) is hidden while previewing as a visitor. */
   const isOwnProfile = isOwner && !previewVisitor;
   const ownedItems = ready ? getGarageItemsFor(handle) : [];
-  const profile =
-    ready && isMockDataEnabled() && handle === "lugged_marco" ? marcoProfile : null;
   const tabs = [
     ["Garage", ownedItems.length],
-    ["Answers", profile?.answers.length ?? 0],
-    ["Reviews", profile?.reviews.length ?? person?.reviews ?? 0],
+    ["Answers", 0],
+    ["Reviews", person?.reviews ?? 0],
   ] as const;
   const tabLabels = tabs.map(([label]) => label);
   const tab =
@@ -89,11 +84,8 @@ export function ProfilePageClient({
       ? tabParam
       : "Garage";
   const skillList: { name: string; endorse: number }[] = useMemo(
-    () =>
-      profile
-        ? profile.skills.map(({ name, endorse }) => ({ name, endorse }))
-        : (person?.skills ?? []).map((name) => ({ name, endorse: 0 })),
-    [profile, person],
+    () => (person?.skills ?? []).map((name) => ({ name, endorse: 0 })),
+    [person],
   );
   // Evidence: accepted answers by this member on questions that match each skill.
   const evidence = useMemo(() => {
@@ -309,7 +301,7 @@ export function ProfilePageClient({
         <aside className="flex max-w-[380px] min-w-0 flex-[1_1_300px] flex-col gap-5">
           <section className="rounded-2xl border border-line bg-surface p-[22px]">
             <h2 className="section-title mb-4 mt-0 text-[20px]">Expertise</h2>
-            {person.skills.length === 0 && !profile ? (
+            {person.skills.length === 0 ? (
               <p className="m-0 text-[14px] text-muted-2">
                 No expertise tags yet.
                 {isOwnProfile ? (
@@ -346,63 +338,6 @@ export function ProfilePageClient({
           </section>
 
           <WantedList handle={handle} previewVisitor={previewVisitor} />
-
-          {profile ? (
-            <>
-              <Feature name="spokesCurrency">
-                <section className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-[22px]">
-                  <h2 className="section-title m-0 text-[20px]">Where the Spokes came from</h2>
-                  <ul className="m-0 flex list-none flex-col gap-2.5 p-0 text-[14px]">
-                    {profile.spokesBreakdown.map((k) => (
-                      <li
-                        key={k.label}
-                        className="flex justify-between gap-2.5 border-b border-line-soft pb-2.5 last:border-0"
-                      >
-                        <span>{k.label}</span>
-                        <span className="font-mono font-medium">{k.n}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </Feature>
-
-              <Feature name="verifiedBadges">
-                <section className="rounded-2xl border border-line bg-surface p-[22px]">
-                  <h2 className="section-title mb-4 mt-0 text-[20px]">Badges</h2>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {profile.badges.map((b) => (
-                      <div
-                        key={b.name}
-                        className="flex flex-col items-center gap-1 rounded-xl border border-line bg-ground p-3 text-center"
-                      >
-                        <span className="section-title text-[20px] normal-case tracking-normal">
-                          {b.mark}
-                        </span>
-                        <span className="text-[11px] leading-tight text-meta">{b.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </Feature>
-
-              <Feature name="paidConsults">
-                <section className="rounded-2xl border border-line bg-surface p-[22px]">
-                  <h2 className="section-title mb-3 mt-0 text-[20px]">Services</h2>
-                  <ul className="m-0 flex list-none flex-col gap-2.5 p-0 text-[14px]">
-                    {profile.services.map((s) => (
-                      <li
-                        key={s.kind}
-                        className="flex justify-between gap-2 border-b border-line-soft pb-2.5"
-                      >
-                        <span className="font-semibold">{s.kind}</span>
-                        <span className="text-meta">{s.detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </Feature>
-            </>
-          ) : null}
 
           <Feature name="spokesCurrency">
             <section className="rounded-2xl border border-line bg-surface p-[22px]">
@@ -514,68 +449,22 @@ export function ProfilePageClient({
 
           {tab === "Answers" && (
             <div className="flex flex-col gap-3">
-              {profile?.answers.length ? (
-                profile.answers.map((a) => (
-                  <Link
-                    key={a.q}
-                    href={`/q/${a.id}`}
-                    className="flex gap-4 rounded-[14px] border border-line bg-surface p-4 text-ink no-underline hover:text-ink"
-                  >
-                    <span className="w-10 shrink-0 text-center font-mono text-lg font-medium">
-                      {a.votes}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold">{a.q}</span>
-                      <span className="mt-1 flex flex-wrap gap-2 text-[13px] text-meta">
-                        {a.meta}
-                        {a.acc ? <TagChip>Accepted</TagChip> : null}
-                      </span>
-                    </span>
-                  </Link>
-                ))
-              ) : (
-                <p className="m-0 text-[15px] text-muted-2">
-                  No answers yet.{" "}
-                  <Link
-                    href="/?sort=Unanswered"
-                    className="font-semibold text-accent no-underline hover:text-accent-hover"
-                  >
-                    Browse unanswered questions
-                  </Link>{" "}
-                  that match your expertise.
-                </p>
-              )}
+              <p className="m-0 text-[15px] text-muted-2">
+                No answers yet.{" "}
+                <Link
+                  href="/?sort=Unanswered"
+                  className="font-semibold text-accent no-underline hover:text-accent-hover"
+                >
+                  Browse unanswered questions
+                </Link>{" "}
+                that match your expertise.
+              </p>
             </div>
           )}
 
           {tab === "Reviews" && (
             <div className="flex flex-col gap-3">
-              {profile?.reviews.length ? (
-                profile.reviews.map((r) => (
-                  <article
-                    key={r.who}
-                    className="rounded-[14px] border border-line bg-surface p-5"
-                  >
-                    <div className="mb-2 flex flex-wrap items-center gap-2 text-[13px] text-meta">
-                      <span className="font-semibold text-ink">{r.who}</span>
-                      <span>·</span>
-                      <span>{r.ctx}</span>
-                      <span className="inline-flex items-center gap-0.5 text-accent">
-                        {Array.from({ length: r.stars }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className="size-3.5 fill-accent text-accent"
-                            aria-hidden
-                          />
-                        ))}
-                      </span>
-                    </div>
-                    <p className="m-0 text-[15px] leading-normal text-muted-2">{r.text}</p>
-                  </article>
-                ))
-              ) : (
-                <p className="m-0 text-[15px] text-muted-2">No reviews yet.</p>
-              )}
+              <p className="m-0 text-[15px] text-muted-2">No reviews yet.</p>
             </div>
           )}
         </div>

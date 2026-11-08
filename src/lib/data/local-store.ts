@@ -1,20 +1,12 @@
 "use client";
 
 import {
-  answers as seedAnswers,
-  DEFAULT_SEED_HANDLES,
-  getItemsByOwner as seedItemsByOwner,
-  getPerson,
   isDefaultSeedHandle,
-  items as seedItems,
-  people,
-  questions as seedQuestions,
   type Answer,
   type GarageItem,
   type ItemStatus,
   type Person,
   type Question,
-  wanted as seedWanted,
 } from "./seed";
 import { normalizeItemCategory } from "./categories";
 import { isValidMemberHandle } from "./handles";
@@ -35,11 +27,6 @@ export {
   PARTNER_SEED_HANDLE,
   SOLO_SEED_HANDLE,
 } from "./seed";
-
-/** Dylan + mock partner are available in the default signed-in view. */
-function defaultSeedVisible(handle?: string | null) {
-  return isDefaultSeedHandle(handle);
-}
 
 const STORAGE_KEY = "cf_beta_v1";
 
@@ -121,15 +108,29 @@ function readStore(): LocalStore {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultStore();
     const parsed = JSON.parse(raw) as Partial<LocalStore>;
-    return {
+    const store: LocalStore = {
       ...defaultStore(),
       ...parsed,
+      // Mock/seed community data is retired — never rehydrate the flag.
+      mockDataEnabled: false,
       itemPatches: parsed.itemPatches ?? {},
       profilePatches: parsed.profilePatches ?? {},
       extraItems: parsed.extraItems ?? [],
       extraQuestions: parsed.extraQuestions ?? [],
       extraAnswers: parsed.extraAnswers ?? [],
     };
+    // Drop leftover demo actors from older clients.
+    if (store.sessionHandle && isDefaultSeedHandle(store.sessionHandle)) {
+      store.sessionHandle = "";
+    }
+    if (parsed.mockDataEnabled) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+      } catch {
+        /* ignore quota */
+      }
+    }
+    return store;
   } catch {
     return defaultStore();
   }
@@ -160,35 +161,28 @@ export function setSessionHandle(handle: string) {
   writeStore(store);
 }
 
+/** Mock/seed community data is permanently off. */
 export function isMockDataEnabled(): boolean {
-  return Boolean(readStore().mockDataEnabled);
+  return false;
 }
 
-/** Reveal seed/mock members, questions, and garage items for UI demos. */
+/** No-op — mock inserts are disabled. */
 export function insertMockData() {
-  const store = readStore();
-  store.mockDataEnabled = true;
-  if (!store.sessionHandle) store.sessionHandle = "ben_carver";
-  writeStore(store);
+  clearMockData();
 }
 
-/** Hide seed/mock data again; keeps the signed-in user’s own posts and items. */
+/** Ensure mock flag is off and demo seed actors are not the session. */
 export function clearMockData() {
   const store = readStore();
   store.mockDataEnabled = false;
-  // Drop full-cast demo actors; keep default-seed handles (Dylan + messaging partner).
-  const demoHandles = new Set(
-    people.map((p) => p.handle).filter((h) => !isDefaultSeedHandle(h)),
-  );
-  if (store.sessionHandle && demoHandles.has(store.sessionHandle)) {
+  if (store.sessionHandle && isDefaultSeedHandle(store.sessionHandle)) {
     store.sessionHandle = "";
   }
   writeStore(store);
 }
 
-function seedPerson(handle: string): Person | undefined {
-  if (!isMockDataEnabled() && !defaultSeedVisible(handle)) return undefined;
-  return getPerson(handle);
+function seedPerson(_handle: string): Person | undefined {
+  return undefined;
 }
 
 function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
@@ -251,7 +245,6 @@ export function resolvePerson(handle: string): Person | undefined {
   if (!isValidMemberHandle(key)) return undefined;
   const merged = getMergedPerson(key);
   if (merged) return merged;
-  if (isMockDataEnabled() && getPerson(key)) return getPerson(key);
   const directory = getDirectoryPerson(key);
   if (directory) {
     const patch = readStore().profilePatches[key];
@@ -276,8 +269,7 @@ export function resolvePerson(handle: string): Person | undefined {
 export function getWantedLines(handle: string): string[] {
   const patch = readStore().profilePatches[handle];
   if (patch?.wantedLines) return patch.wantedLines;
-  if (!isMockDataEnabled() && !defaultSeedVisible(handle)) return [];
-  return seedWanted.filter((w) => w.ownerHandle === handle).map((w) => w.part);
+  return [];
 }
 
 export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
@@ -295,18 +287,8 @@ export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
 
 export function getAllQuestions(): Question[] {
   const store = readStore();
-  const seeded = isMockDataEnabled()
-    ? seedQuestions
-    : seedQuestions.filter((q) => defaultSeedVisible(q.askerHandle));
-  let all = [...seeded, ...store.extraQuestions];
-  if (!isMockDataEnabled()) {
-    const me = store.sessionHandle;
-    if (!me) return [];
-    all = all.filter(
-      (q) => q.askerHandle === me || defaultSeedVisible(q.askerHandle),
-    );
-  }
-  return all.map((q) => {
+  // User-authored questions only (seed Q&A removed).
+  return store.extraQuestions.map((q) => {
     const thread = getAllAnswers(q.id);
     const accepted = thread.find((a) => a.accepted);
     return {
@@ -324,18 +306,7 @@ export function getQuestionLocal(id: string): Question | undefined {
 
 export function getAllAnswers(questionId: string): Answer[] {
   const store = readStore();
-  const allowSeed =
-    isMockDataEnabled() ||
-    seedQuestions.some(
-      (q) => q.id === questionId && defaultSeedVisible(q.askerHandle),
-    );
-  const seeded = allowSeed
-    ? seedAnswers.filter((a) => a.questionId === questionId)
-    : [];
-  const merged = [
-    ...seeded,
-    ...store.extraAnswers.filter((a) => a.questionId === questionId),
-  ];
+  const merged = store.extraAnswers.filter((a) => a.questionId === questionId);
   const acceptedId = store.acceptedByQuestion[questionId];
   return merged
     .map((a) => {
@@ -369,13 +340,8 @@ function resolveOwnedItems(raw: GarageItem[], patches: Record<string, GarageItem
 
 export function getGarageItemsFor(handle: string): GarageItem[] {
   const store = readStore();
-  const seeded =
-    isMockDataEnabled() || defaultSeedVisible(handle)
-      ? seedItemsByOwner(handle)
-      : [];
   const marketplace = getMarketplaceItemsForHandle(handle);
   const raw = [
-    ...seeded,
     ...store.extraItems.filter((i) => i.ownerHandle === handle),
     ...marketplace,
   ];
@@ -384,21 +350,12 @@ export function getGarageItemsFor(handle: string): GarageItem[] {
 
 export function getAllItems(): GarageItem[] {
   const store = readStore();
-  const seeded = isMockDataEnabled()
-    ? seedItems
-    : seedItems.filter((i) => defaultSeedVisible(i.ownerHandle));
   const marketplace = getAllMarketplaceItems();
-  let all = [...seeded, ...store.extraItems];
-  if (!isMockDataEnabled()) {
-    const me = store.sessionHandle;
-    if (!me) {
-      return resolveOwnedItems(marketplace, store.itemPatches);
-    }
-    all = all.filter(
-      (i) => i.ownerHandle === me || defaultSeedVisible(i.ownerHandle),
-    );
-  }
-  return resolveOwnedItems([...all, ...marketplace], store.itemPatches);
+  const me = store.sessionHandle;
+  const mine = me
+    ? store.extraItems.filter((i) => i.ownerHandle === me)
+    : [];
+  return resolveOwnedItems([...mine, ...marketplace], store.itemPatches);
 }
 
 /** Photos for a garage item — marketplace signed URLs, seed `photo`, session uploads. */
@@ -546,7 +503,7 @@ export function deleteGarageItem(id: string) {
   const known =
     Boolean(existing) ||
     store.extraItems.some((i) => i.id === id) ||
-    seedItems.some((i) => i.id === id);
+    Boolean(getMarketplaceItem(id));
   if (!known) return;
   mergeItemPatch(id, { deleted: true });
   try {
@@ -577,7 +534,10 @@ export function postQuestion(input: {
   photoDataUrls: string[];
 }): Question {
   const store = readStore();
-  const author = getMergedPerson(store.sessionHandle) ?? getPerson(store.sessionHandle);
+  const author =
+    getMergedPerson(store.sessionHandle) ??
+    getDirectoryPerson(store.sessionHandle) ??
+    resolvePerson(store.sessionHandle);
   const id = `${slugify(input.title) || "question"}-${Date.now().toString(36)}`;
   const q: Question = {
     id,
@@ -601,7 +561,6 @@ export function postQuestion(input: {
     linked: input.linkedItemId ? "Linked garage item" : "",
     linkedItemId: input.linkedItemId,
   };
-  // Photos kept in sessionStorage for the detail page mock
   if (input.photoDataUrls.length) {
     sessionStorage.setItem(`cf_q_photos_${id}`, JSON.stringify(input.photoDataUrls));
   }
@@ -616,7 +575,10 @@ export function postAnswer(input: {
   photoDataUrls: string[];
 }): Answer {
   const store = readStore();
-  const author = getMergedPerson(store.sessionHandle) ?? getPerson(store.sessionHandle);
+  const author =
+    getMergedPerson(store.sessionHandle) ??
+    getDirectoryPerson(store.sessionHandle) ??
+    resolvePerson(store.sessionHandle);
   const id = `a-${input.questionId}-${Date.now().toString(36)}`;
   const a: Answer = {
     id,
@@ -718,26 +680,13 @@ export function listMembers(): Person[] {
     push(resolvePerson(row.handle) ?? row.person);
   }
 
-  if (isMockDataEnabled()) {
-    for (const p of people) {
-      push(getMergedPerson(p.handle) ?? p);
-    }
-    return out;
-  }
-
   const me = getSessionHandle();
   if (me) {
     push(
       getMergedPerson(me) ??
         getDirectoryPerson(me) ??
-        (defaultSeedVisible(me) ? getPerson(me) : undefined) ??
         stubPersonFromHandle(me, readStore().profilePatches[me]),
     );
-
-    // Default messaging pair when signed in (local seed demos).
-    for (const handle of DEFAULT_SEED_HANDLES) {
-      push(getMergedPerson(handle) ?? getPerson(handle));
-    }
   }
 
   return out;
@@ -749,9 +698,7 @@ export function getExpertsLocal(): Person[] {
 }
 
 export function tagSuggestions(): string[] {
-  const tags = new Set<string>();
-  for (const q of seedQuestions) q.tags.forEach((t) => tags.add(t));
-  [
+  const tags = new Set<string>([
     "repair",
     "vintage-steel",
     "campagnolo",
@@ -760,6 +707,9 @@ export function tagSuggestions(): string[] {
     "valuation",
     "build",
     "rare-parts",
-  ].forEach((t) => tags.add(t));
+  ]);
+  for (const q of readStore().extraQuestions) {
+    q.tags.forEach((t) => tags.add(t));
+  }
   return Array.from(tags).sort();
 }

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { ChevronUp, MessageCircle, Check } from "lucide-react";
 import type { Question } from "@/lib/data/seed";
-import { getItem, getPerson } from "@/lib/data/seed";
 import {
   getGarageItemsFor,
+  getItemLocal,
   getItemPhotoUrls,
+  resolvePerson,
 } from "@/lib/data/local-store";
 import { abbreviatedDisplayName } from "@/lib/auth/user";
 import { Avatar, TagChip } from "./ui";
@@ -23,11 +24,11 @@ function relatedGarageCount(handle: string, tags: string[]): number {
 }
 
 export function QuestionCard({ q }: { q: Question }) {
-  const linkedItem = q.linkedItemId ? getItem(q.linkedItemId) : undefined;
+  const linkedItem = q.linkedItemId ? getItemLocal(q.linkedItemId) : undefined;
   const linkedPhotos = linkedItem ? getItemPhotoUrls(linkedItem) : [];
   const linkedLabel = q.linked || linkedItem?.name || "";
   const askerName = abbreviatedDisplayName(q.asker);
-  const solver = q.expertHandle ? getPerson(q.expertHandle) : undefined;
+  const solver = q.expertHandle ? resolvePerson(q.expertHandle) : undefined;
   const related =
     q.solved && q.expertHandle ? relatedGarageCount(q.expertHandle, q.tags) : 0;
 

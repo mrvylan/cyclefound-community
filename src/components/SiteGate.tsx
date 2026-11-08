@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { MockDataControl } from "@/components/MockDataControl";
 import {
   getSiteGatePassword,
   isSiteGateEnabled,
@@ -79,15 +78,13 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
             className="h-9 w-auto"
             priority
           />
-          <p className="eyebrow mb-2 mt-6 text-accent">Pre-Alpha · Demo</p>
+          <p className="eyebrow mb-2 mt-6 text-accent">Pre-Alpha</p>
           <h1 className="section-title m-0 text-[36px] leading-[1.02]">
             Community preview
           </h1>
           <p className="mt-3 mb-0 text-[15px] leading-[1.55] text-muted-2">
-            This subdomain is in <strong className="font-semibold text-ink">Pre-Alpha</strong>.
-            Names, garages, questions, and market values are{" "}
-            <strong className="font-semibold text-ink">demo / mock data</strong> for
-            product testing — not a live community.
+            This site is in <strong className="font-semibold text-ink">Pre-Alpha</strong>.
+            Sign in to ask questions, build your garage, and meet other bike people.
           </p>
           <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
             <label htmlFor="site-gate-password" className="text-[14px] font-semibold">
@@ -158,7 +155,6 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
             <span className="mx-2 text-muted">·</span>
             We&apos;re building the community — stay tuned.
           </p>
-          <MockDataControl variant="banner" />
         </div>
       </div>
       {children}

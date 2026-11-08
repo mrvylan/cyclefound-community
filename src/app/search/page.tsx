@@ -108,8 +108,8 @@ function SearchInner() {
             title={`No results for “${query.trim()}”`}
             description={
               signedIn
-                ? "Nothing matched in the profiles, questions, and garage items you can see. Insert mock data from the header to search the sample community."
-                : "Log in to search your community data, or insert mock data from the header to explore sample results."
+                ? "Nothing matched in the profiles, questions, and garage items you can see."
+                : "Log in to search members, questions, and garage items."
             }
             actionLabel={signedIn ? "Ask the community" : "Log in"}
             actionHref={signedIn ? "/ask" : "/auth?mode=login&next=/search"}
