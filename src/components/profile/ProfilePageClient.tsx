@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Eye, ShieldCheck, Star } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
@@ -41,13 +42,9 @@ function skillTokens(skill: string) {
     .filter((w) => w.length > 3 && !["and", "with", "pre"].includes(w));
 }
 
-export function ProfilePageClient({
-  handle,
-  tab: tabParam,
-}: {
-  handle: string;
-  tab?: string;
-}) {
+export function ProfilePageClient({ handle }: { handle: string }) {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") ?? undefined;
   const [tick, setTick] = useState(0);
   const [ready, setReady] = useState(false);
   const [sessionHandle, setSessionHandle] = useState("");

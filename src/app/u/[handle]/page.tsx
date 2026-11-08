@@ -1,10 +1,7 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ProfilePageClient } from "@/components/profile/ProfilePageClient";
 import { isValidMemberHandle } from "@/lib/data/handles";
-
-export function generateStaticParams() {
-  return [] as { handle: string }[];
-}
 
 export async function generateMetadata({
   params,
@@ -17,15 +14,22 @@ export async function generateMetadata({
 
 export default async function ProfilePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ handle: string }>;
-  searchParams: Promise<{ tab?: string }>;
 }) {
   const { handle } = await params;
-  const { tab } = await searchParams;
 
   if (!isValidMemberHandle(handle)) notFound();
 
-  return <ProfilePageClient handle={handle} tab={tab} />;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-[1280px] px-8 py-16 text-[15px] text-meta">
+          Loading profile…
+        </div>
+      }
+    >
+      <ProfilePageClient handle={handle} />
+    </Suspense>
+  );
 }
