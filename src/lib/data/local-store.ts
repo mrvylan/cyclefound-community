@@ -36,6 +36,7 @@ import {
   type MemberContribution,
 } from "@/lib/community/contribution-tier";
 import { roleBadgeForMember } from "@/lib/community/founding-members";
+import { isHiddenMember } from "@/lib/community/hidden-members";
 
 export { isValidMemberHandle } from "./handles";
 export {
@@ -757,6 +758,12 @@ export function listMembers(): Person[] {
   function push(person: Person | undefined) {
     const next = withSkills(person);
     if (!next || seen.has(next.handle)) return;
+    if (
+      isHiddenMember({ name: next.name, handle: next.handle }) &&
+      next.handle !== getSessionHandle()
+    ) {
+      return;
+    }
     seen.add(next.handle);
     out.push(next);
   }

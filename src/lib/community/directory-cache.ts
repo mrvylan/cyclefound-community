@@ -2,6 +2,7 @@
 
 import type { GarageItem, Person } from "@/lib/data/seed";
 import { roleBadgeForMember } from "@/lib/community/founding-members";
+import { isHiddenMember } from "@/lib/community/hidden-members";
 import { communityHandleFromProfile } from "@/lib/community/handles";
 import { initialsFromName, colorForId } from "@/lib/auth/user";
 
@@ -162,7 +163,16 @@ export async function hydrateCommunityDirectory() {
       throw new Error(dirPayload.error || `Directory failed (${dirRes.status})`);
     }
 
-    const members = (dirPayload.members || []).map(personFromRow);
+    const members = (dirPayload.members || [])
+      .map(personFromRow)
+      .filter(
+        (m) =>
+          !isHiddenMember({
+            name: m.person.name,
+            handle: m.handle,
+            userId: m.userId,
+          }),
+      );
     const byHandle = new Map(members.map((m) => [m.handle, m]));
     const byUserId = new Map(members.map((m) => [m.userId, m]));
 
