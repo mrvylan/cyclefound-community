@@ -10,7 +10,7 @@ import { ITEM_CATEGORIES } from "@/lib/data/categories";
 import {
   getAllItems,
   getItemPhotoUrls,
-  getMergedPerson,
+  resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
 import { formatAskPrice } from "@/lib/garage/itemFields";
@@ -316,7 +316,7 @@ export default function MarketPage() {
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
                   {visible.map((item) => {
-                    const owner = getMergedPerson(item.ownerHandle);
+                    const owner = resolvePerson(item.ownerHandle);
                     const photos = getItemPhotoUrls(item);
                     return (
                       <Link
