@@ -226,6 +226,11 @@ export function AuthForm() {
         provider,
         options: {
           redirectTo: authCallbackUrl(window.location.origin),
+          // Always show Google’s account picker (otherwise a prior grant
+          // can skip straight to /onboarding with no visible Google UI).
+          ...(provider === "google"
+            ? { queryParams: { prompt: "select_account" } }
+            : {}),
         },
       });
       if (error) throw error;
