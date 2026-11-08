@@ -20,13 +20,31 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+/** Legacy demo hrefs → real seed question ids. */
+const HREF_FIXES: Record<string, string> = {
+  "/q/q1": "/q/dylan-bottom-bracket",
+  "/q/q2": "/q/seized-seatpost",
+};
+
+function normalizeHref(href: string) {
+  return HREF_FIXES[href] || href;
+}
+
 function readAll(): AppNotification[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as AppNotification[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    let dirty = false;
+    const next = parsed.map((n) => {
+      const href = normalizeHref(n.href);
+      if (href !== n.href) dirty = true;
+      return href === n.href ? n : { ...n, href };
+    });
+    if (dirty) writeAll(next);
+    return next;
   } catch {
     return [];
   }
@@ -79,8 +97,8 @@ export function ensureDemoNotifications() {
       id: "n_demo_answer",
       kind: "answer",
       title: "New answer on your question",
-      body: "Someone replied to “Original paint or respray?”",
-      href: "/q/q1",
+      body: "Someone replied to “Creaking bottom bracket on a mid-80s steel frame”",
+      href: "/q/dylan-bottom-bracket",
       createdAt: new Date(now - 1000 * 60 * 40).toISOString(),
       read: false,
     },
@@ -98,7 +116,7 @@ export function ensureDemoNotifications() {
       kind: "accepted",
       title: "Answer accepted",
       body: "Your answer was marked as the solution",
-      href: "/q/q2",
+      href: "/q/seized-seatpost",
       createdAt: new Date(now - 1000 * 60 * 60 * 26).toISOString(),
       read: true,
     },
