@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Feature } from "@/components/Feature";
@@ -14,14 +13,18 @@ import {
   PlaceholderPhoto,
   StatusChip,
 } from "@/components/ui";
+import {
+  hydrateCommunityDirectory,
+  isCommunityDirectoryReady,
+} from "@/lib/community/directory-cache";
 import { handleFromAuthProfile } from "@/lib/demo-session";
 import { FEATURES } from "@/lib/features";
 import {
   canManageGarageItem,
   getItemLocal,
   getItemPrivateMeta,
-  getMergedPerson,
   getSessionHandle,
+  resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
 import { formatAskPrice, itemYearLabel } from "@/lib/garage/itemFields";
@@ -45,6 +48,9 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     setReady(true);
     setSessionHandle(getSessionHandle());
+    if (!isCommunityDirectoryReady()) {
+      void hydrateCommunityDirectory();
+    }
     return subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
@@ -54,8 +60,9 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   void tick;
 
   const item = getItemLocal(id);
-  const owner = item ? getMergedPerson(item.ownerHandle) : undefined;
+  const owner = item ? resolvePerson(item.ownerHandle) : undefined;
   const garage = item ? getGarage(item.ownerHandle) : undefined;
+  const directoryReady = isCommunityDirectoryReady();
   const authHandle = profile ? handleFromAuthProfile(profile) : "";
   const isOwner = Boolean(
     item &&
@@ -63,7 +70,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         canManageGarageItem(item, authHandle)),
   );
 
-  if (!ready) {
+  if (!ready || ((!item || !owner) && !directoryReady)) {
     return (
       <div className="mx-auto max-w-[1280px] px-8 py-16 text-[15px] text-muted">
         Loading item…
@@ -72,7 +79,17 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   }
 
   if (!item || !owner) {
-    notFound();
+    return (
+      <div className="mx-auto max-w-[720px] px-8 py-16">
+        <h1 className="section-title m-0 text-[44px] text-ink">Item not found</h1>
+        <p className="mt-4 text-[16px] text-muted-2">
+          This garage item is unavailable or still loading.
+        </p>
+        <Link href="/garages" className="mt-6 inline-flex font-semibold text-accent">
+          Browse garages
+        </Link>
+      </div>
+    );
   }
 
   const itemPhotosRaw =
