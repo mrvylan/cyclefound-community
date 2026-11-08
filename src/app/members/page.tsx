@@ -92,24 +92,36 @@ export default function MembersPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = members.filter(
-      (p) =>
-        (!tag || normalizeSkillLabels(p.skills).includes(tag)) &&
-        (!q || p.name.toLowerCase().includes(q) || p.handle.toLowerCase().includes(q)),
-    );
+    const list = members.filter((p) => {
+      if (tag && !normalizeSkillLabels(p.skills).includes(tag)) return false;
+      if (!q) return true;
+      const hay = [
+        p.name,
+        p.handle,
+        p.bio,
+        ...normalizeSkillLabels(p.skills),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
     return list.sort((a, b) => {
       if (sort === "recent") {
         return (
           Number(b.memberSince) - Number(a.memberSince) || a.name.localeCompare(b.name)
         );
       }
+      // Most helpful: contribution score, then accepted answers, then garage size.
+      const scoreA = contributions[a.handle]?.score ?? a.accepted;
+      const scoreB = contributions[b.handle]?.score ?? b.accepted;
       return (
+        scoreB - scoreA ||
         b.accepted - a.accepted ||
         (itemCounts[b.handle] ?? 0) - (itemCounts[a.handle] ?? 0) ||
         a.name.localeCompare(b.name)
       );
     });
-  }, [members, tag, query, sort, itemCounts]);
+  }, [members, tag, query, sort, itemCounts, contributions]);
 
   return (
     <>
@@ -126,7 +138,7 @@ export default function MembersPage() {
             <div className="mt-1.5 flex flex-wrap items-end gap-3">
               <div className="flex min-w-[220px] flex-[1_1_280px] flex-col gap-1.5 sm:max-w-[360px]">
                 <label htmlFor="member-search" className="text-[13px] font-semibold text-ink">
-                  Search by name
+                  Search
                 </label>
                 <div className="relative">
                   <Search
@@ -138,7 +150,7 @@ export default function MembersPage() {
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Name or @handle"
+                    placeholder="Name, @handle, or expertise"
                     className="h-11 w-full rounded-[10px] border border-[#D4D3CD] bg-white pl-9 pr-3 text-[15px] text-ink placeholder:text-meta"
                   />
                 </div>

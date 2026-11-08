@@ -19,6 +19,7 @@ import { QuestionCard } from "./QuestionCard";
 const SORTS = [
   { value: "Unanswered", label: "Unanswered" },
   { value: "Newest", label: "Newest" },
+  { value: "Trending", label: "Trending" },
 ] as const;
 type Sort = (typeof SORTS)[number]["value"];
 
@@ -76,7 +77,7 @@ export function HomeFeed() {
     const params = new URLSearchParams(window.location.search);
     const s = params.get("sort");
     if (s === "Unanswered" || s === "Newest" || s === "Trending") {
-      setSort(s === "Trending" ? "Unanswered" : s);
+      setSort(s);
     }
   }, []);
 
@@ -85,6 +86,14 @@ export function HomeFeed() {
       if (sort === "Unanswered" && q.solved) return false;
       return questionMatchesIntent(q.tags, category);
     });
+    if (sort === "Trending") {
+      // Score = (votes + 2×answers + 1) / (1 + ageHours/72) — fresher + more engagement rises.
+      return list.sort((a, b) => trendingScore(b) - trendingScore(a));
+    }
+    if (sort === "Unanswered") {
+      return list.sort((a, b) => ageHours(a.time) - ageHours(b.time));
+    }
+    // Newest
     return list.sort((a, b) => ageHours(a.time) - ageHours(b.time));
   }, [questions, sort, category]);
 
@@ -141,6 +150,11 @@ export function HomeFeed() {
             }}
             className="cf-select h-10 rounded-[10px] border border-[#D4D3CD] bg-white pl-3 text-[14px] font-semibold text-ink"
             aria-label="Sort questions"
+            title={
+              sort === "Trending"
+                ? "Trending ranks by votes + answers, favoring fresher threads"
+                : undefined
+            }
           >
             {SORTS.map((s) => (
               <option key={s.value} value={s.value}>

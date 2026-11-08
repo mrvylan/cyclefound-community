@@ -7,7 +7,7 @@ import { PhotoPicker } from "./PhotoPicker";
 import { SessionPicker } from "./SessionPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ChipRadioGroup } from "@/components/ChipRadioGroup";
-import { TagChip } from "@/components/ui";
+import { FilterChip, TagChip } from "@/components/ui";
 import {
   clearAskDraft,
   readAskDraft,
@@ -28,11 +28,14 @@ import type { Question } from "@/lib/data/seed";
 import {
   ASK_INTENT_OPTIONS,
   intentById,
+  suggestTopicsFromText,
   type AskIntent,
 } from "@/lib/skills/feedTopics";
 
 const MIN_TITLE = 12;
+const MAX_TITLE = 160;
 const MIN_DETAILS = 20;
+const MAX_DETAILS = 4000;
 const MAX_TAGS = 5;
 
 function normalizeTag(raw: string) {
@@ -75,10 +78,12 @@ function initialAskState(searchParams: URLSearchParams) {
   };
 }
 
-function charsNeededHelp(have: number, min: number) {
+function liveCounter(have: number, min: number, max: number) {
   const left = Math.max(0, min - have);
-  if (left === 0) return "Looks long enough.";
-  return `${left} more character${left === 1 ? "" : "s"} needed`;
+  if (left > 0) {
+    return `${have} / ${max} · ${left} more to meet the minimum`;
+  }
+  return `${have} / ${max}`;
 }
 
 export function AskForm() {
@@ -115,17 +120,41 @@ export function AskForm() {
     void storeTick;
     return getGarageItemsFor(handle);
   }, [handle, storeTick]);
-  const suggestions = tagSuggestions().filter((t) => !tags.includes(t));
+
+  const catalogSuggestions = useMemo(() => {
+    void storeTick;
+    return tagSuggestions();
+  }, [storeTick]);
+
+  const fromText = useMemo(
+    () => suggestTopicsFromText(`${title} ${body}`, 8),
+    [title, body],
+  );
+
+  const suggestions = useMemo(() => {
+    const merged: string[] = [];
+    const seen = new Set(tags.map((t) => t.toLowerCase()));
+    for (const t of [...fromText, ...catalogSuggestions]) {
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(t);
+      if (merged.length >= 12) break;
+    }
+    return merged;
+  }, [fromText, catalogSuggestions, tags]);
+
   const titleLen = title.trim().length;
   const bodyLen = body.trim().length;
   const intentMeta = intentById(intent);
 
+  /** Duplicate / near-duplicate check against open + solved threads. */
   const similar = useMemo(() => {
     const q = title.trim().toLowerCase();
     if (q.length < 8) return [] as Question[];
     const tokens = q.split(/\s+/).filter((t) => t.length > 2);
+    if (tokens.length < 2) return [] as Question[];
     return getAllQuestions()
-      .filter((item) => item.solved)
       .map((item) => {
         const hay = `${item.title} ${item.tags.join(" ")}`.toLowerCase();
         const score = tokens.reduce((n, t) => n + (hay.includes(t) ? 1 : 0), 0);
@@ -133,19 +162,27 @@ export function AskForm() {
       })
       .filter((x) => x.score >= 2)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
+      .slice(0, 4)
       .map((x) => x.item);
   }, [title]);
 
-  const notifyHint = useMemo(() => {
-    if (!tags.length) return null;
-    const tag = tags[0]!;
-    const n = listMembers().filter((p) =>
-      p.skills.some((s) => s.toLowerCase().includes(tag.replace(/-/g, " "))),
-    ).length;
-    if (!n) return null;
-    return `Notifies about ${n} member${n === 1 ? "" : "s"} with “${tag}” expertise`;
-  }, [tags]);
+  const routing = useMemo(() => {
+    if (!intentMeta && !tags.length) return null;
+    const needles = tags.map((t) => t.toLowerCase().replace(/-/g, " "));
+    const matched = needles.length
+      ? listMembers().filter((p) =>
+          p.skills.some((s) => {
+            const skill = s.toLowerCase();
+            return needles.some((n) => skill.includes(n) || n.includes(skill));
+          }),
+        )
+      : [];
+    return {
+      intentLabel: intentMeta?.label ?? null,
+      expertiseCount: matched.length,
+      topTag: tags[0] ?? null,
+    };
+  }, [intentMeta, tags]);
 
   function addTag(raw: string) {
     const t = normalizeTag(raw);
@@ -183,14 +220,22 @@ export function AskForm() {
       );
       return;
     }
+    if (!intent) {
+      setError("Pick what you’re trying to do — Fix, Find, Value, or Build.");
+      return;
+    }
+    if (!tags.length) {
+      setError("Add at least one expertise tag so the right people can find this.");
+      return;
+    }
     setError("");
     const finalTags = [...tags];
-    if (intent && !finalTags.includes(intent) && finalTags.length < MAX_TAGS) {
+    if (!finalTags.includes(intent) && finalTags.length < MAX_TAGS) {
       finalTags.unshift(intent);
     }
     const q = postQuestion({
-      title,
-      body,
+      title: title.trim().slice(0, MAX_TITLE),
+      body: body.trim().slice(0, MAX_DETAILS),
       tags: finalTags.slice(0, MAX_TAGS),
       linkedItemId: linkedItemId || undefined,
       photoDataUrls: photos,
@@ -224,27 +269,45 @@ export function AskForm() {
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <span className="text-[14px] font-semibold">What are you trying to do?</span>
+          <p className="m-0 text-[13px] text-muted-2">
+            Intent routes your question into Fix / Find / Value / Build. Expertise tags
+            (next) match people who know the brand or discipline.
+          </p>
           <ChipRadioGroup
             ariaLabel="Question intent"
             options={ASK_INTENT_OPTIONS}
             value={intent}
-            onChange={(v) => setIntent(parseIntent(v))}
+            onChange={(v) => {
+              setIntent(parseIntent(v));
+              if (error) setError("");
+            }}
             allowEmpty
           />
           <p className="m-0 text-[13px] text-muted-2">
             {intentMeta
               ? intentMeta.blurb
-              : "Pick Fix, Find, Value, or Build so the right people see it."}
+              : "Required — pick one so the feed and helpers know the job."}
           </p>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="q-title" className="text-[14px] font-semibold">
-            Title
-          </label>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <label htmlFor="q-title" className="text-[14px] font-semibold">
+              Title
+            </label>
+            <span
+              id="q-title-help"
+              className={`font-mono text-[12px] tabular-nums ${
+                titleLen < MIN_TITLE ? "text-muted" : "text-accent-hover"
+              }`}
+            >
+              {liveCounter(titleLen, MIN_TITLE, MAX_TITLE)}
+            </span>
+          </div>
           <input
             id="q-title"
             value={title}
+            maxLength={MAX_TITLE}
             onChange={(e) => {
               setTitle(e.target.value);
               if (error) setError("");
@@ -253,14 +316,19 @@ export function AskForm() {
             aria-describedby="q-title-help"
             className="h-12 rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none placeholder:text-meta focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30"
           />
-          <p id="q-title-help" className="m-0 text-[13px] leading-[1.45] text-[#5B6166]">
-            {charsNeededHelp(titleLen, MIN_TITLE)}
-          </p>
         </div>
 
         {similar.length ? (
-          <div className="rounded-[12px] border border-line bg-ground p-3.5">
-            <p className="m-0 mb-2 text-[13px] font-semibold text-ink">Similar solved questions</p>
+          <div
+            className="rounded-[12px] border border-[#E8D9A8] bg-[#FFFBF0] p-3.5"
+            role="status"
+          >
+            <p className="m-0 mb-1 text-[13px] font-semibold text-ink">
+              Possible duplicates — check before posting
+            </p>
+            <p className="m-0 mb-2 text-[12px] text-muted-2">
+              Similar threads already exist. Open one if it answers you; otherwise keep writing.
+            </p>
             <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
               {similar.map((q) => (
                 <li key={q.id}>
@@ -269,6 +337,9 @@ export function AskForm() {
                     className="text-[14px] font-medium text-accent-hover no-underline hover:underline"
                   >
                     {q.title}
+                    {q.solved ? (
+                      <span className="ml-1.5 font-mono text-[11px] text-blue">Solved</span>
+                    ) : null}
                   </Link>
                 </li>
               ))}
@@ -277,13 +348,24 @@ export function AskForm() {
         ) : null}
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="q-body" className="text-[14px] font-semibold">
-            Details
-          </label>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <label htmlFor="q-body" className="text-[14px] font-semibold">
+              Details
+            </label>
+            <span
+              id="q-body-help"
+              className={`font-mono text-[12px] tabular-nums ${
+                bodyLen < MIN_DETAILS ? "text-muted" : "text-accent-hover"
+              }`}
+            >
+              {liveCounter(bodyLen, MIN_DETAILS, MAX_DETAILS)}
+            </span>
+          </div>
           <textarea
             id="q-body"
             rows={6}
             value={body}
+            maxLength={MAX_DETAILS}
             onChange={(e) => {
               setBody(e.target.value);
               if (error) setError("");
@@ -292,9 +374,6 @@ export function AskForm() {
             aria-describedby="q-body-help"
             className="rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 py-3 text-[16px] leading-[1.55] text-ink outline-none placeholder:text-meta focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30"
           />
-          <p id="q-body-help" className="m-0 text-[13px] leading-[1.45] text-[#5B6166]">
-            {charsNeededHelp(bodyLen, MIN_DETAILS)}
-          </p>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -302,21 +381,25 @@ export function AskForm() {
           <PhotoPicker photos={photos} onChange={setPhotos} max={4} />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 rounded-[14px] border border-line bg-surface p-4">
           <label htmlFor="q-tags" className="text-[14px] font-semibold">
-            Tags <span className="font-normal text-muted">(up to {MAX_TAGS})</span>
+            Expertise tags <span className="font-normal text-muted">(required · up to {MAX_TAGS})</span>
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTags(tags.filter((x) => x !== t))}
-                className="min-h-8 rounded-md border border-line bg-ground px-2.5 py-1 font-mono text-[12px] text-[#3D4249] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              >
-                {t} ×
-              </button>
-            ))}
+          <p className="m-0 text-[13px] text-muted-2">
+            Separate from intent — tag brands, parts, or skills (e.g. Campagnolo, seatpost) so
+            experts get matched.
+          </p>
+          <div className="flex flex-wrap gap-1.5" aria-live="polite">
+            {tags.length ? (
+              tags.map((t) => (
+                <FilterChip key={t} active onClick={() => setTags(tags.filter((x) => x !== t))}>
+                  {t}
+                  <span aria-hidden>×</span>
+                </FilterChip>
+              ))
+            ) : (
+              <span className="text-[13px] text-meta">No tags yet — pick a suggestion or type one.</span>
+            )}
           </div>
           <input
             id="q-tags"
@@ -326,41 +409,87 @@ export function AskForm() {
               if (e.key === "Enter" || e.key === ",") {
                 e.preventDefault();
                 addTag(tagInput.replace(/,/g, ""));
+                if (error) setError("");
               }
             }}
             placeholder="Type a tag and press Enter"
             className="h-11 rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[15px] outline-none placeholder:text-meta focus:border-accent"
           />
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Suggested tags">
-            {suggestions.slice(0, 10).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => addTag(t)}
-                className="min-h-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              >
-                <TagChip>{t}</TagChip>
-              </button>
-            ))}
+            {suggestions.slice(0, 10).map((t) => {
+              const selected = tags.some((x) => x.toLowerCase() === t.toLowerCase());
+              return (
+                <FilterChip
+                  key={t}
+                  active={selected}
+                  onClick={() => {
+                    if (selected) {
+                      setTags(tags.filter((x) => x.toLowerCase() !== t.toLowerCase()));
+                    } else {
+                      addTag(t);
+                    }
+                    if (error) setError("");
+                  }}
+                >
+                  {t}
+                </FilterChip>
+              );
+            })}
           </div>
-          {notifyHint ? (
-            <p className="m-0 text-[13px] text-[#5B6166]">{notifyHint}</p>
-          ) : null}
         </div>
+
+        {routing ? (
+          <div className="rounded-[12px] border border-accent-soft-border bg-accent-soft px-4 py-3">
+            <p className="eyebrow m-0 text-accent-hover">Routing</p>
+            <p className="mt-1.5 mb-0 text-[14px] leading-[1.45] text-ink">
+              {routing.intentLabel ? (
+                <>
+                  Lands in <strong>{routing.intentLabel}</strong>
+                  {routing.expertiseCount > 0 ? " · " : "."}
+                </>
+              ) : null}
+              {routing.expertiseCount > 0 ? (
+                <>
+                  Notifies about{" "}
+                  <strong>
+                    {routing.expertiseCount} member
+                    {routing.expertiseCount === 1 ? "" : "s"}
+                  </strong>
+                  {routing.topTag ? (
+                    <>
+                      {" "}
+                      with “{routing.topTag}” expertise
+                    </>
+                  ) : null}
+                  .
+                </>
+              ) : tags.length ? (
+                <>No exact expertise matches yet — tags still help search.</>
+              ) : (
+                <>Add expertise tags to match helpers.</>
+              )}
+            </p>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-2">
           <label htmlFor="q-item" className="text-[14px] font-semibold">
-            Link an item from your garage <span className="font-normal text-muted">(optional)</span>
+            Link a garage item <span className="font-normal text-muted">(optional)</span>
           </label>
+          <p className="m-0 text-[13px] text-muted-2">
+            Attach a bike or part from your garage so answerers see the exact machine.
+          </p>
           {garageItems.length ? (
             <div
               id="q-item"
               className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-              role="group"
+              role="listbox"
               aria-label="Link a garage item"
             >
               <button
                 type="button"
+                role="option"
+                aria-selected={!linkedItemId}
                 onClick={() => setLinkedItemId("")}
                 className={`flex min-h-[5.5rem] flex-col items-center justify-center rounded-[10px] border p-2 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                   !linkedItemId
@@ -371,16 +500,18 @@ export function AskForm() {
                 <span className="text-[12px] font-semibold text-ink">None</span>
                 <span className="mt-0.5 text-[11px] text-meta">No linked item</span>
               </button>
-              {garageItems.slice(0, 6).map((item) => {
+              {garageItems.slice(0, 8).map((item) => {
                 const on = linkedItemId === item.id;
                 const photo = getItemPhotoUrls(item)[0];
                 return (
                   <button
                     key={item.id}
                     type="button"
+                    role="option"
+                    aria-selected={on}
                     onClick={() => setLinkedItemId(item.id)}
                     className={`rounded-[10px] border p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                      on ? "border-accent bg-accent-soft" : "border-line bg-white"
+                      on ? "border-accent bg-accent-soft ring-1 ring-accent/30" : "border-line bg-white"
                     }`}
                   >
                     {photo ? (
@@ -401,8 +532,12 @@ export function AskForm() {
               })}
             </div>
           ) : (
-            <p className="m-0 text-[13px] text-meta">
-              No garage items yet — you can still ask without linking one.
+            <p className="m-0 rounded-[10px] border border-dashed border-line bg-ground px-3 py-3 text-[13px] text-meta">
+              No garage items yet.{" "}
+              <Link href="/i/new" className="font-semibold text-accent">
+                Add one
+              </Link>{" "}
+              or post without linking.
             </p>
           )}
         </div>
