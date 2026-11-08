@@ -64,7 +64,11 @@ export function ProfileEditForm() {
     const person = getMergedPerson(h);
     if (person) {
       setDisplayName(person.name);
-      setClaimedHandle(person.publicHandle || "");
+      setClaimedHandle(
+        person.publicHandle && !isProvisionalHandle(person.publicHandle)
+          ? person.publicHandle
+          : "",
+      );
       setCity(person.loc.split("·")[0]?.trim() ?? person.loc);
       setBio(person.bio);
       setSkills(normalizeSkillLabels(person.skills));

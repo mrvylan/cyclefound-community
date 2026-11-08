@@ -277,7 +277,12 @@ export default function MembersPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[17px] font-bold">{m.name}</div>
                       <div className="text-[13px] text-meta">
-                        {m.loc ? m.loc.split("·")[0]?.trim() : `@${m.handle}`}
+                        {[
+                          m.publicHandle ? `@${m.publicHandle}` : null,
+                          m.loc ? m.loc.split("·")[0]?.trim() : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Member"}
                       </div>
                     </div>
                   </div>

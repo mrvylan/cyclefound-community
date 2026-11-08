@@ -87,7 +87,11 @@ export function searchLocal(query: string): SearchHit[] {
       id: p.handle,
       href: `/u/${p.handle}`,
       title: p.name,
-      subtitle: [`@${p.handle}`, p.role, p.loc.split("·")[0]?.trim()]
+      subtitle: [
+        p.publicHandle ? `@${p.publicHandle}` : null,
+        p.role,
+        p.loc.split("·")[0]?.trim(),
+      ]
         .filter(Boolean)
         .join(" · "),
       score:

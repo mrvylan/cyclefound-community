@@ -252,7 +252,7 @@ export const garageMessagingService = {
         href,
         priceLabel: t.kind === "member" ? "" : t.priceLabel,
         coverUrl: "",
-        meta: otherHandle ? `@${otherHandle}` : otherName,
+        meta: otherName,
       },
       messages: t.messages,
       viewerId: viewer.id,

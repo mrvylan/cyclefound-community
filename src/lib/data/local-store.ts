@@ -285,16 +285,19 @@ function withPublicHandle(person: Person, claimed?: string): Person {
   if (claimedNorm && isClaimableHandle(claimedNorm)) {
     return { ...person, publicHandle: claimedNorm };
   }
-  if (!isProvisionalHandle(person.handle)) {
-    return { ...person, publicHandle: person.handle };
+  // Never surface auto hash handles (e.g. warren_9a180516) as a public @.
+  if (isProvisionalHandle(person.handle)) {
+    return { ...person, publicHandle: undefined };
   }
-  return { ...person, publicHandle: undefined };
+  return { ...person, publicHandle: person.handle };
 }
 
 /** Public @handle for display, or null when still provisional. */
 export function displayHandleFor(person: Pick<Person, "handle" | "publicHandle">) {
-  if (person.publicHandle) return person.publicHandle;
-  if (!isProvisionalHandle(person.handle)) return person.handle;
+  if (person.publicHandle && !isProvisionalHandle(person.publicHandle)) {
+    return person.publicHandle;
+  }
+  if (person.handle && !isProvisionalHandle(person.handle)) return person.handle;
   return null;
 }
 

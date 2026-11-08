@@ -166,7 +166,7 @@ export function NewMessagePicker({ open, onClose }: Props) {
                           {abbreviatedDisplayName(m.name)}
                         </span>
                         <span className="block truncate text-[12px] text-meta">
-                          @{m.handle}
+                          {m.publicHandle ? `@${m.publicHandle}` : m.loc || "Member"}
                         </span>
                       </span>
                     </button>

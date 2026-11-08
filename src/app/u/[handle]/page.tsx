@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ProfilePageClient } from "@/components/profile/ProfilePageClient";
-import { isValidMemberHandle } from "@/lib/data/handles";
+import { isProvisionalHandle, isValidMemberHandle } from "@/lib/data/handles";
 
 export async function generateMetadata({
   params,
@@ -9,7 +9,9 @@ export async function generateMetadata({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
-  return { title: `@${handle}` };
+  return {
+    title: isProvisionalHandle(handle) ? "Member profile" : `@${handle}`,
+  };
 }
 
 export default async function ProfilePage({
