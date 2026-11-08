@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Cycle Found Guidelines",
   description:
     "How to use Cycle Found — ask and answer, document garages, and buy or sell fairly and safely.",
-  alternates: { canonical: "https://community.cyclefound.com/community-guidelines" },
+  alternates: { canonical: "https://www.cyclefound.com/community-guidelines" },
 };
 
 const linkClass =
@@ -22,7 +22,7 @@ export default function CommunityGuidelinesPage() {
     >
       <p className="m-0 rounded-[10px] border border-accent-soft-border bg-accent-soft px-3.5 py-3 text-[14px] leading-[1.5] text-ink">
         <strong className="font-semibold">Pre-Alpha · Demo.</strong> Cycle Found on
-        community.cyclefound.com is early access. Some screens use mock or sample data for
+        www.cyclefound.com is early access. Some screens use mock or sample data for
         testing. Treat advice as member-to-member knowledge-sharing — not a substitute for a
         qualified mechanic on safety-critical work. Tagline: Ask · Share · Ride.
       </p>

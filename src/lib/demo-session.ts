@@ -16,7 +16,7 @@ export function isDemoSessionEnabled(): boolean {
 
 /**
  * Show Insert Mock Data in the Pre-Alpha banner.
- * Default on for Pre-Alpha (local + community.cyclefound.com). Opt out with
+ * Default on for Pre-Alpha (local + www.cyclefound.com). Opt out with
  * NEXT_PUBLIC_SHOW_MOCK_CONTROLS=0 when you no longer want testers seeding mock data.
  */
 export function showMockDataControls(): boolean {

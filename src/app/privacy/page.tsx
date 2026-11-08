@@ -12,8 +12,8 @@ import { LEGAL } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How Cycle Found collects, uses, and shares information on community.cyclefound.com.",
-  alternates: { canonical: "https://community.cyclefound.com/privacy" },
+    "How Cycle Found collects, uses, and shares information on www.cyclefound.com.",
+  alternates: { canonical: "https://www.cyclefound.com/privacy" },
 };
 
 export default function PrivacyPage() {
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
     <LegalPage eyebrow="Legal" title="Privacy Policy" effectiveDate="November 5, 2026">
       <p className="m-0 rounded-[10px] border border-accent-soft-border bg-accent-soft px-3.5 py-3 text-[14px] leading-[1.5] text-ink">
         <strong className="font-semibold">Pre-Alpha.</strong> This Policy describes Cycle
-        Found on community.cyclefound.com. Some features described below may be limited,
+        Found on www.cyclefound.com. Some features described below may be limited,
         demo-only, or not yet enabled.
       </p>
       <LegalP>
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         information. Cycle Found is a service operated by Fault Board Co., LLC (“Cycle
         Found,” “we,” “us,” or “our”). Cycle Found is a DBA / trade name of Fault Board Co.,
         LLC, a California limited liability company. The Policy covers Cycle Found on
-        community.cyclefound.com and related services we operate under the Cycle Found name
+        www.cyclefound.com and related services we operate under the Cycle Found name
         (the “Service”).
       </LegalP>
       <LegalP>
@@ -157,7 +157,7 @@ export default function PrivacyPage() {
           preference, Pre-Alpha invite-gate unlock state (when the soft gate is enabled),
           and optional local demo Community data (for example, mock or locally created
           questions, answers, or garage items). That local data stays on your device unless
-          you clear site data for community.cyclefound.com.
+          you clear site data for www.cyclefound.com.
         </LegalP>
         <LegalP>
           When you allow analytics and a measurement ID is configured, we may use Google
@@ -309,7 +309,7 @@ export default function PrivacyPage() {
           that as well. Deletion removes profile and account data we control, server-stored
           Community content tied to your account (such as questions and answers), and
           garage/listing records we host — subject to legal retention needs. Local browser
-          demo data on community.cyclefound.com is cleared when you clear site data for this
+          demo data on www.cyclefound.com is cleared when you clear site data for this
           host.
         </LegalP>
         <LegalP>
@@ -371,7 +371,7 @@ export default function PrivacyPage() {
         </LegalP>
         <LegalP>
           As of November 5, 2026, we aligned this Policy with Cycle Found on
-          community.cyclefound.com as a single Pre-Alpha site: Q&A, garages (bikes, parts,
+          www.cyclefound.com as a single Pre-Alpha site: Q&A, garages (bikes, parts,
           tools, accessories), optional buy/sell, local demo storage, Cookie settings, and
           deletion via email until in-product account deletion is available.
         </LegalP>

@@ -1,4 +1,4 @@
-/** Legal routes on this Community host only — do not link to cyclefound.com. */
+/** Legal routes on the Community host (www / apex after cutover). */
 export const LEGAL = {
   terms: "/terms",
   privacy: "/privacy",
@@ -8,4 +8,8 @@ export const LEGAL = {
   copyrightEmail: "copyright@cyclefound.com",
 } as const;
 
-export const LEGAL_ORIGIN = "https://community.cyclefound.com";
+/** Canonical Community origin after apex cutover. */
+export const LEGAL_ORIGIN = "https://www.cyclefound.com";
+
+/** Marketplace Vite app kept live for listings / sell flow. */
+export const CLASSIC_ORIGIN = "https://classic.cyclefound.com";

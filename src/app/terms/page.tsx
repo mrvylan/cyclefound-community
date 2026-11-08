@@ -12,8 +12,8 @@ import { LEGAL } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Terms of Service for Cycle Found on community.cyclefound.com — Ask · Share · Ride.",
-  alternates: { canonical: "https://community.cyclefound.com/terms" },
+    "Terms of Service for Cycle Found on www.cyclefound.com — Ask · Share · Ride.",
+  alternates: { canonical: "https://www.cyclefound.com/terms" },
 };
 
 export default function TermsPage() {
@@ -31,7 +31,7 @@ export default function TermsPage() {
           between you and Fault Board Co., LLC. Cycle Found is a service operated by Fault
           Board Co., LLC (“Cycle Found,” “we,” “us,” or “our”). Cycle Found is a DBA / trade
           name of Fault Board Co., LLC, a California limited liability company. These Terms
-          cover Cycle Found on community.cyclefound.com and related services we operate
+          cover Cycle Found on www.cyclefound.com and related services we operate
           under the Cycle Found name (collectively, the “Service”). Tagline: Ask · Share ·
           Ride.
         </LegalP>
@@ -526,7 +526,7 @@ export default function TermsPage() {
         </LegalP>
         <LegalP>
           As of November 5, 2026 (terms version 2026-11-05), we aligned these Terms with
-          Cycle Found on community.cyclefound.com as a single Pre-Alpha site (Ask · Share ·
+          Cycle Found on www.cyclefound.com as a single Pre-Alpha site (Ask · Share ·
           Ride): Q&A, garages (bikes, parts, tools, accessories), and buying/selling when
           enabled — without treating Community and marketplace as separate products.
         </LegalP>
