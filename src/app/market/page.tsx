@@ -230,7 +230,6 @@ export default function MarketPage() {
     <>
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-8 pb-8 pt-12">
-          <p className="eyebrow m-0">Buy · Sell · Trade</p>
           <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
             Parts and bikes from real garages
           </h1>

@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { HomeAskBox } from "@/components/HomeAskBox";
 import { HomeExpertsOnline } from "@/components/HomeMockPanels";
 import { Feature } from "@/components/Feature";
-import { getSessionHandle, subscribeStore } from "@/lib/data/local-store";
+import {
+  getSessionHandle,
+  resolvePerson,
+  subscribeStore,
+} from "@/lib/data/local-store";
+import { abbreviatedDisplayName } from "@/lib/auth/user";
 
 export function HomeHero() {
   const [ready, setReady] = useState(false);
@@ -19,6 +24,7 @@ export function HomeHero() {
     return subscribeStore(sync);
   }, []);
 
+  const person = handle ? resolvePerson(handle) : undefined;
   const signedIn = Boolean(handle);
   /** Member home: compact ask. Full marketing hero for logged-out visitors. */
   const memberHome = ready && signedIn;
@@ -34,12 +40,14 @@ export function HomeHero() {
   }
 
   if (memberHome) {
+    const firstName =
+      abbreviatedDisplayName(person?.name || handle).split(" ")[0] || "there";
     return (
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-8 pb-7">
           <div>
-            <p className="eyebrow m-0">Your workbench</p>
-            <h1 className="section-title m-0 text-[clamp(28px,4vw,40px)]">
+            <p className="m-0 text-[16px] font-medium text-muted-2">Hi {firstName}</p>
+            <h1 className="section-title m-0 mt-1 text-[clamp(28px,4vw,40px)]">
               What&apos;s rolling around in your head?
             </h1>
             <p className="m-0 mt-2 max-w-[560px] text-[16px] leading-[1.55] text-muted-2">
