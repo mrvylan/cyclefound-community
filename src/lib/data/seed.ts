@@ -28,6 +28,8 @@ export type Person = {
   memberSince: string;
   avatarUrl?: string;
   coverUrl?: string;
+  /** Vertical crop focus for cover (`object-position` Y%), 0 = top, 100 = bottom. */
+  coverPositionY?: number;
 };
 
 export type Garage = {

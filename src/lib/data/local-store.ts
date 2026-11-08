@@ -40,7 +40,16 @@ export type LocalProfilePatch = {
   avatarUrl?: string;
   /** Cover / workshop banner — data URL or remote URL. */
   coverUrl?: string;
+  /** Vertical crop focus for cover (`object-position` Y%), 0–100. */
+  coverPositionY?: number;
 };
+
+/** Clamp cover focal point for `object-position: 50% {y}%`. */
+export function clampCoverPositionY(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 50;
+  return Math.min(100, Math.max(0, Math.round(n)));
+}
 
 function initialsFromDisplayName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -210,6 +219,10 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
     roleBadge: "Member",
     avatarUrl: patch?.avatarUrl || undefined,
     coverUrl: patch?.coverUrl || undefined,
+    coverPositionY:
+      patch?.coverPositionY !== undefined
+        ? clampCoverPositionY(patch.coverPositionY)
+        : undefined,
   };
 }
 
@@ -233,6 +246,10 @@ export function getMergedPerson(handle: string): Person | undefined {
     skills: normalizeSkillLabels(patch.skills ?? base.skills),
     avatarUrl: patch.avatarUrl ?? base.avatarUrl,
     coverUrl: patch.coverUrl ?? base.coverUrl,
+    coverPositionY:
+      patch.coverPositionY !== undefined
+        ? clampCoverPositionY(patch.coverPositionY)
+        : base.coverPositionY,
   };
 }
 
@@ -257,6 +274,10 @@ export function resolvePerson(handle: string): Person | undefined {
       skills: normalizeSkillLabels(patch.skills ?? directory.skills),
       avatarUrl: patch.avatarUrl ?? directory.avatarUrl,
       coverUrl: patch.coverUrl ?? directory.coverUrl,
+      coverPositionY:
+        patch.coverPositionY !== undefined
+          ? clampCoverPositionY(patch.coverPositionY)
+          : directory.coverPositionY,
     };
   }
   // Own account stub even before a name patch exists.
