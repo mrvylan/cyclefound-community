@@ -41,7 +41,8 @@ const KIND_META: Record<
   item: { label: "Garage & market", Icon: Bike },
 };
 
-const HINTS = ["campagnolo", "seatpost", "dylan", "for sale", "repair"];
+/** Mix of brands, parts, people, listing filters, and question types. */
+const HINTS = ["Campagnolo", "seatpost", "Dylan", "for sale", "repair"];
 
 type Props = {
   open: boolean;
@@ -219,7 +220,7 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
                 ? `search-hit-${flat[activeIndex]!.kind}-${flat[activeIndex]!.id}`
                 : undefined
             }
-            className="min-w-0 flex-1 border-0 bg-transparent text-[16px] text-ink outline-none placeholder:text-[#929792]"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[16px] text-ink outline-none placeholder:text-[#929792] focus-visible:outline-none"
           />
           {trimmed ? (
             <button
@@ -228,7 +229,7 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              className="inline-flex size-8 items-center justify-center rounded-lg border-0 bg-transparent text-muted hover:bg-ground hover:text-ink"
+              className="inline-flex size-8 items-center justify-center rounded-lg border-0 bg-transparent text-muted hover:bg-ground hover:text-ink focus-visible:outline-none focus-visible:bg-ground"
               aria-label="Clear search"
             >
               <X className="size-4" aria-hidden />
@@ -266,9 +267,6 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
                   </button>
                 ))}
               </div>
-              <p className="mt-5 m-0 text-[13px] leading-snug text-muted-2">
-                Use ↑ ↓ to move, Enter to open, Esc to close.
-              </p>
             </div>
           ) : flat.length === 0 ? (
             <div className="px-4 py-10 text-center">
@@ -367,15 +365,15 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
         <div className="flex items-center justify-between gap-3 border-t border-line-soft bg-ground/60 px-4 py-2.5">
           <p className="m-0 hidden text-[12px] text-muted sm:block">
             {flat.length
-              ? `${flat.length} result${flat.length === 1 ? "" : "s"}`
-              : "Search the community"}
+              ? "↑ ↓ to move · Enter to open"
+              : "Press Enter to see all results"}
           </p>
           <Link
             href={trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search"}
             onClick={close}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-accent no-underline hover:text-accent-hover"
+            className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-semibold text-accent no-underline hover:text-accent-hover"
           >
-            {trimmed ? "View all results" : "Open search page"}
+            {trimmed ? "View all results" : "Browse search"}
             <ArrowRight className="size-3.5" aria-hidden />
           </Link>
         </div>
