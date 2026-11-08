@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { PhotoPicker } from "./PhotoPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -35,6 +35,7 @@ const STATUSES: ItemStatus[] = [
 
 export function ItemEditForm({ itemId }: { itemId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { ready: authReady } = useAuth();
   const [ready, setReady] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -81,7 +82,12 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       if ((CONDITIONS as readonly string[]).includes(item.cond)) {
         setCondition(item.cond as FormCondition);
       }
-      setStatus(item.status);
+      const statusFromUrl = searchParams.get("status");
+      const nextStatus =
+        statusFromUrl && (STATUSES as readonly string[]).includes(statusFromUrl)
+          ? (statusFromUrl as ItemStatus)
+          : item.status;
+      setStatus(nextStatus);
       setAskingPrice(item.ask === "—" ? "" : item.ask);
       setDescription(item.description || "");
       setPhotos(getItemPhotoUrls(item));
@@ -94,7 +100,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
     }
     load();
     return subscribeStore(load);
-  }, [itemId]);
+  }, [itemId, searchParams]);
 
   const field =
     "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";

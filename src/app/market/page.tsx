@@ -5,30 +5,52 @@ import Link from "next/link";
 import { Camera, SlidersHorizontal, X } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
+import { SellFromGarage } from "@/components/market/SellFromGarage";
 import { PlaceholderPhoto, StatusChip } from "@/components/ui";
 import { ITEM_CATEGORIES } from "@/lib/data/categories";
 import {
   getAllItems,
   getItemPhotoUrls,
+  getSessionHandle,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { formatAskPrice } from "@/lib/garage/itemFields";
+import { DISCIPLINES, inferDiscipline } from "@/lib/garage/disciplines";
+import { formatAskPrice, itemYearLabel } from "@/lib/garage/itemFields";
 import { CONDITIONS } from "@/lib/garage/mapAiCategory";
 import { cityFromLoc, type GarageItem, type ItemStatus } from "@/lib/data/seed";
 
 const MARKET: ItemStatus[] = ["For sale", "Open to offers", "Trade only"];
 
 type SortKey = "newest" | "price-asc" | "price-desc";
-type Facet = "cat" | "status" | "cond";
+type Facet = "type" | "discipline" | "size" | "price" | "distance" | "cond";
 type Filters = Record<Facet, string[]>;
-const EMPTY_FILTERS: Filters = { cat: [], status: [], cond: [] };
+
+const EMPTY_FILTERS: Filters = {
+  type: [],
+  discipline: [],
+  size: [],
+  price: [],
+  distance: [],
+  cond: [],
+};
 
 const FACET_LABEL: Record<Facet, string> = {
-  cat: "Category",
-  status: "Status",
+  type: "Type",
+  discipline: "Discipline",
+  size: "Size",
+  price: "Price",
+  distance: "Distance",
   cond: "Condition",
 };
+
+const PRICE_BUCKETS = [
+  { value: "0-250", label: "Under $250", min: 0, max: 250 },
+  { value: "250-500", label: "$250 – $500", min: 250, max: 500 },
+  { value: "500-1000", label: "$500 – $1,000", min: 500, max: 1000 },
+  { value: "1000-2500", label: "$1,000 – $2,500", min: 1000, max: 2500 },
+  { value: "2500+", label: "$2,500+", min: 2500, max: Number.POSITIVE_INFINITY },
+] as const;
 
 /** "$1,200" → 1200; "—" or unparseable → null. */
 function askNumber(ask: string): number | null {
@@ -38,6 +60,19 @@ function askNumber(ask: string): number | null {
 
 function hasAsk(item: GarageItem) {
   return Boolean(item.ask && item.ask.trim() && item.ask.trim() !== "—");
+}
+
+function priceBucket(ask: string): string | null {
+  const n = askNumber(ask);
+  if (n == null) return null;
+  const hit = PRICE_BUCKETS.find((b) => n >= b.min && n < b.max);
+  return hit?.value ?? null;
+}
+
+function itemMetaLine(item: GarageItem) {
+  return [item.size?.trim(), itemYearLabel(item.year), item.cond]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function Asking({ item }: { item: GarageItem }) {
@@ -60,7 +95,7 @@ function FilterFields({
   onToggle,
   idPrefix,
 }: {
-  options: Record<Facet, { value: string; n: number }[]>;
+  options: Record<Facet, { value: string; label?: string; n: number }[]>;
   filters: Filters;
   onToggle: (facet: Facet, value: string) => void;
   idPrefix: string;
@@ -89,7 +124,7 @@ function FilterFields({
                       onChange={() => onToggle(facet, o.value)}
                       className="size-[18px] shrink-0 accent-[#527D31]"
                     />
-                    <span className="min-w-0 flex-1">{o.value}</span>
+                    <span className="min-w-0 flex-1">{o.label ?? o.value}</span>
                     <span className="font-mono text-[12px] tabular-nums text-meta">{o.n}</span>
                   </label>
                 );
@@ -107,16 +142,19 @@ export default function MarketPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("newest");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sellOpen, setSellOpen] = useState(false);
+  const [sessionHandle, setSessionHandle] = useState("");
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Newest first: member-posted items are appended after seed data.
-    const load = () =>
+    const load = () => {
+      setSessionHandle(getSessionHandle());
       setListings(
         getAllItems()
           .filter((i) => MARKET.includes(i.status))
           .reverse(),
       );
+    };
     load();
     return subscribeStore(load);
   }, []);
@@ -136,6 +174,12 @@ export default function MarketPage() {
     };
   }, [sheetOpen]);
 
+  const myCity = useMemo(() => {
+    if (!sessionHandle) return "";
+    const me = resolvePerson(sessionHandle);
+    return me ? cityFromLoc(me.loc).trim() : "";
+  }, [sessionHandle]);
+
   const options = useMemo(() => {
     const tally = (pick: (i: GarageItem) => string) => {
       const m = new Map<string, number>();
@@ -145,31 +189,70 @@ export default function MarketPage() {
       }
       return m;
     };
-    const byCat = tally((i) => i.catShort);
-    const byStatus = tally((i) => i.status);
-    const byCond = tally((i) => i.cond);
-    // Hide zero-count options until the catalog grows (keep an active filter visible).
     const withActive = (
-      all: { value: string; n: number }[],
+      all: { value: string; label?: string; n: number }[],
       active: string[],
-    ) =>
-      all.filter((o) => o.n > 0 || active.includes(o.value));
+    ) => all.filter((o) => o.n > 0 || active.includes(o.value));
+
+    const byType = tally((i) => i.catShort);
+    const byDiscipline = tally((i) => inferDiscipline(i));
+    const bySize = tally((i) => i.size?.trim() || "");
+    const byPrice = tally((i) => priceBucket(i.ask) || "");
+    const byCond = tally((i) => i.cond);
+    const byCity = tally((i) => {
+      const owner = resolvePerson(i.ownerHandle);
+      return owner ? cityFromLoc(owner.loc).trim() : "";
+    });
+
+    const distanceOpts: { value: string; label?: string; n: number }[] = [];
+    if (myCity) {
+      const near = listings.filter((i) => {
+        const owner = resolvePerson(i.ownerHandle);
+        return owner && cityFromLoc(owner.loc).trim() === myCity;
+      }).length;
+      distanceOpts.push({
+        value: `near:${myCity}`,
+        label: `Near me (${myCity})`,
+        n: near,
+      });
+    }
+    for (const [city, n] of [...byCity.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+      if (!city) continue;
+      if (myCity && city === myCity) continue;
+      distanceOpts.push({ value: `city:${city}`, label: city, n });
+    }
 
     return {
-      cat: withActive(
+      type: withActive(
         ITEM_CATEGORIES.map((value) => ({
           value,
-          n: byCat.get(value) ?? 0,
+          n: byType.get(value) ?? 0,
         })),
-        filters.cat,
+        filters.type,
       ),
-      status: withActive(
-        MARKET.map((value) => ({
+      discipline: withActive(
+        DISCIPLINES.map((value) => ({
           value,
-          n: byStatus.get(value) ?? 0,
+          n: byDiscipline.get(value) ?? 0,
         })),
-        filters.status,
+        filters.discipline,
       ),
+      size: withActive(
+        [...bySize.entries()]
+          .filter(([v]) => v)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .map(([value, n]) => ({ value, n })),
+        filters.size,
+      ),
+      price: withActive(
+        PRICE_BUCKETS.map((b) => ({
+          value: b.value,
+          label: b.label,
+          n: byPrice.get(b.value) ?? 0,
+        })),
+        filters.price,
+      ),
+      distance: withActive(distanceOpts, filters.distance),
       cond: withActive(
         CONDITIONS.map((value) => ({
           value,
@@ -177,34 +260,56 @@ export default function MarketPage() {
         })),
         filters.cond,
       ),
-    } satisfies Record<Facet, { value: string; n: number }[]>;
-  }, [listings, filters]);
+    } satisfies Record<Facet, { value: string; label?: string; n: number }[]>;
+  }, [listings, filters, myCity]);
 
   const visible = useMemo(() => {
-    const list = listings.filter(
-      (i) =>
-        (!filters.cat.length || filters.cat.includes(i.catShort)) &&
-        (!filters.status.length || filters.status.includes(i.status)) &&
-        (!filters.cond.length || filters.cond.includes(i.cond)),
-    );
+    const list = listings.filter((i) => {
+      if (filters.type.length && !filters.type.includes(i.catShort)) return false;
+      if (filters.discipline.length && !filters.discipline.includes(inferDiscipline(i))) {
+        return false;
+      }
+      if (filters.size.length && !filters.size.includes(i.size?.trim() || "")) return false;
+      if (filters.price.length) {
+        const bucket = priceBucket(i.ask);
+        if (!bucket || !filters.price.includes(bucket)) return false;
+      }
+      if (filters.distance.length) {
+        const owner = resolvePerson(i.ownerHandle);
+        const city = owner ? cityFromLoc(owner.loc).trim() : "";
+        const ok = filters.distance.some((d) => {
+          if (d.startsWith("near:")) return city === d.slice(5);
+          if (d.startsWith("city:")) return city === d.slice(5);
+          return false;
+        });
+        if (!ok) return false;
+      }
+      if (filters.cond.length && !filters.cond.includes(i.cond)) return false;
+      return true;
+    });
     if (sort === "newest") return list;
     const dir = sort === "price-asc" ? 1 : -1;
     return [...list].sort((a, b) => {
       const pa = askNumber(a.ask);
       const pb = askNumber(b.ask);
       if (pa == null && pb == null) return 0;
-      if (pa == null) return 1; // unpriced listings always last
+      if (pa == null) return 1;
       if (pb == null) return -1;
       return (pa - pb) * dir;
     });
   }, [listings, filters, sort]);
 
-  const activeCount = filters.cat.length + filters.status.length + filters.cond.length;
+  const activeCount = (Object.keys(filters) as Facet[]).reduce(
+    (n, k) => n + filters[k].length,
+    0,
+  );
 
   function toggle(facet: Facet, value: string) {
     setFilters((f) => ({
       ...f,
-      [facet]: f[facet].includes(value) ? f[facet].filter((v) => v !== value) : [...f[facet], value],
+      [facet]: f[facet].includes(value)
+        ? f[facet].filter((v) => v !== value)
+        : [...f[facet], value],
     }));
   }
 
@@ -229,14 +334,23 @@ export default function MarketPage() {
   return (
     <>
       <section className="border-b border-line">
-        <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-8 pb-8 pt-12">
-          <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
-            Parts and bikes from real garages
-          </h1>
-          <p className="m-0 max-w-[640px] text-[18px] leading-[1.55] text-muted-2">
-            Listings come from member garages. Every item is tied to a person and the rest of what
-            they own.
-          </p>
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-4 px-8 pb-8 pt-12">
+          <div className="min-w-0 flex-1">
+            <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
+              Parts and bikes from real garages
+            </h1>
+            <p className="mt-4 m-0 max-w-[640px] text-[18px] leading-[1.55] text-muted-2">
+              Listings come from member garages. Every item is tied to a person and the rest of what
+              they own.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSellOpen(true)}
+            className="inline-flex h-11 shrink-0 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white hover:bg-accent-hover"
+          >
+            Sell from your garage
+          </button>
         </div>
       </section>
 
@@ -245,8 +359,8 @@ export default function MarketPage() {
           <EmptyState
             title="Nothing for sale yet"
             description="When members list bikes or parts, they show up here."
-            actionLabel="Add an item"
-            actionHref="/item/new"
+            actionLabel="Sell from your garage"
+            actionHref="/item/new?status=For%20sale"
           />
         ) : (
           <div className="flex items-start gap-8">
@@ -318,41 +432,51 @@ export default function MarketPage() {
                   {visible.map((item) => {
                     const owner = resolvePerson(item.ownerHandle);
                     const photos = getItemPhotoUrls(item);
+                    const discipline = inferDiscipline(item);
+                    const meta = itemMetaLine(item);
                     return (
                       <Link
                         key={item.id}
                         href={`/i/${item.id}`}
-                        className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline outline-none ring-ink ring-offset-2 ring-offset-ground hover:border-ink hover:text-ink hover:ring-2 focus-visible:border-ink focus-visible:ring-2"
+                        className="flex h-full flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline outline-none ring-ink ring-offset-2 ring-offset-ground hover:border-ink hover:text-ink hover:ring-2 focus-visible:border-ink focus-visible:ring-2"
                       >
                         {photos.length ? (
-                          <div className="relative h-[180px] overflow-hidden">
+                          <div className="relative h-[180px] shrink-0 overflow-hidden">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={photos[0]} alt="" className="size-full object-cover" />
                             <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-ink/80 px-2 py-1 font-mono text-[12px] text-white">
                               <Camera className="size-3.5" aria-hidden />
                               {photos.length}
-                              <span className="sr-only"> photo{photos.length === 1 ? "" : "s"}</span>
+                              <span className="sr-only">
+                                {" "}
+                                photo{photos.length === 1 ? "" : "s"}
+                              </span>
                             </span>
                           </div>
                         ) : (
                           <PlaceholderPhoto
                             silhouette
                             label={`${item.year} · ${item.cond}`}
-                            className="h-[180px]"
+                            className="h-[180px] shrink-0"
                           />
                         )}
-                        <div className="flex flex-col gap-2 p-4">
+                        <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-[11px] text-meta">{item.cat}</span>
+                            <span className="font-mono text-[11px] tracking-[0.04em] text-meta uppercase">
+                              {discipline}
+                            </span>
                             <StatusChip status={item.status} />
                           </div>
                           <span className="text-[16px] font-semibold leading-snug">{item.name}</span>
+                          {meta ? (
+                            <span className="font-mono text-[12px] text-meta">{meta}</span>
+                          ) : null}
                           {owner ? (
                             <span className="text-[13px] text-meta">
                               {owner.name} · {cityFromLoc(owner.loc)}
                             </span>
                           ) : null}
-                          <div className="flex items-end justify-between gap-2 text-[13px]">
+                          <div className="mt-auto flex items-end justify-between gap-2 border-t border-line-soft pt-3 text-[13px]">
                             <Feature name="marketValues">
                               <span>
                                 <span className="block text-[11px] text-meta">MARKET</span>
@@ -428,6 +552,8 @@ export default function MarketPage() {
           </div>
         </div>
       ) : null}
+
+      <SellFromGarage open={sellOpen} onClose={() => setSellOpen(false)} />
     </>
   );
 }

@@ -52,6 +52,8 @@ export type GarageItem = {
   cat: string;
   year: string;
   size?: string;
+  /** Ride discipline when known (Road, Mountain, Hybrid / Comfort, …). */
+  discipline?: string;
   name: string;
   cond: string;
   mkt: string;

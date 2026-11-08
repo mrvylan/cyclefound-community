@@ -5,6 +5,8 @@ import { roleBadgeForMember } from "@/lib/community/founding-members";
 import { isHiddenMember } from "@/lib/community/hidden-members";
 import { communityHandleFromProfile } from "@/lib/community/handles";
 import { initialsFromName, colorForId } from "@/lib/auth/user";
+import { isItemCategory, normalizeItemCategory } from "@/lib/data/categories";
+import { inferDiscipline, normalizeDiscipline } from "@/lib/garage/disciplines";
 
 export type DirectoryMember = {
   userId: string;
@@ -233,11 +235,13 @@ export async function hydrateCommunityDirectory() {
         row.asking_price_cents == null ? null : Number(row.asking_price_cents),
       );
       const catLabel = String(row.category_name || "").trim();
-      const catShort = catLabel
-        ? catLabel.replace(/\s+/g, " ").slice(0, 24)
-        : "Complete bikes";
-
-      items.push({
+      const asDiscipline = normalizeDiscipline(catLabel);
+      const catShort = isItemCategory(catLabel)
+        ? catLabel
+        : asDiscipline
+          ? "Complete bikes"
+          : normalizeItemCategory(catLabel || "Complete bikes");
+      const item: MarketplaceGarageItem = {
         id: listingId,
         listingId,
         sellerId,
@@ -246,6 +250,7 @@ export async function hydrateCommunityDirectory() {
         cat: catShort,
         year,
         size: row.frame_size_label ? String(row.frame_size_label) : undefined,
+        discipline: asDiscipline || undefined,
         name: title,
         cond: String(row.condition || "—"),
         mkt: ask,
@@ -259,7 +264,12 @@ export async function hydrateCommunityDirectory() {
           String(row.description || "").trim() ||
           `Listed on Cycle Found marketplace. ${classicUrl}`,
         classicUrl,
-      });
+      };
+      if (!item.discipline) {
+        const inferred = inferDiscipline(item);
+        if (inferred !== "Other") item.discipline = inferred;
+      }
+      items.push(item);
     }
 
     const counts = new Map<string, number>();
