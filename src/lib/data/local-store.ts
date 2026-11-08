@@ -401,16 +401,27 @@ export function getAllItems(): GarageItem[] {
   return resolveOwnedItems([...all, ...marketplace], store.itemPatches);
 }
 
-/** Photos for a garage item — seed `photo` plus any uploaded this session. */
+/** Photos for a garage item — marketplace signed URLs, seed `photo`, session uploads. */
 export function getItemPhotoUrls(item: GarageItem): string[] {
   const out: string[] = [];
-  if (item.photo) out.push(item.photo);
+  const seen = new Set<string>();
+  function push(url: string | undefined) {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    out.push(url);
+  }
+
+  const market = getMarketplaceItem(item.id);
+  if (market?.photoUrls?.length) {
+    for (const url of market.photoUrls) push(url);
+  }
+  push(item.photo);
   if (typeof window !== "undefined") {
     try {
       const raw = window.sessionStorage.getItem(`cf_i_photos_${item.id}`);
       const parsed: unknown = raw ? JSON.parse(raw) : [];
       if (Array.isArray(parsed)) {
-        for (const p of parsed) if (typeof p === "string" && p) out.push(p);
+        for (const p of parsed) if (typeof p === "string") push(p);
       }
     } catch {
       /* ignore malformed session data */

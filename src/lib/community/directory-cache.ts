@@ -15,6 +15,8 @@ export type MarketplaceGarageItem = GarageItem & {
   sellerId: string;
   listingId: string;
   classicUrl: string;
+  /** Signed marketplace photo URLs (cover first). */
+  photoUrls: string[];
 };
 
 type Cache = {
@@ -162,79 +164,78 @@ export async function hydrateCommunityDirectory() {
     const byHandle = new Map(members.map((m) => [m.handle, m]));
     const byUserId = new Map(members.map((m) => [m.userId, m]));
 
-    const { createClient } = await import("@/lib/supabase/client");
-    const { hasSupabaseConfig } = await import("@/lib/supabase/config");
-    const items: MarketplaceGarageItem[] = [];
+    // Members first so garage/profile pages can open without waiting on photos.
+    cache.members = members;
+    cache.byHandle = byHandle;
+    cache.byUserId = byUserId;
+    cache.ready = true;
+    cache.error = "";
+    notify();
 
-    if (hasSupabaseConfig()) {
-      const supabase = createClient();
-      const { data: listings, error } = await supabase
-        .from("bike_listings")
-        .select(
-          "id, seller_id, title, description, status, condition, asking_price_cents, manufacturer_name, model_name, category_name, approximate_year, frame_size_label, city, state, published_at",
-        )
-        .eq("status", "active")
-        .order("published_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-
-      for (const row of listings || []) {
-        const sellerId = String(row.seller_id || "");
-        const member = byUserId.get(sellerId);
-        if (!member) continue;
-        const listingId = String(row.id);
-        const classicUrl = `https://classic.cyclefound.com/listing.html?id=${encodeURIComponent(listingId)}`;
-
-        let photo = "";
-        const { data: photos } = await supabase
-          .from("listing_photos")
-          .select("storage_path, is_cover, sort_order")
-          .eq("listing_id", listingId)
-          .order("is_cover", { ascending: false })
-          .order("sort_order", { ascending: true })
-          .limit(1);
-        const path = photos?.[0]?.storage_path as string | undefined;
-        if (path) {
-          const { data: signed } = await supabase.storage
-            .from("listing-photos")
-            .createSignedUrl(path, 60 * 60);
-          photo = signed?.signedUrl || "";
-        }
-
-        const title =
-          String(row.title || "").trim() ||
-          [row.manufacturer_name, row.model_name].filter(Boolean).join(" ") ||
-          "Listing";
-        const ask = formatUsdFromCents(
-          row.asking_price_cents == null ? null : Number(row.asking_price_cents),
-        );
-
-        items.push({
-          id: listingId,
-          listingId,
-          sellerId,
-          ownerHandle: member.handle,
-          catShort: String(row.category_name || "Bike").slice(0, 12) || "Bike",
-          cat: String(row.category_name || "Bicycle"),
-          year: String(row.approximate_year || "—"),
-          size: row.frame_size_label ? String(row.frame_size_label) : undefined,
-          name: title,
-          cond: String(row.condition || "—"),
-          mkt: ask,
-          ask,
-          status: statusFromListing(String(row.status || "active")),
-          links: "Marketplace",
-          trend: "Flat",
-          photo: photo || undefined,
-          description:
-            String(row.description || "").trim() ||
-            `Listed on Cycle Found marketplace. ${classicUrl}`,
-          classicUrl,
-        });
-      }
+    const listRes = await fetch("/api/community/listings", { cache: "no-store" });
+    const listPayload = (await listRes.json().catch(() => ({}))) as {
+      listings?: Array<{
+        id: string;
+        seller_id: string;
+        title: string | null;
+        description: string | null;
+        status: string | null;
+        condition: string | null;
+        asking_price_cents: number | null;
+        manufacturer_name: string | null;
+        model_name: string | null;
+        category_name: string | null;
+        approximate_year: string | null;
+        frame_size_label: string | null;
+        photoUrls?: string[];
+      }>;
+      error?: string;
+    };
+    if (!listRes.ok) {
+      throw new Error(listPayload.error || `Listings failed (${listRes.status})`);
     }
 
-    // Refresh item counts on people
+    const items: MarketplaceGarageItem[] = [];
+    for (const row of listPayload.listings || []) {
+      const sellerId = String(row.seller_id || "");
+      const member = byUserId.get(sellerId);
+      if (!member) continue;
+      const listingId = String(row.id);
+      const classicUrl = `https://classic.cyclefound.com/listing.html?id=${encodeURIComponent(listingId)}`;
+      const photoUrls = (row.photoUrls || []).filter(Boolean);
+      const title =
+        String(row.title || "").trim() ||
+        [row.manufacturer_name, row.model_name].filter(Boolean).join(" ") ||
+        "Listing";
+      const ask = formatUsdFromCents(
+        row.asking_price_cents == null ? null : Number(row.asking_price_cents),
+      );
+
+      items.push({
+        id: listingId,
+        listingId,
+        sellerId,
+        ownerHandle: member.handle,
+        catShort: String(row.category_name || "Bike").slice(0, 12) || "Bike",
+        cat: String(row.category_name || "Bicycle"),
+        year: String(row.approximate_year || "—"),
+        size: row.frame_size_label ? String(row.frame_size_label) : undefined,
+        name: title,
+        cond: String(row.condition || "—"),
+        mkt: ask,
+        ask,
+        status: statusFromListing(String(row.status || "active")),
+        links: "Marketplace",
+        trend: "Flat",
+        photo: photoUrls[0],
+        photoUrls,
+        description:
+          String(row.description || "").trim() ||
+          `Listed on Cycle Found marketplace. ${classicUrl}`,
+        classicUrl,
+      });
+    }
+
     const counts = new Map<string, number>();
     for (const item of items) {
       counts.set(item.ownerHandle, (counts.get(item.ownerHandle) || 0) + 1);
@@ -243,11 +244,9 @@ export async function hydrateCommunityDirectory() {
       m.person = { ...m.person, items: counts.get(m.handle) || 0 };
     }
 
-    cache.ready = true;
-    cache.error = "";
     cache.members = members;
-    cache.byHandle = byHandle;
-    cache.byUserId = byUserId;
+    cache.byHandle = new Map(members.map((m) => [m.handle, m]));
+    cache.byUserId = new Map(members.map((m) => [m.userId, m]));
     cache.items = items;
     notify();
   } catch (err) {

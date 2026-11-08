@@ -22,6 +22,7 @@ import { FEATURES } from "@/lib/features";
 import {
   canManageGarageItem,
   getItemLocal,
+  getItemPhotoUrls,
   getItemPrivateMeta,
   getSessionHandle,
   resolvePerson,
@@ -92,11 +93,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const itemPhotosRaw =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem(`cf_i_photos_${id}`)
-      : null;
-  const itemPhotos: string[] = itemPhotosRaw ? JSON.parse(itemPhotosRaw) : [];
+  const itemPhotos = getItemPhotoUrls(item);
   const itemMeta = getItemPrivateMeta(id);
   const yearLabel = itemYearLabel(item.year);
 
