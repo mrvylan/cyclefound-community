@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Avatar, PlaceholderPhoto } from "@/components/ui";
+import { normalizeItemCategory } from "@/lib/data/categories";
 import {
   getGarageItemsFor,
   getItemPhotoUrls,
@@ -10,16 +11,34 @@ import {
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { cityFromLoc, getGarage } from "@/lib/data/seed";
+import { cityFromLoc, getGarage, type GarageItem } from "@/lib/data/seed";
+
+function garageStatLine(items: GarageItem[], forSale: number) {
+  const bikeish = items.filter((i) => {
+    const cat = normalizeItemCategory(i.cat);
+    return cat === "Complete bikes" || cat === "Framesets";
+  }).length;
+  const useBikes = items.length > 0 && bikeish >= Math.ceil(items.length / 2);
+  const noun = useBikes
+    ? items.length === 1
+      ? "bike"
+      : "bikes"
+    : items.length === 1
+      ? "item"
+      : "items";
+  const base = `${items.length} ${noun}`;
+  return forSale ? `${base} · ${forSale} for sale` : base;
+}
 
 export default function GaragesIndexPage() {
   const [rows, setRows] = useState<
     {
       person: ReturnType<typeof listMembers>[number];
       garage: ReturnType<typeof getGarage>;
-      items: number;
+      items: GarageItem[];
       forSale: number;
       photo?: string;
+      isYou: boolean;
     }[]
   >([]);
   const [me, setMe] = useState("");
@@ -37,13 +56,17 @@ export default function GaragesIndexPage() {
           return {
             person,
             garage,
-            items: items.length,
+            items,
             forSale: items.filter((i) => i.status !== "Not for sale").length,
             photo,
+            isYou: Boolean(handle) && person.handle === handle,
           };
         })
-        .filter((row) => row.items > 0 || row.person.handle === handle)
-        .sort((a, b) => b.items - a.items);
+        .filter((row) => row.items.length > 0 || row.isYou)
+        .sort((a, b) => {
+          if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
+          return b.items.length - a.items.length;
+        });
       setRows(next);
       setReady(true);
     };
@@ -88,12 +111,17 @@ export default function GaragesIndexPage() {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-          {rows.map(({ person, garage, items, forSale, photo }) => (
+          {rows.map(({ person, garage, items, forSale, photo, isYou }) => (
             <Link
               key={person.handle}
               href={`/u/${person.handle}/garage`}
-              className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline hover:border-[#D4D3CD]"
+              className="relative flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline hover:border-[#D4D3CD]"
             >
+              {isYou ? (
+                <span className="absolute top-3 left-3 z-[1] rounded-full bg-ink px-2.5 py-1 font-mono text-[11px] font-medium tracking-[0.08em] text-white uppercase">
+                  You
+                </span>
+              ) : null}
               {photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photo} alt="" className="h-[160px] w-full object-cover" />
@@ -123,8 +151,7 @@ export default function GaragesIndexPage() {
                   </div>
                 </div>
                 <p className="m-0 font-mono text-[12px] text-muted">
-                  {items} item{items === 1 ? "" : "s"}
-                  {forSale ? ` · ${forSale} listed` : ""}
+                  {garageStatLine(items, forSale)}
                 </p>
               </div>
             </Link>

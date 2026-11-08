@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, MessageSquare } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
 import { handleFromAuthProfile } from "@/lib/demo-session";
@@ -140,6 +140,22 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
 
   return (
     <div className="flex items-center gap-1.5">
+      <Link
+        href="/messages"
+        className="relative inline-flex size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink no-underline hover:bg-ground"
+        aria-label={
+          unreadMsgs
+            ? `Messages, ${unreadMsgs} unread`
+            : "Messages"
+        }
+      >
+        <MessageSquare className="size-[18px]" aria-hidden />
+        {unreadMsgs > 0 ? (
+          <span className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1 font-mono text-[10px] font-semibold leading-[18px] text-white">
+            {unreadMsgs > 9 ? "9+" : unreadMsgs}
+          </span>
+        ) : null}
+      </Link>
       <Link
         href="/notifications"
         className="relative inline-flex size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink no-underline hover:bg-ground"
