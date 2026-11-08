@@ -4,29 +4,36 @@ import { useEffect, useState } from "react";
 import { HomeAskBox } from "@/components/HomeAskBox";
 import { HomeExpertsOnline } from "@/components/HomeMockPanels";
 import { Feature } from "@/components/Feature";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
+  getGarageItemsFor,
   getSessionHandle,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { handleFromAuthProfile } from "@/lib/demo-session";
 import { abbreviatedDisplayName } from "@/lib/auth/user";
 
 export function HomeHero() {
-  const [ready, setReady] = useState(false);
+  const { ready: authReady, profile, user } = useAuth();
+  const [storeReady, setStoreReady] = useState(false);
   const [handle, setHandle] = useState("");
+  const [itemCount, setItemCount] = useState(0);
 
   useEffect(() => {
     function sync() {
-      setHandle(getSessionHandle());
-      setReady(true);
+      const h = getSessionHandle();
+      setHandle(h);
+      setItemCount(h ? getGarageItemsFor(h).length : 0);
+      setStoreReady(true);
     }
     sync();
     return subscribeStore(sync);
   }, []);
 
-  const person = handle ? resolvePerson(handle) : undefined;
-  const signedIn = Boolean(handle);
-  /** Member home: compact ask. Full marketing hero for logged-out visitors. */
+  const ready = authReady && storeReady;
+  /** Real auth only — a leftover local session must not show the member hero. */
+  const signedIn = Boolean(user && profile);
   const memberHome = ready && signedIn;
 
   if (!ready) {
@@ -39,19 +46,29 @@ export function HomeHero() {
     );
   }
 
-  if (memberHome) {
+  if (memberHome && profile) {
+    const authHandle = handleFromAuthProfile(profile);
+    const person = resolvePerson(handle || authHandle);
+    const displayName =
+      person?.name ||
+      profile.displayName ||
+      profile.fullName ||
+      authHandle;
     const firstName =
-      abbreviatedDisplayName(person?.name || handle).split(" ")[0] || "there";
+      abbreviatedDisplayName(displayName).split(" ")[0] || "there";
     return (
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-8 pb-7">
           <div>
-            <p className="m-0 text-[16px] font-medium text-muted-2">Hi {firstName}</p>
-            <h1 className="section-title m-0 mt-1 text-[clamp(28px,4vw,40px)]">
-              What&apos;s rolling around in your head?
+            <p className="eyebrow m-0">Your workbench</p>
+            <h1 className="section-title m-0 text-[clamp(28px,4vw,40px)]">
+              {itemCount > 0
+                ? `Welcome back, ${firstName}`
+                : `Hi ${firstName} — ask or add to your garage`}
             </h1>
             <p className="m-0 mt-2 max-w-[560px] text-[16px] leading-[1.55] text-muted-2">
-              Questions go to members whose garages and expertise match.
+              What&apos;s rolling around in your head? Questions go to members whose
+              garages and expertise match.
             </p>
           </div>
           <HomeAskBox compact />
