@@ -56,9 +56,11 @@ export function HomeHero() {
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-8 pb-7">
           <div>
-            <p className="m-0 text-[16px] font-medium text-muted-2">Hi {firstName}</p>
-            <h1 className="section-title m-0 mt-1 text-[clamp(28px,4vw,40px)]">
-              What&apos;s rolling around in your head?
+            <h1 className="section-title m-0 text-[clamp(28px,4vw,40px)] leading-[1.1]">
+              <span className="block">Hi {firstName}</span>
+              <span className="mt-1.5 block">
+                What&apos;s rolling around in your head?
+              </span>
             </h1>
             <p className="m-0 mt-2 max-w-[560px] text-[16px] leading-[1.55] text-muted-2">
               Questions go to members whose garages and expertise match.
