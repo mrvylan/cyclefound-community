@@ -14,6 +14,7 @@ import {
   validatePassword,
 } from "@/lib/auth/user";
 import { useAuth } from "./AuthProvider";
+import { OAuthButtons } from "./OAuthButtons";
 
 type Mode =
   | "login"
@@ -389,36 +390,6 @@ export function AuthForm() {
     }
   }
 
-  function OAuthButtons() {
-    return (
-      <div className="space-y-2.5">
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => startOAuth("google")}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-line bg-white text-[15px] font-semibold text-ink hover:bg-ground disabled:opacity-60"
-        >
-          Continue with Google
-        </button>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => startOAuth("apple")}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-line bg-ink text-[15px] font-semibold text-white hover:bg-ink-2 disabled:opacity-60"
-        >
-          Continue with Apple
-        </button>
-        <div className="flex items-center gap-3 py-1">
-          <span className="h-px flex-1 bg-line" aria-hidden />
-          <span className="text-[12px] font-medium tracking-wide text-muted uppercase">
-            or email
-          </span>
-          <span className="h-px flex-1 bg-line" aria-hidden />
-        </div>
-      </div>
-    );
-  }
-
   if (!configured) {
     return (
       <div className="rounded-[14px] border border-line bg-white p-8 shadow-[0_8px_28px_rgba(16,23,27,0.06)]">
@@ -483,7 +454,11 @@ export function AuthForm() {
 
       {mode === "join" ? (
         <form className="mt-7 space-y-4" onSubmit={onJoin}>
-          <OAuthButtons />
+          <OAuthButtons
+            loading={loading}
+            onGoogle={() => startOAuth("google")}
+            onApple={() => startOAuth("apple")}
+          />
           <Field id="fullName" label="Full name">
             <input
               id="fullName"
@@ -553,7 +528,11 @@ export function AuthForm() {
 
       {mode === "login" ? (
         <form className="mt-7 space-y-4" onSubmit={onLoginOtp}>
-          <OAuthButtons />
+          <OAuthButtons
+            loading={loading}
+            onGoogle={() => startOAuth("google")}
+            onApple={() => startOAuth("apple")}
+          />
           <Field id="email" label="Email">
             <input
               id="email"
