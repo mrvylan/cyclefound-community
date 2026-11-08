@@ -19,6 +19,10 @@ import {
   TagChip,
 } from "@/components/ui";
 import {
+  hydrateCommunityDirectory,
+  isCommunityDirectoryReady,
+} from "@/lib/community/directory-cache";
+import {
   getAllAnswers,
   getAllQuestions,
   getGarageItemsFor,
@@ -55,6 +59,9 @@ export function ProfilePageClient({
   useEffect(() => {
     setReady(true);
     setSessionHandle(getSessionHandle());
+    if (!isCommunityDirectoryReady()) {
+      void hydrateCommunityDirectory();
+    }
     return subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
@@ -64,6 +71,7 @@ export function ProfilePageClient({
   void tick;
 
   const person = ready ? resolvePerson(handle) : undefined;
+  const directoryReady = isCommunityDirectoryReady();
   const isOwner = Boolean(sessionHandle && sessionHandle === handle);
   /** Owner chrome (edit links) is hidden while previewing as a visitor. */
   const isOwnProfile = isOwner && !previewVisitor;
@@ -115,7 +123,7 @@ export function ProfilePageClient({
     }),
   );
 
-  if (!ready) {
+  if (!ready || (!person && !directoryReady)) {
     return (
       <div className="mx-auto max-w-[1280px] px-8 py-16 text-[15px] text-meta">
         Loading profile…

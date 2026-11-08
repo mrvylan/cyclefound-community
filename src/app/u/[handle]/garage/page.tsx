@@ -2,7 +2,6 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
@@ -14,6 +13,10 @@ import {
   SegmentedControl,
   StatusChip,
 } from "@/components/ui";
+import {
+  hydrateCommunityDirectory,
+  isCommunityDirectoryReady,
+} from "@/lib/community/directory-cache";
 import {
   getGarageItemsFor,
   getItemPhotoUrls,
@@ -59,6 +62,9 @@ export default function GaragePage({
     if (added) setJustAddedId(added);
     setReady(true);
     setSessionHandle(getSessionHandle());
+    if (!isCommunityDirectoryReady()) {
+      void hydrateCommunityDirectory();
+    }
     return subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
@@ -67,6 +73,7 @@ export default function GaragePage({
   void tick;
 
   const person = ready ? resolvePerson(handle) : undefined;
+  const directoryReady = isCommunityDirectoryReady();
   const isOwner = Boolean(sessionHandle && sessionHandle === handle);
   /** Owner chrome hidden while previewing as a visitor. */
   const isOwnGarage = isOwner && !previewVisitor;
@@ -106,7 +113,7 @@ export default function GaragePage({
     return parts.join(" · ");
   }
 
-  if (!ready) {
+  if (!ready || (!person && !directoryReady)) {
     return (
       <div className="mx-auto max-w-[1280px] px-8 py-16 text-[15px] text-muted">
         Loading garage…
@@ -114,7 +121,20 @@ export default function GaragePage({
     );
   }
 
-  if (!person) notFound();
+  if (!person) {
+    return (
+      <div className="mx-auto max-w-[720px] px-8 py-16">
+        <h1 className="section-title m-0 text-[44px] text-ink">Garage not found</h1>
+        <p className="mt-4 text-[16px] text-muted-2">
+          No member matches <span className="font-mono">@{handle}</span>.
+        </p>
+        <Link href="/garages" className="mt-6 inline-flex font-semibold text-accent">
+          Browse garages
+        </Link>
+      </div>
+    );
+  }
+
   const garageName = garage?.name ?? `${person.name.split(" ")[0]}'s garage`;
   const justAdded = justAddedId
     ? getGarageItemsFor(handle).find((i) => i.id === justAddedId)
