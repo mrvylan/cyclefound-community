@@ -20,6 +20,8 @@ import type { ItemStatus } from "@/lib/data/seed";
 import { identifyGarageItemFromPhotos } from "@/lib/garage/identifyClient";
 import {
   clampItemDescription,
+  composeItemTitle,
+  descriptionPriceMismatch,
   ITEM_DESCRIPTION_MAX,
 } from "@/lib/garage/itemFields";
 import { CONDITIONS, type FormCondition } from "@/lib/garage/mapAiCategory";
@@ -150,9 +152,19 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       setError(`Description must be ${ITEM_DESCRIPTION_MAX} characters or fewer.`);
       return;
     }
+    const priceClash =
+      showPrice && askingPrice.trim()
+        ? descriptionPriceMismatch(description, askingPrice)
+        : null;
+    if (priceClash != null) {
+      setError(
+        `Description mentions $${priceClash.toLocaleString("en-US")} but Asking is different — keep the price only in Asking, or match the amounts.`,
+      );
+      return;
+    }
     setError("");
     const updated = updateGarageItem(itemId, {
-      title: title.trim(),
+      title: composeItemTitle({ title, year }),
       category,
       year: year.trim() || "—",
       size: showSize ? size.trim() : "",
@@ -416,6 +428,15 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
                 onChange={(e) => setAskingPrice(e.target.value)}
                 className={field}
               />
+              {descriptionPriceMismatch(description, askingPrice) != null ? (
+                <p className="m-0 text-[13px] text-[#9B2C2C]">
+                  Description quotes a different dollar amount — keep price only in Asking.
+                </p>
+              ) : (
+                <p className="m-0 text-[12px] text-meta">
+                  Keep the price here, not in the description.
+                </p>
+              )}
             </div>
           ) : null}
         </section>

@@ -21,6 +21,8 @@ import {
 } from "@/lib/garage/identifyClient";
 import {
   clampItemDescription,
+  composeItemTitle,
+  descriptionPriceMismatch,
   ITEM_DESCRIPTION_MAX,
 } from "@/lib/garage/itemFields";
 import { CONDITIONS, type FormCondition } from "@/lib/garage/mapAiCategory";
@@ -214,11 +216,23 @@ export function ItemNewForm() {
       setError("Add an asking price, or switch to Open to offers.");
       return;
     }
+    const priceClash =
+      showPrice && askingPrice.trim()
+        ? descriptionPriceMismatch(description, askingPrice)
+        : null;
+    if (priceClash != null) {
+      setError(
+        `Description mentions $${priceClash.toLocaleString("en-US")} but Asking is different — keep the price only in Asking, or match the amounts.`,
+      );
+      return;
+    }
     setError("");
-    const composedTitle =
-      title.trim() ||
-      [year, manufacturer, modelName].filter(Boolean).join(" ").trim() ||
-      "Untitled garage item";
+    const composedTitle = composeItemTitle({
+      title,
+      year,
+      manufacturer,
+      modelName,
+    });
     const item = postItem({
       title: composedTitle,
       category,
@@ -541,6 +555,15 @@ export function ItemNewForm() {
                 placeholder="$3,000"
                 className={field}
               />
+              {descriptionPriceMismatch(description, askingPrice) != null ? (
+                <p className="m-0 text-[13px] text-[#9B2C2C]">
+                  Description quotes a different dollar amount — keep price only in Asking.
+                </p>
+              ) : (
+                <p className="m-0 text-[12px] text-meta">
+                  Keep the price here, not in the description.
+                </p>
+              )}
             </div>
           ) : null}
         </section>

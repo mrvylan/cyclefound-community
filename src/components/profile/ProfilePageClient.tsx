@@ -192,9 +192,13 @@ export function ProfilePageClient({ handle }: { handle: string }) {
               </Feature>
             </div>
             <p className="m-0 text-[15px] text-on-dark-muted">
-              @{person.handle}
-              {person.loc ? ` · ${person.loc.split(" · ")[0]}` : null}
-              {" · "}Member since {person.memberSince}
+              {[
+                person.publicHandle ? `@${person.publicHandle}` : null,
+                person.loc ? person.loc.split(" · ")[0] : null,
+                `Member since ${person.memberSince}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               {contribution ? (
                 <>
                   {" · "}

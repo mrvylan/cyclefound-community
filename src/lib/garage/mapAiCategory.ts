@@ -57,7 +57,18 @@ export function buildSuggestedTitle(s: {
   const year =
     s.year && s.year !== "Unknown" && !/^unk/i.test(s.year) ? s.year.trim() : "";
   const brand = (s.manufacturer || "").trim();
-  const model = (s.model || "").trim();
+  let model = (s.model || "").trim();
+  // Drop year tokens already captured in the year field.
+  if (year) {
+    model = model
+      .replace(new RegExp(`\\b${year}\\b`, "g"), "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  // Avoid "Klein … Mountain Bike Mountain Bike".
+  if (brand && model.toLowerCase().startsWith(brand.toLowerCase())) {
+    model = model.slice(brand.length).trim().replace(/^[-–—:]+\s*/, "");
+  }
   const parts = [year, brand, model].filter(Boolean);
   if (parts.length) return parts.join(" ");
   if (s.partCategory) return s.partCategory;

@@ -205,22 +205,36 @@ export async function hydrateCommunityDirectory() {
       const listingId = String(row.id);
       const classicUrl = `https://classic.cyclefound.com/listing.html?id=${encodeURIComponent(listingId)}`;
       const photoUrls = (row.photoUrls || []).filter(Boolean);
-      const title =
+      const year = String(row.approximate_year || "—");
+      const rawTitle =
         String(row.title || "").trim() ||
         [row.manufacturer_name, row.model_name].filter(Boolean).join(" ") ||
         "Listing";
+      // Keep year in the structured field; strip it from the display name to avoid "1996 … 1996".
+      const title =
+        year && year !== "—"
+          ? rawTitle
+              .replace(new RegExp(`\\b${year}\\b`, "g"), "")
+              .replace(/\s+/g, " ")
+              .replace(/^[-–—:/]+|[-–—:/]+$/g, "")
+              .trim() || rawTitle
+          : rawTitle;
       const ask = formatUsdFromCents(
         row.asking_price_cents == null ? null : Number(row.asking_price_cents),
       );
+      const catLabel = String(row.category_name || "").trim();
+      const catShort = catLabel
+        ? catLabel.replace(/\s+/g, " ").slice(0, 24)
+        : "Complete bikes";
 
       items.push({
         id: listingId,
         listingId,
         sellerId,
         ownerHandle: member.handle,
-        catShort: String(row.category_name || "Bike").slice(0, 12) || "Bike",
-        cat: String(row.category_name || "Bicycle"),
-        year: String(row.approximate_year || "—"),
+        catShort,
+        cat: catShort,
+        year,
         size: row.frame_size_label ? String(row.frame_size_label) : undefined,
         name: title,
         cond: String(row.condition || "—"),

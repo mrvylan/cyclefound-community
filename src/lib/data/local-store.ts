@@ -14,7 +14,12 @@ import {
   STARTER_QUESTIONS,
 } from "./starter-feed";
 import { normalizeItemCategory } from "./categories";
-import { isValidMemberHandle } from "./handles";
+import {
+  isClaimableHandle,
+  isProvisionalHandle,
+  isValidMemberHandle,
+  normalizeClaimedHandle,
+} from "./handles";
 import { normalizeAskInput } from "@/lib/garage/itemFields";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 import {
@@ -54,6 +59,8 @@ export type LocalProfilePatch = {
   coverUrl?: string;
   /** Vertical crop focus for cover (`object-position` Y%), 0–100. */
   coverPositionY?: number;
+  /** Public @handle claimed by the member (hides provisional hash handles). */
+  claimedHandle?: string;
 };
 
 /** Clamp cover focal point for `object-position: 50% {y}%`. */
@@ -209,34 +216,37 @@ function seedPerson(_handle: string): Person | undefined {
 function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
   const name = patch?.name?.trim() || handle;
   const badge = roleBadgeForMember({ handle });
-  return {
-    handle,
-    name,
-    init: initialsFromDisplayName(name),
-    bg: "#527D31",
-    role: badge,
-    loc: patch?.loc ?? "",
-    level: "RIDER",
-    skills: normalizeSkillLabels(patch?.skills ?? []),
-    bio: patch?.bio ?? "",
-    rating: "New",
-    reviews: 0,
-    spokes: "0",
-    spokesNum: 0,
-    accepted: 0,
-    items: 0,
-    reply: "—",
-    consult: "",
-    verified: false,
-    memberSince: "2026",
-    roleBadge: badge,
-    avatarUrl: patch?.avatarUrl || undefined,
-    coverUrl: patch?.coverUrl || undefined,
-    coverPositionY:
-      patch?.coverPositionY !== undefined
-        ? clampCoverPositionY(patch.coverPositionY)
-        : undefined,
-  };
+  return withPublicHandle(
+    {
+      handle,
+      name,
+      init: initialsFromDisplayName(name),
+      bg: "#527D31",
+      role: badge,
+      loc: patch?.loc ?? "",
+      level: "RIDER",
+      skills: normalizeSkillLabels(patch?.skills ?? []),
+      bio: patch?.bio ?? "",
+      rating: "New",
+      reviews: 0,
+      spokes: "0",
+      spokesNum: 0,
+      accepted: 0,
+      items: 0,
+      reply: "—",
+      consult: "",
+      verified: false,
+      memberSince: "2026",
+      roleBadge: badge,
+      avatarUrl: patch?.avatarUrl || undefined,
+      coverUrl: patch?.coverUrl || undefined,
+      coverPositionY:
+        patch?.coverPositionY !== undefined
+          ? clampCoverPositionY(patch.coverPositionY)
+          : undefined,
+    },
+    patch?.claimedHandle,
+  );
 }
 
 export function getMergedPerson(handle: string): Person | undefined {
@@ -248,22 +258,43 @@ export function getMergedPerson(handle: string): Person | undefined {
     // Auth / demo actor with no seed row — enough for post attribution.
     return stubPersonFromHandle(handle, patch);
   }
-  if (!patch) return base;
+  if (!patch) return withPublicHandle(base, undefined);
   const name = patch.name ?? base.name;
-  return {
-    ...base,
-    name,
-    init: patch.name ? initialsFromDisplayName(name) : base.init,
-    loc: patch.loc ?? base.loc,
-    bio: patch.bio ?? base.bio,
-    skills: normalizeSkillLabels(patch.skills ?? base.skills),
-    avatarUrl: patch.avatarUrl ?? base.avatarUrl,
-    coverUrl: patch.coverUrl ?? base.coverUrl,
-    coverPositionY:
-      patch.coverPositionY !== undefined
-        ? clampCoverPositionY(patch.coverPositionY)
-        : base.coverPositionY,
-  };
+  return withPublicHandle(
+    {
+      ...base,
+      name,
+      init: patch.name ? initialsFromDisplayName(name) : base.init,
+      loc: patch.loc ?? base.loc,
+      bio: patch.bio ?? base.bio,
+      skills: normalizeSkillLabels(patch.skills ?? base.skills),
+      avatarUrl: patch.avatarUrl ?? base.avatarUrl,
+      coverUrl: patch.coverUrl ?? base.coverUrl,
+      coverPositionY:
+        patch.coverPositionY !== undefined
+          ? clampCoverPositionY(patch.coverPositionY)
+          : base.coverPositionY,
+    },
+    patch.claimedHandle,
+  );
+}
+
+function withPublicHandle(person: Person, claimed?: string): Person {
+  const claimedNorm = claimed ? normalizeClaimedHandle(claimed) : "";
+  if (claimedNorm && isClaimableHandle(claimedNorm)) {
+    return { ...person, publicHandle: claimedNorm };
+  }
+  if (!isProvisionalHandle(person.handle)) {
+    return { ...person, publicHandle: person.handle };
+  }
+  return { ...person, publicHandle: undefined };
+}
+
+/** Public @handle for display, or null when still provisional. */
+export function displayHandleFor(person: Pick<Person, "handle" | "publicHandle">) {
+  if (person.publicHandle) return person.publicHandle;
+  if (!isProvisionalHandle(person.handle)) return person.handle;
+  return null;
 }
 
 /**
@@ -278,20 +309,23 @@ export function resolvePerson(handle: string): Person | undefined {
   const directory = getDirectoryPerson(key);
   if (directory) {
     const patch = readStore().profilePatches[key];
-    if (!patch) return directory;
-    return {
-      ...directory,
-      name: patch.name ?? directory.name,
-      loc: patch.loc ?? directory.loc,
-      bio: patch.bio ?? directory.bio,
-      skills: normalizeSkillLabels(patch.skills ?? directory.skills),
-      avatarUrl: patch.avatarUrl ?? directory.avatarUrl,
-      coverUrl: patch.coverUrl ?? directory.coverUrl,
-      coverPositionY:
-        patch.coverPositionY !== undefined
-          ? clampCoverPositionY(patch.coverPositionY)
-          : directory.coverPositionY,
-    };
+    if (!patch) return withPublicHandle(directory, undefined);
+    return withPublicHandle(
+      {
+        ...directory,
+        name: patch.name ?? directory.name,
+        loc: patch.loc ?? directory.loc,
+        bio: patch.bio ?? directory.bio,
+        skills: normalizeSkillLabels(patch.skills ?? directory.skills),
+        avatarUrl: patch.avatarUrl ?? directory.avatarUrl,
+        coverUrl: patch.coverUrl ?? directory.coverUrl,
+        coverPositionY:
+          patch.coverPositionY !== undefined
+            ? clampCoverPositionY(patch.coverPositionY)
+            : directory.coverPositionY,
+      },
+      patch.claimedHandle,
+    );
   }
   // Own account stub even before a name patch exists.
   if (key === getSessionHandle()) {

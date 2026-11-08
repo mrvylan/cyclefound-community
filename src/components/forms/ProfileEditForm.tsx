@@ -11,6 +11,11 @@ import { SkillsEditor } from "@/components/forms/SkillsEditor";
 import { authHref } from "@/lib/auth/redirects";
 import { handleFromAuthProfile } from "@/lib/demo-session";
 import {
+  isClaimableHandle,
+  isProvisionalHandle,
+  normalizeClaimedHandle,
+} from "@/lib/data/handles";
+import {
   clampCoverPositionY,
   getGarageItemsFor,
   getMergedPerson,
@@ -39,6 +44,7 @@ export function ProfileEditForm() {
   // Empty on SSR + first client paint — session handle lives in localStorage.
   const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [claimedHandle, setClaimedHandle] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [coverPositionY, setCoverPositionY] = useState(50);
@@ -58,6 +64,7 @@ export function ProfileEditForm() {
     const person = getMergedPerson(h);
     if (person) {
       setDisplayName(person.name);
+      setClaimedHandle(person.publicHandle || "");
       setCity(person.loc.split("·")[0]?.trim() ?? person.loc);
       setBio(person.bio);
       setSkills(normalizeSkillLabels(person.skills));
@@ -70,6 +77,7 @@ export function ProfileEditForm() {
     if (profile && handleFromAuthProfile(profile) === h) {
       setDisplayName(profile.displayName || profile.fullName || "");
       setAvatarUrl(profile.avatarUrl || "");
+      setClaimedHandle("");
     }
   }
 
@@ -210,6 +218,12 @@ export function ProfileEditForm() {
       return;
     }
 
+    const nextClaim = normalizeClaimedHandle(claimedHandle);
+    if (claimedHandle.trim() && !isClaimableHandle(nextClaim)) {
+      setError("Handle must be 3–24 characters: letters, numbers, underscores.");
+      return;
+    }
+
     setSaving(true);
     try {
       saveProfilePatch(handle, {
@@ -224,6 +238,7 @@ export function ProfileEditForm() {
         avatarUrl: avatarUrl || undefined,
         coverUrl: coverUrl || undefined,
         coverPositionY: coverUrl ? clampCoverPositionY(coverPositionY) : 50,
+        claimedHandle: nextClaim || undefined,
       });
 
       if (user && profile) {
@@ -445,6 +460,33 @@ export function ProfileEditForm() {
           />
           <p className="m-0 text-[13px] text-muted">
             Shown on your profile, answers, and in the account menu.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="p-handle" className="text-[14px] font-semibold">
+            Public handle
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[15px] text-muted">@</span>
+            <input
+              id="p-handle"
+              value={claimedHandle}
+              onChange={(e) =>
+                setClaimedHandle(
+                  e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24),
+                )
+              }
+              placeholder="dylan_s"
+              autoComplete="username"
+              maxLength={24}
+              className={field}
+            />
+          </div>
+          <p className="m-0 text-[13px] text-muted">
+            {isProvisionalHandle(handle) && !claimedHandle
+              ? "Claim a short @handle — the auto-generated one stays hidden until you do."
+              : "Shown on your profile and garage cards."}
           </p>
         </div>
 

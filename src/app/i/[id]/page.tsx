@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
+import { ItemDescription } from "@/components/garage/ItemDescription";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
 import {
   Avatar,
@@ -21,6 +22,7 @@ import { handleFromAuthProfile } from "@/lib/demo-session";
 import { FEATURES } from "@/lib/features";
 import {
   canManageGarageItem,
+  displayHandleFor,
   getItemLocal,
   getItemPhotoUrls,
   getItemPrivateMeta,
@@ -28,7 +30,11 @@ import {
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { formatAskPrice, itemYearLabel } from "@/lib/garage/itemFields";
+import {
+  formatAskPrice,
+  itemDisplayTitle,
+  itemYearLabel,
+} from "@/lib/garage/itemFields";
 import {
   getGarage,
   itemDetail,
@@ -96,6 +102,13 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const itemPhotos = getItemPhotoUrls(item);
   const itemMeta = getItemPrivateMeta(id);
   const yearLabel = itemYearLabel(item.year);
+  const displayTitle = itemDisplayTitle(item.name, item.year);
+  const titleShort =
+    displayTitle.length > 42 ? `${displayTitle.slice(0, 40).trim()}…` : displayTitle;
+  const longTitle = displayTitle.length > 40;
+  const garageName =
+    garage?.name ?? `${owner.name.split(" ")[0] || "Member"}'s garage`;
+  const publicHandle = displayHandleFor(owner);
 
   const trend = itemDetail.trendBars[range];
   const labels = itemDetail.photoLabels;
@@ -120,15 +133,11 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   return (
     <div className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 py-6 pb-16">
       <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-[13px] text-meta">
-        <Link href={`/u/${owner.handle}/garage`}>Garages</Link>
+        <Link href="/garages">Garages</Link>
         <span aria-hidden>/</span>
-        <Link href={`/u/${owner.handle}`}>{owner.name}</Link>
+        <Link href={`/u/${owner.handle}/garage`}>{garageName}</Link>
         <span aria-hidden>/</span>
-        <Link href={`/u/${owner.handle}/garage`}>
-          {garage?.name ?? "Garage"}
-        </Link>
-        <span aria-hidden>/</span>
-        <span>{item.name.split(",")[0]}</span>
+        <span>{titleShort}</span>
       </nav>
 
       <div className="flex flex-wrap items-start gap-8">
@@ -191,24 +200,28 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 Archived
               </span>
             ) : null}
-            <span className="font-mono text-[12px] text-muted">{item.cat}</span>
             {isOwner ? (
               <div className="ml-auto">
                 <GarageItemActions item={item} compact />
               </div>
             ) : null}
           </div>
-          <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">
-            {yearLabel ? `${yearLabel} ` : ""}
-            {item.name.split(",")[0]}
+          <h1
+            className={`section-title m-0 ${
+              longTitle
+                ? "text-[clamp(24px,3.6vw,36px)] leading-[1.15]"
+                : "text-[clamp(36px,5vw,56px)]"
+            }`}
+          >
+            {displayTitle}
           </h1>
           <p className="m-0 text-[17px] text-muted-2">
             {showRichDetail
               ? "Saronni red · 56 cm c-t-c · Campagnolo Super Record · Excellent original condition"
-              : `${item.cond} · ${item.catShort}`}
+              : [item.cond, item.size?.trim()].filter(Boolean).join(" · ")}
           </p>
           {!showRichDetail && item.description ? (
-            <p className="m-0 text-[15px] leading-[1.55] text-ink">{item.description}</p>
+            <ItemDescription text={item.description} />
           ) : null}
 
           <section
@@ -225,12 +238,16 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   {owner.name}
                 </Link>
                 <span className="block text-[13px] text-meta">
-                  @{owner.handle}
-                  {owner.rating && owner.rating !== "New" ? ` · ★ ${owner.rating}` : ""}
-                  <Feature name="spokesCurrency">
-                    <> · {owner.spokesNum.toLocaleString()} Spokes</>
-                  </Feature>
-                  {" · "}Member since {owner.memberSince}
+                  {[
+                    publicHandle ? `@${publicHandle}` : null,
+                    owner.rating && owner.rating !== "New" ? `★ ${owner.rating}` : null,
+                    FEATURES.spokesCurrency
+                      ? `${owner.spokesNum.toLocaleString()} Spokes`
+                      : null,
+                    `Member since ${owner.memberSince}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
                 {owner.roleBadge && owner.roleBadge.toLowerCase() !== "member" ? (
                   <span className="mt-1 block font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover">

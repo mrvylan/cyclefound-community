@@ -8,6 +8,10 @@ import { SkillsEditor } from "@/components/forms/SkillsEditor";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
 import {
+  isClaimableHandle,
+  normalizeClaimedHandle,
+} from "@/lib/data/handles";
+import {
   getSessionHandle,
   postItem,
   saveProfilePatch,
@@ -22,6 +26,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { ready, user, profile } = useAuth();
   const [step, setStep] = useState<Step>(1);
+  const [claimedHandle, setClaimedHandle] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [title, setTitle] = useState("");
@@ -41,13 +46,21 @@ export default function OnboardingPage() {
     }
   }, [ready, user, router]);
 
-  function persistSkills() {
+  function persistProfileBasics() {
     if (!handle) return;
     setSessionHandle(handle);
+    const nextClaim = normalizeClaimedHandle(claimedHandle);
     saveProfilePatch(handle, {
       skills: normalizeSkillLabels(skills),
       wantedLines: [],
+      ...(nextClaim && isClaimableHandle(nextClaim)
+        ? { claimedHandle: nextClaim }
+        : {}),
     });
+  }
+
+  function persistSkills() {
+    persistProfileBasics();
   }
 
   function onFinishWanted() {
@@ -125,8 +138,29 @@ export default function OnboardingPage() {
         <section className="mt-8 flex flex-col gap-4">
           <h2 className="section-title m-0 text-[28px]">What do you know?</h2>
           <p className="m-0 text-[14px] text-meta">
-            Build a short public expertise list — same tags Members use to find you.
+            Claim a public handle, then build a short expertise list — same tags Members use
+            to find you.
           </p>
+          <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
+            Public handle
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[15px] text-muted">@</span>
+              <input
+                value={claimedHandle}
+                onChange={(e) =>
+                  setClaimedHandle(
+                    e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24),
+                  )
+                }
+                placeholder="dylan_s"
+                maxLength={24}
+                className="h-11 flex-1 rounded-[10px] border border-[#D4D3CD] px-3.5 text-[15px] font-normal outline-none focus:border-accent"
+              />
+            </div>
+            <span className="font-normal text-[13px] text-meta">
+              Optional now — until you claim one, the auto-generated hash handle stays hidden.
+            </span>
+          </label>
           <SkillsEditor
             value={skills}
             onChange={setSkills}
@@ -138,6 +172,12 @@ export default function OnboardingPage() {
               type="button"
               disabled={skills.length === 0}
               onClick={() => {
+                const nextClaim = normalizeClaimedHandle(claimedHandle);
+                if (claimedHandle.trim() && !isClaimableHandle(nextClaim)) {
+                  setError("Handle must be 3–24 characters: letters, numbers, underscores.");
+                  return;
+                }
+                setError("");
                 persistSkills();
                 setStep(2);
               }}
