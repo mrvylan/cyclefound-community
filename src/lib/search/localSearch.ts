@@ -147,3 +147,122 @@ export function groupSearchHits(hits: SearchHit[]) {
     items: hits.filter((h) => h.kind === "item"),
   };
 }
+
+const HINT_FALLBACK = ["Campagnolo", "seatpost", "for sale", "repair"];
+
+const HINT_STOP = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "for",
+  "with",
+  "road",
+  "bike",
+  "bikes",
+  "frame",
+  "frameset",
+  "hybrid",
+  "mountain",
+  "women",
+  "womens",
+  "men",
+  "mens",
+  "classic",
+  "vintage",
+  "used",
+  "new",
+  "size",
+  "cm",
+]);
+
+function formatHintLabel(raw: string): string {
+  const cleaned = String(raw || "")
+    .trim()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ");
+  if (!cleaned) return "";
+  const lower = cleaned.toLowerCase();
+  if (lower === "for sale" || lower === "open to offers" || lower === "trade only") {
+    return lower;
+  }
+  if (["repair", "build", "find", "fix", "value", "seatpost", "wheels"].includes(lower)) {
+    return lower;
+  }
+  return cleaned.replace(/\b([a-z])/gi, (ch) => ch.toUpperCase());
+}
+
+/** First 1–2 brand-like words from a title (“2002 LeMond Zurich…” → “LeMond”). */
+function brandishPhrase(name: string): string | null {
+  const cleaned = String(name || "")
+    .replace(/^(classic|vintage|used|new)\s+/i, "")
+    .replace(/^\d{4}\s+/, "")
+    .trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  const out: string[] = [];
+  for (const word of words) {
+    const key = word.toLowerCase().replace(/['’]s$/i, "").replace(/[^a-z0-9]/gi, "");
+    if (!key || /^\d/.test(key) || HINT_STOP.has(key)) {
+      if (out.length) break;
+      continue;
+    }
+    out.push(word.replace(/[^a-zA-Z0-9'-]/g, ""));
+    if (out.length >= 2) break;
+  }
+  return out.length ? out.join(" ") : null;
+}
+
+/**
+ * Suggestion chips for the empty search overlay.
+ * Prefers tags from the top question cards, then marketplace brands in the data.
+ */
+export function getSearchHintChips(limit = 5): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  function push(raw: string) {
+    if (out.length >= limit) return;
+    const label = formatHintLabel(raw);
+    const key = label.toLowerCase();
+    if (!label || key.length < 2 || seen.has(key)) return;
+    // Never surface handles / member-looking tokens.
+    if (key.includes("_") || key.startsWith("@")) return;
+    seen.add(key);
+    out.push(label);
+  }
+
+  const topQuestions = getAllQuestions().slice(0, 3);
+  for (const q of topQuestions) {
+    for (const tag of q.tags) push(tag);
+  }
+  if (out.length < limit) {
+    for (const q of topQuestions) {
+      const phrase = brandishPhrase(q.title);
+      if (phrase) push(phrase);
+    }
+  }
+
+  if (out.length < limit) {
+    for (const item of getAllItems()) {
+      const phrase = brandishPhrase(item.name);
+      if (phrase) push(phrase);
+      if (item.catShort) push(item.catShort);
+      if (out.length >= limit) break;
+    }
+  }
+
+  if (
+    out.length < limit &&
+    getAllItems().some((item) => item.status === "For sale" || item.status === "Open to offers")
+  ) {
+    push("for sale");
+  }
+
+  for (const fallback of HINT_FALLBACK) {
+    if (out.length >= limit) break;
+    push(fallback);
+  }
+
+  return out;
+}

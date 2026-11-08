@@ -27,6 +27,7 @@ import {
   subscribeStore,
 } from "@/lib/data/local-store";
 import {
+  getSearchHintChips,
   groupSearchHits,
   searchLocal,
   type SearchHit,
@@ -40,9 +41,6 @@ const KIND_META: Record<
   question: { label: "Questions", Icon: CircleHelp },
   item: { label: "Garage & market", Icon: Bike },
 };
-
-/** Example queries — brands, parts, listing filters, question types (no real member names). */
-const HINTS = ["Campagnolo", "Gary Fisher", "seatpost", "for sale", "repair"];
 
 type Props = {
   open: boolean;
@@ -126,6 +124,7 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
     () => [...grouped.members, ...grouped.questions, ...grouped.items],
     [grouped],
   );
+  const hints = useMemo(() => getSearchHintChips(5), [tick]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -252,21 +251,27 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
               <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Try searching for
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {HINTS.map((hint) => (
-                  <button
-                    key={hint}
-                    type="button"
-                    onClick={() => {
-                      setQuery(hint);
-                      inputRef.current?.focus();
-                    }}
-                    className="rounded-full border border-line bg-ground px-3 py-1.5 text-[13px] font-medium text-ink hover:border-ink"
-                  >
-                    {hint}
-                  </button>
-                ))}
-              </div>
+              {hints.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {hints.map((hint) => (
+                    <button
+                      key={hint}
+                      type="button"
+                      onClick={() => {
+                        setQuery(hint);
+                        inputRef.current?.focus();
+                      }}
+                      className="rounded-full border border-line bg-ground px-3 py-1.5 text-[13px] font-medium text-ink hover:border-ink"
+                    >
+                      {hint}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 m-0 text-[14px] text-muted-2">
+                  Type a member, part, brand, or question topic.
+                </p>
+              )}
             </div>
           ) : flat.length === 0 ? (
             <div className="px-4 py-10 text-center">
