@@ -41,8 +41,8 @@ const KIND_META: Record<
   item: { label: "Garage & market", Icon: Bike },
 };
 
-/** Mix of brands, parts, people, listing filters, and question types. */
-const HINTS = ["Campagnolo", "seatpost", "Dylan", "for sale", "repair"];
+/** Example queries — brands, parts, listing filters, question types (no real member names). */
+const HINTS = ["Campagnolo", "Gary Fisher", "seatpost", "for sale", "repair"];
 
 type Props = {
   open: boolean;
