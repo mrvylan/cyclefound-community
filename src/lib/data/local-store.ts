@@ -19,6 +19,7 @@ import {
   getMarketplaceItem,
   getMarketplaceItemsForHandle,
 } from "@/lib/community/directory-cache";
+import { roleBadgeForMember } from "@/lib/community/founding-members";
 
 export { isValidMemberHandle } from "./handles";
 export {
@@ -196,12 +197,13 @@ function seedPerson(_handle: string): Person | undefined {
 
 function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
   const name = patch?.name?.trim() || handle;
+  const badge = roleBadgeForMember({ handle });
   return {
     handle,
     name,
     init: initialsFromDisplayName(name),
     bg: "#527D31",
-    role: "Member",
+    role: badge,
     loc: patch?.loc ?? "",
     level: "RIDER",
     skills: normalizeSkillLabels(patch?.skills ?? []),
@@ -216,7 +218,7 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
     consult: "",
     verified: false,
     memberSince: "2026",
-    roleBadge: "Member",
+    roleBadge: badge,
     avatarUrl: patch?.avatarUrl || undefined,
     coverUrl: patch?.coverUrl || undefined,
     coverPositionY:

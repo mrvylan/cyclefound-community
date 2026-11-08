@@ -1,6 +1,7 @@
 "use client";
 
 import type { GarageItem, Person } from "@/lib/data/seed";
+import { roleBadgeForMember } from "@/lib/community/founding-members";
 import { communityHandleFromProfile } from "@/lib/community/handles";
 import { initialsFromName, colorForId } from "@/lib/auth/user";
 
@@ -59,12 +60,13 @@ function personFromRow(row: {
   const name = String(row.display_name || "").trim() || "Member";
   const handle = communityHandleFromProfile(row.id, name);
   const year = row.created_at ? String(new Date(row.created_at).getFullYear()) : "2026";
+  const badge = roleBadgeForMember({ userId: row.id, handle });
   const person: Person = {
     handle,
     name,
     init: initialsFromName(name),
     bg: colorForId(row.id),
-    role: "Member",
+    role: badge,
     loc: locOf(row.city, row.state),
     level: "RIDER",
     rating: "New",
@@ -78,7 +80,7 @@ function personFromRow(row: {
     skills: [],
     consult: "",
     verified: false,
-    roleBadge: "Member",
+    roleBadge: badge,
     memberSince: year,
     avatarUrl: row.avatar_url || undefined,
   };
