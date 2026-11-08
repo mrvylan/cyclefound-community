@@ -5,11 +5,11 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
+import { ItemCard } from "@/components/ItemCard";
 import { MessageMember } from "@/components/messaging/MessageMember";
 import {
   Avatar,
   FilterChip,
-  PlaceholderPhoto,
   SegmentedControl,
   StatusChip,
 } from "@/components/ui";
@@ -19,14 +19,13 @@ import {
 } from "@/lib/community/directory-cache";
 import {
   getGarageItemsFor,
-  getItemPhotoUrls,
   getSessionHandle,
   getWantedLines,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
 import { ITEM_CATEGORIES } from "@/lib/data/categories";
-import { formatAskPrice, itemYearLabel } from "@/lib/garage/itemFields";
+import { formatAskPrice } from "@/lib/garage/itemFields";
 import { garageActivityFor, getGarage } from "@/lib/data/seed";
 import { Archive, Eye, ShieldCheck } from "lucide-react";
 
@@ -430,86 +429,23 @@ export default function GaragePage({
           />
         ) : view === "Grid" ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-            {items.map((item) => {
-              const photos = getItemPhotoUrls(item);
-              const showAsk = item.status !== "Not for sale" && !item.archived;
-              const askLabel =
-                (!item.ask || item.ask === "—") && item.status === "Open to offers"
-                  ? "Make an offer"
-                  : formatAskPrice(item.ask);
-              return (
-              <div
+            {items.map((item) => (
+              <ItemCard
                 key={item.id}
-                className={`relative flex flex-col overflow-hidden rounded-[14px] border bg-surface ${
-                  item.archived ? "border-line-soft opacity-90" : "border-line"
-                } ${justAddedId === item.id ? "ring-2 ring-accent/40" : ""}`}
-              >
-                {isOwnGarage ? (
-                  <div className="absolute top-2.5 right-2.5 z-10">
-                    <GarageItemActions item={item} />
-                  </div>
-                ) : null}
-                <Link
-                  href={`/i/${item.id}`}
-                  className="flex flex-col text-ink no-underline hover:text-ink"
-                >
-                  {photos[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photos[0]}
-                      alt=""
-                      className="h-[180px] w-full object-cover"
-                    />
-                  ) : (
-                    <PlaceholderPhoto
-                      label={[itemYearLabel(item.year), item.cond].filter(Boolean).join(" · ")}
-                      className="h-[180px]"
-                      silhouette
-                    />
-                  )}
-                  <div className="flex flex-col gap-2 p-4">
-                    <div className="flex items-center justify-between gap-2 pr-10">
-                      <span className="font-mono text-[11px] text-muted">{item.cat}</span>
-                      {item.archived ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-line bg-ground px-2.5 py-1 text-[11px] font-bold tracking-[0.02em] text-muted-2">
-                          <Archive className="size-3" aria-hidden />
-                          Archived
-                        </span>
-                      ) : (
-                        <StatusChip status={item.status} />
-                      )}
+                item={item}
+                photoHeight={180}
+                className={`${item.archived ? "opacity-90" : ""} ${
+                  justAddedId === item.id ? "ring-2 ring-accent/40" : ""
+                }`}
+                overlay={
+                  isOwnGarage ? (
+                    <div className="absolute top-2.5 right-2.5 z-10">
+                      <GarageItemActions item={item} />
                     </div>
-                    <span className="text-[16px] font-semibold leading-snug">{item.name}</span>
-                    {item.description ? (
-                      <p className="m-0 line-clamp-2 text-[13px] leading-snug text-muted-2">
-                        {item.description}
-                      </p>
-                    ) : null}
-                    <div className="flex justify-between gap-2 text-[13px]">
-                      <Feature name="marketValues">
-                        <span>
-                          <span className="block text-[11px] text-muted">MARKET</span>
-                          <span className="font-mono tabular-nums">{item.mkt}</span>
-                        </span>
-                      </Feature>
-                      {showAsk ? (
-                        <span className="text-right">
-                          <span className="block text-[11px] text-muted">ASKING</span>
-                          <span className="font-mono tabular-nums">{askLabel}</span>
-                        </span>
-                      ) : null}
-                    </div>
-                    <Feature name="marketValues">
-                      <div className="flex justify-between text-[12px] text-muted">
-                        <span>{item.links}</span>
-                        <span>{item.trend}</span>
-                      </div>
-                    </Feature>
-                  </div>
-                </Link>
-              </div>
-            );
-            })}
+                  ) : null
+                }
+              />
+            ))}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-[14px] border border-line bg-surface">

@@ -1,22 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { Camera, SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
-import { Feature } from "@/components/Feature";
+import { ItemCard } from "@/components/ItemCard";
 import { SellFromGarage } from "@/components/market/SellFromGarage";
-import { PlaceholderPhoto, StatusChip } from "@/components/ui";
 import { ITEM_CATEGORIES } from "@/lib/data/categories";
 import {
   getAllItems,
-  getItemPhotoUrls,
   getSessionHandle,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
 import { DISCIPLINES, inferDiscipline } from "@/lib/garage/disciplines";
-import { formatAskPrice, itemYearLabel } from "@/lib/garage/itemFields";
 import { CONDITIONS } from "@/lib/garage/mapAiCategory";
 import { cityFromLoc, type GarageItem, type ItemStatus } from "@/lib/data/seed";
 
@@ -58,35 +54,11 @@ function askNumber(ask: string): number | null {
   return /\d/.test(ask) && Number.isFinite(n) ? n : null;
 }
 
-function hasAsk(item: GarageItem) {
-  return Boolean(item.ask && item.ask.trim() && item.ask.trim() !== "—");
-}
-
 function priceBucket(ask: string): string | null {
   const n = askNumber(ask);
   if (n == null) return null;
   const hit = PRICE_BUCKETS.find((b) => n >= b.min && n < b.max);
   return hit?.value ?? null;
-}
-
-function itemMetaLine(item: GarageItem) {
-  return [item.size?.trim(), itemYearLabel(item.year), item.cond]
-    .filter(Boolean)
-    .join(" · ");
-}
-
-function Asking({ item }: { item: GarageItem }) {
-  if (hasAsk(item)) {
-    return <span className="font-mono tabular-nums">{formatAskPrice(item.ask)}</span>;
-  }
-  if (item.status === "Open to offers") {
-    return <span className="text-[13px] font-semibold text-status-offers">Make an offer</span>;
-  }
-  return (
-    <span className="font-mono tabular-nums text-meta">
-      —<span className="sr-only"> no asking price listed</span>
-    </span>
-  );
 }
 
 function FilterFields({
@@ -429,69 +401,16 @@ export default function MarketPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
-                  {visible.map((item) => {
-                    const owner = resolvePerson(item.ownerHandle);
-                    const photos = getItemPhotoUrls(item);
-                    const discipline = inferDiscipline(item);
-                    const meta = itemMetaLine(item);
-                    return (
-                      <Link
-                        key={item.id}
-                        href={`/i/${item.id}`}
-                        className="flex h-full flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline outline-none ring-ink ring-offset-2 ring-offset-ground hover:border-ink hover:text-ink hover:ring-2 focus-visible:border-ink focus-visible:ring-2"
-                      >
-                        {photos.length ? (
-                          <div className="relative h-[180px] shrink-0 overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={photos[0]} alt="" className="size-full object-cover" />
-                            <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-ink/80 px-2 py-1 font-mono text-[12px] text-white">
-                              <Camera className="size-3.5" aria-hidden />
-                              {photos.length}
-                              <span className="sr-only">
-                                {" "}
-                                photo{photos.length === 1 ? "" : "s"}
-                              </span>
-                            </span>
-                          </div>
-                        ) : (
-                          <PlaceholderPhoto
-                            silhouette
-                            label={`${item.year} · ${item.cond}`}
-                            className="h-[180px] shrink-0"
-                          />
-                        )}
-                        <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-[11px] tracking-[0.04em] text-meta uppercase">
-                              {discipline}
-                            </span>
-                            <StatusChip status={item.status} />
-                          </div>
-                          <span className="text-[16px] font-semibold leading-snug">{item.name}</span>
-                          {meta ? (
-                            <span className="font-mono text-[12px] text-meta">{meta}</span>
-                          ) : null}
-                          {owner ? (
-                            <span className="text-[13px] text-meta">
-                              {owner.name} · {cityFromLoc(owner.loc)}
-                            </span>
-                          ) : null}
-                          <div className="mt-auto flex items-end justify-between gap-2 border-t border-line-soft pt-3 text-[13px]">
-                            <Feature name="marketValues">
-                              <span>
-                                <span className="block text-[11px] text-meta">MARKET</span>
-                                <span className="font-mono tabular-nums">{item.mkt}</span>
-                              </span>
-                            </Feature>
-                            <span className="ml-auto text-right">
-                              <span className="block text-[11px] text-meta">ASKING</span>
-                              <Asking item={item} />
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                  {visible.map((item) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      photoHeight={180}
+                      showOwner
+                      showPhotoCount
+                      className="hover:border-ink hover:ring-2 hover:ring-ink hover:ring-offset-2 hover:ring-offset-ground"
+                    />
+                  ))}
                 </div>
               )}
             </div>

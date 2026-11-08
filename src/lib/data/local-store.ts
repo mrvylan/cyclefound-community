@@ -282,10 +282,15 @@ export function getMergedPerson(handle: string): Person | undefined {
 
 function withPublicHandle(person: Person, claimed?: string): Person {
   const claimedNorm = claimed ? normalizeClaimedHandle(claimed) : "";
-  if (claimedNorm && isClaimableHandle(claimedNorm)) {
+  // Drop stale local patches that stored the auto hash as a "claimed" handle.
+  if (
+    claimedNorm &&
+    isClaimableHandle(claimedNorm) &&
+    !isProvisionalHandle(claimedNorm)
+  ) {
     return { ...person, publicHandle: claimedNorm };
   }
-  // Never surface auto hash handles (e.g. warren_9a180516) as a public @.
+  // Never surface auto hash handles (e.g. dylan_s_75f7798f) as a public @.
   if (isProvisionalHandle(person.handle)) {
     return { ...person, publicHandle: undefined };
   }
@@ -294,8 +299,9 @@ function withPublicHandle(person: Person, claimed?: string): Person {
 
 /** Public @handle for display, or null when still provisional. */
 export function displayHandleFor(person: Pick<Person, "handle" | "publicHandle">) {
-  if (person.publicHandle && !isProvisionalHandle(person.publicHandle)) {
-    return person.publicHandle;
+  const claimed = person.publicHandle?.trim();
+  if (claimed && !isProvisionalHandle(claimed) && isClaimableHandle(claimed)) {
+    return claimed;
   }
   if (person.handle && !isProvisionalHandle(person.handle)) return person.handle;
   return null;

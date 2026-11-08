@@ -7,6 +7,7 @@ import { Eye, ShieldCheck, Star } from "lucide-react";
 import { ContributionBadge } from "@/components/ContributionBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
+import { ItemCard } from "@/components/ItemCard";
 import { MessageMember } from "@/components/messaging/MessageMember";
 import { ProfileCover } from "@/components/profile/ProfileCover";
 import {
@@ -14,26 +15,21 @@ import {
   ProfileIdentity,
 } from "@/components/profile/ProfileIdentity";
 import { WantedList } from "@/components/WantedList";
-import {
-  LevelBadge,
-  PlaceholderPhoto,
-  StatusChip,
-} from "@/components/ui";
+import { LevelBadge } from "@/components/ui";
 import {
   hydrateCommunityDirectory,
   isCommunityDirectoryReady,
 } from "@/lib/community/directory-cache";
 import {
+  displayHandleFor,
   getAllAnswers,
   getAllQuestions,
   getGarageItemsFor,
-  getItemPhotoUrls,
   getMemberContribution,
   getSessionHandle,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { itemYearLabel } from "@/lib/garage/itemFields";
 
 /** Words from a skill label that can be matched against question tags/titles. */
 function skillTokens(skill: string) {
@@ -140,6 +136,21 @@ export function ProfilePageClient({ handle }: { handle: string }) {
   }
 
   const firstName = person.name.split(" ")[0] || person.name;
+  const publicHandle = displayHandleFor(person);
+  const acceptedCount = Math.max(
+    person.accepted || 0,
+    contribution?.activity.accepted ?? 0,
+  );
+  const askedCount = contribution?.activity.asked ?? 0;
+  const answeredCount = contribution?.activity.answered ?? 0;
+  const showRating = person.reviews > 0 && person.rating !== "New";
+  const showAccepted = acceptedCount > 0;
+  const showGarageCount = ownedItems.length > 0;
+  const isNewMember = !showRating && !showAccepted;
+  const expertiseHasEvidence = skillList.some((s) => {
+    const solved = evidence.get(s.name) ?? 0;
+    return solved > 0 || s.endorse > 0;
+  });
 
   return (
     <>
@@ -193,24 +204,14 @@ export function ProfilePageClient({ handle }: { handle: string }) {
             </div>
             <p className="m-0 text-[15px] text-on-dark-muted">
               {[
-                person.publicHandle ? `@${person.publicHandle}` : null,
+                publicHandle ? `@${publicHandle}` : null,
                 person.loc ? person.loc.split(" · ")[0] : null,
                 `Member since ${person.memberSince}`,
+                askedCount > 0 ? `${askedCount} asked` : null,
+                answeredCount > 0 ? `${answeredCount} answered` : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}
-              {contribution ? (
-                <>
-                  {" · "}
-                  <span className="font-mono tabular-nums">
-                    {contribution.activity.asked} asked
-                  </span>
-                  {" · "}
-                  <span className="font-mono tabular-nums">
-                    {contribution.activity.answered} answered
-                  </span>
-                </>
-              ) : null}
             </p>
             {person.bio ? (
               <p className="m-0 max-w-[720px] text-base leading-[1.55] text-[#E3E5E8]">
@@ -265,37 +266,57 @@ export function ProfilePageClient({ handle }: { handle: string }) {
           </div>
         </div>
         <div className="border-t border-ink-3">
-          <div className="mx-auto grid max-w-[1280px] grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4 px-8 py-5">
-            <div>
-              <div className="font-display flex items-center gap-1.5 text-[34px]">
-                <Star className="size-[22px] fill-accent-bright text-accent-bright" aria-hidden />
-                {person.rating}
-              </div>
-              <div className="text-[13px] text-on-dark-muted">
-                {person.reviews} member reviews
-              </div>
-            </div>
-            <Feature name="spokesCurrency">
+          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-8 gap-y-4 px-8 py-5">
+            {isNewMember ? (
+              <p className="m-0 max-w-[520px] text-[15px] leading-snug text-on-dark-muted">
+                New member — first accepted answer earns a badge.
+              </p>
+            ) : null}
+            {showRating ? (
               <div>
-                <div className="font-display text-[34px]">
-                  {person.spokesNum.toLocaleString()}
+                <div className="font-display flex items-center gap-1.5 text-[34px]">
+                  <Star
+                    className="size-[22px] fill-accent-bright text-accent-bright"
+                    aria-hidden
+                  />
+                  {person.rating}
                 </div>
-                <div className="text-[13px] text-on-dark-muted">Spokes earned</div>
+                <div className="text-[13px] text-on-dark-muted">
+                  {person.reviews} member review{person.reviews === 1 ? "" : "s"}
+                </div>
               </div>
+            ) : null}
+            <Feature name="spokesCurrency">
+              {person.spokesNum > 0 ? (
+                <div>
+                  <div className="font-display text-[34px]">
+                    {person.spokesNum.toLocaleString()}
+                  </div>
+                  <div className="text-[13px] text-on-dark-muted">Spokes earned</div>
+                </div>
+              ) : null}
             </Feature>
-            <div>
-              <div className="font-display text-[34px]">{person.accepted}</div>
-              <div className="text-[13px] text-on-dark-muted">Accepted answers</div>
-            </div>
-            <div>
-              <div className="font-display text-[34px]">{ownedItems.length}</div>
-              <div className="text-[13px] text-on-dark-muted">Items in garage</div>
-            </div>
-            <Feature name="topContributors">
+            {showAccepted ? (
               <div>
-                <div className="font-display text-[34px]">Top 1%</div>
-                <div className="text-[13px] text-on-dark-muted">{person.skills[0]}</div>
+                <div className="font-display text-[34px]">{acceptedCount}</div>
+                <div className="text-[13px] text-on-dark-muted">Accepted answers</div>
               </div>
+            ) : null}
+            {showGarageCount ? (
+              <div>
+                <div className="font-display text-[34px]">{ownedItems.length}</div>
+                <div className="text-[13px] text-on-dark-muted">
+                  Item{ownedItems.length === 1 ? "" : "s"} in garage
+                </div>
+              </div>
+            ) : null}
+            <Feature name="topContributors">
+              {person.skills[0] ? (
+                <div>
+                  <div className="font-display text-[34px]">Top 1%</div>
+                  <div className="text-[13px] text-on-dark-muted">{person.skills[0]}</div>
+                </div>
+              ) : null}
             </Feature>
           </div>
         </div>
@@ -325,9 +346,9 @@ export function ProfilePageClient({ handle }: { handle: string }) {
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-start gap-7 px-8 py-8 pb-16">
         <aside className="flex max-w-[380px] min-w-0 flex-[1_1_300px] flex-col gap-5">
           <section className="rounded-2xl border border-line bg-surface p-[22px]">
-            <h2 className="section-title mb-4 mt-0 text-[20px]">Expertise</h2>
+            <h2 className="section-title mb-1 mt-0 text-[20px]">Expertise</h2>
             {person.skills.length === 0 ? (
-              <p className="m-0 text-[14px] text-muted-2">
+              <p className="m-0 mt-3 text-[14px] text-muted-2">
                 No expertise tags yet.
                 {isOwnProfile ? (
                   <>
@@ -339,26 +360,37 @@ export function ProfilePageClient({ handle }: { handle: string }) {
                 ) : null}
               </p>
             ) : (
-              <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {skillList.map((s) => {
-                  const solved = evidence.get(s.name) ?? 0;
-                  const bits = [
-                    solved > 0 ? `${solved} solved` : "",
-                    s.endorse > 0 ? `${s.endorse} endorsements` : "",
-                  ].filter(Boolean);
-                  return (
-                    <li
-                      key={s.name}
-                      className="flex flex-col gap-0.5 border-b border-line-soft pb-3 last:border-b-0 last:pb-0"
-                    >
-                      <span className="text-[14px] font-semibold text-ink">{s.name}</span>
-                      <span className="font-mono text-[12px] text-meta">
-                        {bits.length ? bits.join(" · ") : "Listed by member — no answers yet"}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <>
+                {!expertiseHasEvidence ? (
+                  <p className="mb-3 mt-1 text-[13px] text-meta">
+                    Listed by member — evidence appears when answers are accepted.
+                  </p>
+                ) : (
+                  <div className="mb-3" />
+                )}
+                <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                  {skillList.map((s) => {
+                    const solved = evidence.get(s.name) ?? 0;
+                    const bits = [
+                      solved > 0 ? `${solved} solved` : "",
+                      s.endorse > 0 ? `${s.endorse} endorsements` : "",
+                    ].filter(Boolean);
+                    return (
+                      <li
+                        key={s.name}
+                        className="flex flex-col gap-0.5 border-b border-line-soft pb-3 last:border-b-0 last:pb-0"
+                      >
+                        <span className="text-[14px] font-semibold text-ink">{s.name}</span>
+                        {bits.length ? (
+                          <span className="font-mono text-[12px] text-meta">
+                            {bits.join(" · ")}
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
           </section>
 
@@ -422,47 +454,9 @@ export function ProfilePageClient({ handle }: { handle: string }) {
               />
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
-                {ownedItems.slice(0, 6).map((item) => {
-                  const photo = getItemPhotoUrls(item)[0];
-                  const year = itemYearLabel(item.year);
-                  return (
-                  <Link
-                    key={item.id}
-                    href={`/i/${item.id}`}
-                    className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline hover:text-ink"
-                  >
-                    {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={photo}
-                        alt=""
-                        className="h-[140px] w-full object-cover"
-                      />
-                    ) : (
-                      <PlaceholderPhoto
-                        label={year || item.cond}
-                        className="h-[140px]"
-                        silhouette
-                      />
-                    )}
-                    <div className="flex flex-col gap-2 p-4">
-                      <span className="font-mono text-[11px] text-meta">{item.cat}</span>
-                      <span className="text-[15px] font-semibold leading-snug">{item.name}</span>
-                      {item.description ? (
-                        <p className="m-0 line-clamp-2 text-[13px] leading-snug text-muted-2">
-                          {item.description}
-                        </p>
-                      ) : null}
-                      <div className="flex items-center justify-between gap-2">
-                        <Feature name="marketValues">
-                          <span className="font-mono text-[13px]">{item.mkt}</span>
-                        </Feature>
-                        <StatusChip status={item.status} />
-                      </div>
-                    </div>
-                  </Link>
-                  );
-                })}
+                {ownedItems.slice(0, 6).map((item) => (
+                  <ItemCard key={item.id} item={item} photoHeight={140} />
+                ))}
                 <Link
                   href={`/u/${handle}/garage`}
                   className="col-span-full text-center text-[15px] font-semibold"
