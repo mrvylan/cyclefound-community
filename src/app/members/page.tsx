@@ -276,7 +276,7 @@ export default function MembersPage() {
                         {badge}
                       </span>
                     ) : null}
-                    {contribution ? (
+                    {contribution && contribution.activity.answered > 0 ? (
                       <ContributionBadge
                         tier={contribution.tier}
                         preview={contribution.isPreview}

@@ -165,7 +165,7 @@ export function ProfilePageClient({ handle }: { handle: string }) {
                   {person.roleBadge}
                 </p>
               ) : null}
-              {contribution ? (
+              {contribution && contribution.activity.answered > 0 ? (
                 <ContributionBadge
                   tier={contribution.tier}
                   preview={contribution.isPreview}
