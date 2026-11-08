@@ -1,0 +1,258 @@
+"use client";
+
+import type { GarageItem, Person } from "@/lib/data/seed";
+import { communityHandleFromProfile } from "@/lib/community/handles";
+import { initialsFromName, colorForId } from "@/lib/auth/user";
+
+export type DirectoryMember = {
+  userId: string;
+  handle: string;
+  person: Person;
+};
+
+export type MarketplaceGarageItem = GarageItem & {
+  /** Supabase auth user id (seller). */
+  sellerId: string;
+  listingId: string;
+  classicUrl: string;
+};
+
+type Cache = {
+  ready: boolean;
+  error: string;
+  members: DirectoryMember[];
+  /** handle → member */
+  byHandle: Map<string, DirectoryMember>;
+  /** userId → member */
+  byUserId: Map<string, DirectoryMember>;
+  items: MarketplaceGarageItem[];
+};
+
+const cache: Cache = {
+  ready: false,
+  error: "",
+  members: [],
+  byHandle: new Map(),
+  byUserId: new Map(),
+  items: [],
+};
+
+function notify() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("cf-store"));
+}
+
+function locOf(city?: string | null, state?: string | null) {
+  return [city, state].map((s) => String(s || "").trim()).filter(Boolean).join(", ");
+}
+
+function personFromRow(row: {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  state: string | null;
+  created_at: string | null;
+}): DirectoryMember {
+  const name = String(row.display_name || "").trim() || "Member";
+  const handle = communityHandleFromProfile(row.id, name);
+  const year = row.created_at ? String(new Date(row.created_at).getFullYear()) : "2026";
+  const person: Person = {
+    handle,
+    name,
+    init: initialsFromName(name),
+    bg: colorForId(row.id),
+    role: "Member",
+    loc: locOf(row.city, row.state),
+    level: "RIDER",
+    rating: "New",
+    reviews: 0,
+    spokes: "0",
+    spokesNum: 0,
+    accepted: 0,
+    items: 0,
+    reply: "—",
+    bio: "",
+    skills: [],
+    consult: "",
+    verified: false,
+    roleBadge: "Member",
+    memberSince: year,
+    avatarUrl: row.avatar_url || undefined,
+  };
+  return { userId: row.id, handle, person };
+}
+
+function formatUsdFromCents(cents: number | null | undefined) {
+  if (cents == null) return "—";
+  const n = Number(cents) / 100;
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function statusFromListing(status: string): GarageItem["status"] {
+  if (status === "active") return "For sale";
+  return "Not for sale";
+}
+
+export function getDirectoryMembers(): DirectoryMember[] {
+  return cache.members;
+}
+
+export function getDirectoryPerson(handle: string): Person | undefined {
+  return cache.byHandle.get(handle)?.person;
+}
+
+export function getDirectoryUserId(handle: string): string | undefined {
+  return cache.byHandle.get(handle)?.userId;
+}
+
+export function getDirectoryHandleForUserId(userId: string): string | undefined {
+  return cache.byUserId.get(userId)?.handle;
+}
+
+export function getMarketplaceItemsForHandle(handle: string): MarketplaceGarageItem[] {
+  const userId = cache.byHandle.get(handle)?.userId;
+  if (!userId) return [];
+  return cache.items.filter((i) => i.sellerId === userId);
+}
+
+export function getAllMarketplaceItems(): MarketplaceGarageItem[] {
+  return cache.items;
+}
+
+export function getMarketplaceItem(id: string): MarketplaceGarageItem | undefined {
+  return cache.items.find((i) => i.id === id || i.listingId === id);
+}
+
+export function isCommunityDirectoryReady() {
+  return cache.ready;
+}
+
+export function communityDirectoryError() {
+  return cache.error;
+}
+
+/** Load Supabase profiles + active marketplace listings into the client cache. */
+export async function hydrateCommunityDirectory() {
+  if (typeof window === "undefined") return;
+
+  try {
+    const dirRes = await fetch("/api/community/directory", { cache: "no-store" });
+    const dirPayload = (await dirRes.json().catch(() => ({}))) as {
+      members?: Array<{
+        id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        city: string | null;
+        state: string | null;
+        created_at: string | null;
+      }>;
+      error?: string;
+    };
+    if (!dirRes.ok) {
+      throw new Error(dirPayload.error || `Directory failed (${dirRes.status})`);
+    }
+
+    const members = (dirPayload.members || []).map(personFromRow);
+    const byHandle = new Map(members.map((m) => [m.handle, m]));
+    const byUserId = new Map(members.map((m) => [m.userId, m]));
+
+    const { createClient } = await import("@/lib/supabase/client");
+    const { hasSupabaseConfig } = await import("@/lib/supabase/config");
+    const items: MarketplaceGarageItem[] = [];
+
+    if (hasSupabaseConfig()) {
+      const supabase = createClient();
+      const { data: listings, error } = await supabase
+        .from("bike_listings")
+        .select(
+          "id, seller_id, title, description, status, condition, asking_price_cents, manufacturer_name, model_name, category_name, approximate_year, frame_size_label, city, state, published_at",
+        )
+        .eq("status", "active")
+        .order("published_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+
+      for (const row of listings || []) {
+        const sellerId = String(row.seller_id || "");
+        const member = byUserId.get(sellerId);
+        if (!member) continue;
+        const listingId = String(row.id);
+        const classicUrl = `https://classic.cyclefound.com/listing.html?id=${encodeURIComponent(listingId)}`;
+
+        let photo = "";
+        const { data: photos } = await supabase
+          .from("listing_photos")
+          .select("storage_path, is_cover, sort_order")
+          .eq("listing_id", listingId)
+          .order("is_cover", { ascending: false })
+          .order("sort_order", { ascending: true })
+          .limit(1);
+        const path = photos?.[0]?.storage_path as string | undefined;
+        if (path) {
+          const { data: signed } = await supabase.storage
+            .from("listing-photos")
+            .createSignedUrl(path, 60 * 60);
+          photo = signed?.signedUrl || "";
+        }
+
+        const title =
+          String(row.title || "").trim() ||
+          [row.manufacturer_name, row.model_name].filter(Boolean).join(" ") ||
+          "Listing";
+        const ask = formatUsdFromCents(
+          row.asking_price_cents == null ? null : Number(row.asking_price_cents),
+        );
+
+        items.push({
+          id: listingId,
+          listingId,
+          sellerId,
+          ownerHandle: member.handle,
+          catShort: String(row.category_name || "Bike").slice(0, 12) || "Bike",
+          cat: String(row.category_name || "Bicycle"),
+          year: String(row.approximate_year || "—"),
+          size: row.frame_size_label ? String(row.frame_size_label) : undefined,
+          name: title,
+          cond: String(row.condition || "—"),
+          mkt: ask,
+          ask,
+          status: statusFromListing(String(row.status || "active")),
+          links: "Marketplace",
+          trend: "Flat",
+          photo: photo || undefined,
+          description:
+            String(row.description || "").trim() ||
+            `Listed on Cycle Found marketplace. ${classicUrl}`,
+          classicUrl,
+        });
+      }
+    }
+
+    // Refresh item counts on people
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      counts.set(item.ownerHandle, (counts.get(item.ownerHandle) || 0) + 1);
+    }
+    for (const m of members) {
+      m.person = { ...m.person, items: counts.get(m.handle) || 0 };
+    }
+
+    cache.ready = true;
+    cache.error = "";
+    cache.members = members;
+    cache.byHandle = byHandle;
+    cache.byUserId = byUserId;
+    cache.items = items;
+    notify();
+  } catch (err) {
+    cache.ready = true;
+    cache.error = err instanceof Error ? err.message : "Directory unavailable";
+    notify();
+  }
+}

@@ -1,4 +1,5 @@
 import type { AuthProfile } from "@/lib/auth/user";
+import { communityHandleFromProfile } from "@/lib/community/handles";
 
 /**
  * Option A: one app, two modes.
@@ -16,14 +17,13 @@ export function isDemoSessionEnabled(): boolean {
 
 /**
  * Show Insert Mock Data in the Pre-Alpha banner.
- * Default on for Pre-Alpha (local + www.cyclefound.com). Opt out with
- * NEXT_PUBLIC_SHOW_MOCK_CONTROLS=0 when you no longer want testers seeding mock data.
+ * Default off. Opt in with NEXT_PUBLIC_SHOW_MOCK_CONTROLS=1 for local seeding.
  */
 export function showMockDataControls(): boolean {
   const v = process.env.NEXT_PUBLIC_SHOW_MOCK_CONTROLS?.trim().toLowerCase();
   if (v === "0" || v === "false" || v === "off") return false;
   if (v === "1" || v === "true" || v === "on") return true;
-  return true;
+  return false;
 }
 
 /**
@@ -40,12 +40,6 @@ export function canUseAdminSessionSwitch(): boolean {
 
 /** Stable local-store handle when posting as a real Supabase user. */
 export function handleFromAuthProfile(profile: AuthProfile): string {
-  const local = profile.email.split("@")[0] || "";
-  const cleaned = local
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 32);
-  if (cleaned) return cleaned;
-  return `user_${profile.id.replace(/-/g, "").slice(0, 10)}`;
+  const name = profile.displayName || profile.fullName || profile.email.split("@")[0] || "";
+  return communityHandleFromProfile(profile.id, name);
 }

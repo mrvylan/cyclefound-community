@@ -156,7 +156,7 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
               Pre-Alpha
             </span>
             <span className="mx-2 text-muted">·</span>
-            Demo content for testing — not production community data.
+            We&apos;re building the community — stay tuned.
           </p>
           <MockDataControl variant="banner" />
         </div>

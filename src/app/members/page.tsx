@@ -232,11 +232,11 @@ export default function MembersPage() {
             </div>
           ) : (
             <EmptyState
-              title={signedIn ? "No members to show" : "No profiles yet"}
+              title="No members to show"
               description={
                 signedIn
-                  ? "Insert mock data from the header to browse sample members, or finish editing your profile."
-                  : "Log in to create your profile, or insert mock data from the header to explore the UI."
+                  ? "Finish editing your profile, or check back as more riders join."
+                  : "Members from Cycle Found accounts will show here. Log in to create your profile."
               }
               actionLabel={signedIn ? "Edit profile" : "Log in"}
               actionHref={signedIn ? "/settings/profile" : "/auth?mode=login&next=/members"}

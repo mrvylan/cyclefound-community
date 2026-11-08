@@ -20,6 +20,13 @@ import { normalizeItemCategory } from "./categories";
 import { isValidMemberHandle } from "./handles";
 import { normalizeAskInput } from "@/lib/garage/itemFields";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
+import {
+  getAllMarketplaceItems,
+  getDirectoryMembers,
+  getDirectoryPerson,
+  getMarketplaceItem,
+  getMarketplaceItemsForHandle,
+} from "@/lib/community/directory-cache";
 
 export { isValidMemberHandle } from "./handles";
 export {
@@ -245,6 +252,20 @@ export function resolvePerson(handle: string): Person | undefined {
   const merged = getMergedPerson(key);
   if (merged) return merged;
   if (isMockDataEnabled() && getPerson(key)) return getPerson(key);
+  const directory = getDirectoryPerson(key);
+  if (directory) {
+    const patch = readStore().profilePatches[key];
+    if (!patch) return directory;
+    return {
+      ...directory,
+      name: patch.name ?? directory.name,
+      loc: patch.loc ?? directory.loc,
+      bio: patch.bio ?? directory.bio,
+      skills: normalizeSkillLabels(patch.skills ?? directory.skills),
+      avatarUrl: patch.avatarUrl ?? directory.avatarUrl,
+      coverUrl: patch.coverUrl ?? directory.coverUrl,
+    };
+  }
   // Own account stub even before a name patch exists.
   if (key === getSessionHandle()) {
     return stubPersonFromHandle(key, readStore().profilePatches[key]);
@@ -352,9 +373,11 @@ export function getGarageItemsFor(handle: string): GarageItem[] {
     isMockDataEnabled() || defaultSeedVisible(handle)
       ? seedItemsByOwner(handle)
       : [];
+  const marketplace = getMarketplaceItemsForHandle(handle);
   const raw = [
     ...seeded,
     ...store.extraItems.filter((i) => i.ownerHandle === handle),
+    ...marketplace,
   ];
   return resolveOwnedItems(raw, store.itemPatches);
 }
@@ -364,15 +387,18 @@ export function getAllItems(): GarageItem[] {
   const seeded = isMockDataEnabled()
     ? seedItems
     : seedItems.filter((i) => defaultSeedVisible(i.ownerHandle));
+  const marketplace = getAllMarketplaceItems();
   let all = [...seeded, ...store.extraItems];
   if (!isMockDataEnabled()) {
     const me = store.sessionHandle;
-    if (!me) return [];
+    if (!me) {
+      return resolveOwnedItems(marketplace, store.itemPatches);
+    }
     all = all.filter(
       (i) => i.ownerHandle === me || defaultSeedVisible(i.ownerHandle),
     );
   }
-  return resolveOwnedItems(all, store.itemPatches);
+  return resolveOwnedItems([...all, ...marketplace], store.itemPatches);
 }
 
 /** Photos for a garage item — seed `photo` plus any uploaded this session. */
@@ -394,7 +420,7 @@ export function getItemPhotoUrls(item: GarageItem): string[] {
 }
 
 export function getItemLocal(id: string): GarageItem | undefined {
-  return getAllItems().find((i) => i.id === id);
+  return getAllItems().find((i) => i.id === id) || getMarketplaceItem(id);
 }
 
 function mergeItemPatch(id: string, patch: GarageItemPatch) {
@@ -666,14 +692,6 @@ export function listMembers(): Person[] {
     return { ...person, skills: normalizeSkillLabels(person.skills) };
   };
 
-  if (isMockDataEnabled()) {
-    return people
-      .map((p) => withSkills(getMergedPerson(p.handle) ?? p))
-      .filter((p): p is Person => Boolean(p));
-  }
-  const me = getSessionHandle();
-  if (!me) return [];
-
   const out: Person[] = [];
   const seen = new Set<string>();
 
@@ -684,15 +702,31 @@ export function listMembers(): Person[] {
     out.push(next);
   }
 
-  push(
-    getMergedPerson(me) ??
-      (defaultSeedVisible(me) ? getPerson(me) : undefined) ??
-      stubPersonFromHandle(me, readStore().profilePatches[me]),
-  );
+  // Real Supabase members (marketplace accounts) — available logged out or in.
+  for (const row of getDirectoryMembers()) {
+    push(resolvePerson(row.handle) ?? row.person);
+  }
 
-  // Always include the default messaging pair (Dylan + Ben) when signed in.
-  for (const handle of DEFAULT_SEED_HANDLES) {
-    push(getMergedPerson(handle) ?? getPerson(handle));
+  if (isMockDataEnabled()) {
+    for (const p of people) {
+      push(getMergedPerson(p.handle) ?? p);
+    }
+    return out;
+  }
+
+  const me = getSessionHandle();
+  if (me) {
+    push(
+      getMergedPerson(me) ??
+        getDirectoryPerson(me) ??
+        (defaultSeedVisible(me) ? getPerson(me) : undefined) ??
+        stubPersonFromHandle(me, readStore().profilePatches[me]),
+    );
+
+    // Default messaging pair when signed in (local seed demos).
+    for (const handle of DEFAULT_SEED_HANDLES) {
+      push(getMergedPerson(handle) ?? getPerson(handle));
+    }
   }
 
   return out;
