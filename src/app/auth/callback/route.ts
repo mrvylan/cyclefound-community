@@ -1,13 +1,29 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sanitizeNextPath } from "@/lib/auth/redirects";
+import {
+  AUTH_NEXT_COOKIE,
+  readAuthNextFromCookieHeader,
+  sanitizeNextPath,
+} from "@/lib/auth/redirects";
+
+function clearNextCookie(response: NextResponse) {
+  response.cookies.set(AUTH_NEXT_COOKIE, "", {
+    path: "/",
+    maxAge: 0,
+  });
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = sanitizeNextPath(searchParams.get("next"));
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
+  const cookieHeader = request.headers.get("cookie");
+  const next = sanitizeNextPath(
+    searchParams.get("next") ||
+      readAuthNextFromCookieHeader(cookieHeader, ""),
+    "/",
+  );
 
   const supabase = await createClient();
 
@@ -15,9 +31,15 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       if (type === "recovery") {
-        return NextResponse.redirect(`${origin}/auth?mode=set-password&next=${encodeURIComponent(next)}`);
+        const res = NextResponse.redirect(
+          `${origin}/auth?mode=set-password&next=${encodeURIComponent(next)}`,
+        );
+        clearNextCookie(res);
+        return res;
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      const res = NextResponse.redirect(`${origin}${next}`);
+      clearNextCookie(res);
+      return res;
     }
   }
 
@@ -29,13 +51,21 @@ export async function GET(request: Request) {
     });
     if (!error) {
       if (type === "recovery") {
-        return NextResponse.redirect(`${origin}/auth?mode=set-password&next=${encodeURIComponent(next)}`);
+        const res = NextResponse.redirect(
+          `${origin}/auth?mode=set-password&next=${encodeURIComponent(next)}`,
+        );
+        clearNextCookie(res);
+        return res;
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      const res = NextResponse.redirect(`${origin}${next}`);
+      clearNextCookie(res);
+      return res;
     }
   }
 
-  return NextResponse.redirect(
+  const fail = NextResponse.redirect(
     `${origin}/auth?mode=login&error=${encodeURIComponent("Could not complete sign-in. Try again.")}`,
   );
+  clearNextCookie(fail);
+  return fail;
 }

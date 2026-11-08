@@ -6,7 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { toAuthErrorMessage } from "@/lib/auth/errors";
-import { sanitizeNextPath } from "@/lib/auth/redirects";
+import {
+  authCallbackUrl,
+  sanitizeNextPath,
+  stashAuthNext,
+} from "@/lib/auth/redirects";
 import {
   MIN_PASSWORD_LENGTH,
   signupMetadata,
@@ -176,7 +180,8 @@ export function AuthForm() {
     const cleanEmail = validateEmail(targetEmail);
     const supabase = createClient();
     const dest = intent === "join" ? joinRedirect() : next;
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`;
+    stashAuthNext(dest);
+    const emailRedirectTo = authCallbackUrl(window.location.origin);
 
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
@@ -214,10 +219,13 @@ export function AuthForm() {
     try {
       const supabase = createClient();
       const dest = mode === "join" ? joinRedirect() : next;
+      // Keep redirectTo query-free so it matches the Supabase allowlist.
+      // (A ?next= URL often fails validation → Site URL = cyclefound.com.)
+      stashAuthNext(dest);
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`,
+          redirectTo: authCallbackUrl(window.location.origin),
         },
       });
       if (error) throw error;
