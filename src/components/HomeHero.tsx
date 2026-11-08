@@ -6,7 +6,6 @@ import { HomeExpertsOnline } from "@/components/HomeMockPanels";
 import { Feature } from "@/components/Feature";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
-  getGarageItemsFor,
   getSessionHandle,
   resolvePerson,
   subscribeStore,
@@ -18,13 +17,10 @@ export function HomeHero() {
   const { ready: authReady, profile, user } = useAuth();
   const [storeReady, setStoreReady] = useState(false);
   const [handle, setHandle] = useState("");
-  const [itemCount, setItemCount] = useState(0);
 
   useEffect(() => {
     function sync() {
-      const h = getSessionHandle();
-      setHandle(h);
-      setItemCount(h ? getGarageItemsFor(h).length : 0);
+      setHandle(getSessionHandle());
       setStoreReady(true);
     }
     sync();
@@ -60,15 +56,12 @@ export function HomeHero() {
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-8 pb-7">
           <div>
-            <p className="eyebrow m-0">Your workbench</p>
-            <h1 className="section-title m-0 text-[clamp(28px,4vw,40px)]">
-              {itemCount > 0
-                ? `Welcome back, ${firstName}`
-                : `Hi ${firstName} — ask or add to your garage`}
+            <p className="m-0 text-[16px] font-medium text-muted-2">Hi {firstName}</p>
+            <h1 className="section-title m-0 mt-1 text-[clamp(28px,4vw,40px)]">
+              What&apos;s rolling around in your head?
             </h1>
             <p className="m-0 mt-2 max-w-[560px] text-[16px] leading-[1.55] text-muted-2">
-              What&apos;s rolling around in your head? Questions go to members whose
-              garages and expertise match.
+              Questions go to members whose garages and expertise match.
             </p>
           </div>
           <HomeAskBox compact />
