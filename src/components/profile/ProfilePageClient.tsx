@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Eye, ShieldCheck, Star } from "lucide-react";
+import { ContributionBadge } from "@/components/ContributionBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { MessageMember } from "@/components/messaging/MessageMember";
@@ -27,6 +28,7 @@ import {
   getAllQuestions,
   getGarageItemsFor,
   getItemPhotoUrls,
+  getMemberContribution,
   getSessionHandle,
   resolvePerson,
   subscribeStore,
@@ -65,6 +67,7 @@ export function ProfilePageClient({ handle }: { handle: string }) {
   void tick;
 
   const person = ready ? resolvePerson(handle) : undefined;
+  const contribution = ready ? getMemberContribution(handle) : null;
   const directoryReady = isCommunityDirectoryReady();
   const isOwner = Boolean(sessionHandle && sessionHandle === handle);
   /** Owner chrome (edit links) is hidden while previewing as a visitor. */
@@ -156,11 +159,20 @@ export function ProfilePageClient({ handle }: { handle: string }) {
             }}
           />
           <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-2 pt-1">
-            {person.roleBadge ? (
-              <p className="m-0 font-mono text-[12px] font-medium tracking-[0.12em] uppercase text-accent-bright">
-                {person.roleBadge}
-              </p>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              {person.roleBadge && person.roleBadge.toLowerCase() !== "member" ? (
+                <p className="m-0 font-mono text-[12px] font-medium tracking-[0.12em] uppercase text-accent-bright">
+                  {person.roleBadge}
+                </p>
+              ) : null}
+              {contribution ? (
+                <ContributionBadge
+                  tier={contribution.tier}
+                  preview={contribution.isPreview}
+                  onDark
+                />
+              ) : null}
+            </div>
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">
               <ProfileDisplayName
                 handle={handle}
@@ -183,6 +195,18 @@ export function ProfilePageClient({ handle }: { handle: string }) {
               @{person.handle}
               {person.loc ? ` · ${person.loc.split(" · ")[0]}` : null}
               {" · "}Member since {person.memberSince}
+              {contribution ? (
+                <>
+                  {" · "}
+                  <span className="font-mono tabular-nums">
+                    {contribution.activity.asked} asked
+                  </span>
+                  {" · "}
+                  <span className="font-mono tabular-nums">
+                    {contribution.activity.answered} answered
+                  </span>
+                </>
+              ) : null}
             </p>
             {person.bio ? (
               <p className="m-0 max-w-[720px] text-base leading-[1.55] text-[#E3E5E8]">

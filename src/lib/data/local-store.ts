@@ -16,9 +16,15 @@ import {
   getAllMarketplaceItems,
   getDirectoryMembers,
   getDirectoryPerson,
+  getDirectoryUserId,
   getMarketplaceItem,
   getMarketplaceItemsForHandle,
 } from "@/lib/community/directory-cache";
+import {
+  resolveMemberContribution,
+  type ContributionActivity,
+  type MemberContribution,
+} from "@/lib/community/contribution-tier";
 import { roleBadgeForMember } from "@/lib/community/founding-members";
 
 export { isValidMemberHandle } from "./handles";
@@ -718,6 +724,35 @@ export function listMembers(): Person[] {
 /** Verified experts — seed roster when mock is on, otherwise the signed-in member only if verified. */
 export function getExpertsLocal(): Person[] {
   return listMembers().filter((p) => p.verified);
+}
+
+/** Live Q&A counts for a member from the local community store. */
+export function getContributionActivity(handle: string): ContributionActivity {
+  const key = String(handle || "").trim();
+  if (!key) return { asked: 0, answered: 0, accepted: 0 };
+
+  const asked = getAllQuestions().filter((q) => q.askerHandle === key).length;
+  const store = readStore();
+  const mine = store.extraAnswers.filter((a) => a.handle === key);
+  let accepted = 0;
+  for (const a of mine) {
+    const override = store.acceptedByQuestion[a.questionId];
+    if (override !== undefined) {
+      if (override === a.id) accepted += 1;
+      continue;
+    }
+    if (a.accepted) accepted += 1;
+  }
+  return { asked, answered: mine.length, accepted };
+}
+
+/** Tier + score for a member (may use Pre-Alpha preview numbers when live counts are empty). */
+export function getMemberContribution(handle: string): MemberContribution {
+  const key = String(handle || "").trim();
+  return resolveMemberContribution(getContributionActivity(key), {
+    handle: key,
+    userId: getDirectoryUserId(key),
+  });
 }
 
 export function tagSuggestions(): string[] {

@@ -3,16 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, Search } from "lucide-react";
+import { ContributionBadge } from "@/components/ContributionBadge";
 import { Avatar, FilterChip } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import {
   getGarageItemsFor,
+  getMemberContribution,
   getSessionHandle,
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
 import type { Person } from "@/lib/data/seed";
+import type { MemberContribution } from "@/lib/community/contribution-tier";
 import {
   SKILL_GROUPS,
   groupForLabel,
@@ -39,6 +42,9 @@ export default function MembersPage() {
   const [expanded, setExpanded] = useState<Partial<Record<Group, boolean>>>({});
   const [members, setMembers] = useState<Person[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
+  const [contributions, setContributions] = useState<
+    Record<string, MemberContribution>
+  >({});
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
@@ -47,6 +53,9 @@ export default function MembersPage() {
       setMembers([...list]);
       setItemCounts(
         Object.fromEntries(list.map((p) => [p.handle, getGarageItemsFor(p.handle).length])),
+      );
+      setContributions(
+        Object.fromEntries(list.map((p) => [p.handle, getMemberContribution(p.handle)])),
       );
       setSignedIn(Boolean(getSessionHandle()));
     }
@@ -242,6 +251,9 @@ export default function MembersPage() {
             {filtered.map((m) => {
               const badge = badgeOf(m);
               const garageItems = itemCounts[m.handle] ?? 0;
+              const contribution = contributions[m.handle];
+              const asked = contribution?.activity.asked ?? 0;
+              const answered = contribution?.activity.answered ?? 0;
               return (
                 <Link
                   key={m.handle}
@@ -257,12 +269,20 @@ export default function MembersPage() {
                       </div>
                     </div>
                   </div>
-                  {badge ? (
-                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent-soft-border bg-accent-soft px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover">
-                      <BadgeCheck className="size-3.5" aria-hidden />
-                      {badge}
-                    </span>
-                  ) : null}
+                  <div className="flex flex-wrap gap-1.5">
+                    {badge ? (
+                      <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent-soft-border bg-accent-soft px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover">
+                        <BadgeCheck className="size-3.5" aria-hidden />
+                        {badge}
+                      </span>
+                    ) : null}
+                    {contribution ? (
+                      <ContributionBadge
+                        tier={contribution.tier}
+                        preview={contribution.isPreview}
+                      />
+                    ) : null}
+                  </div>
                   {m.bio ? (
                     <p className="m-0 line-clamp-2 text-[14px] leading-normal text-muted-2">
                       {m.bio}
@@ -281,7 +301,9 @@ export default function MembersPage() {
                     </ul>
                   ) : null}
                   <p className="m-0 mt-auto border-t border-line-soft pt-3 text-[13px] text-meta">
-                    <span className="font-mono tabular-nums text-ink">{m.accepted}</span> solved
+                    <span className="font-mono tabular-nums text-ink">{asked}</span> asked
+                    {" · "}
+                    <span className="font-mono tabular-nums text-ink">{answered}</span> answered
                     {" · "}
                     <span className="font-mono tabular-nums text-ink">{garageItems}</span> garage
                     item{garageItems === 1 ? "" : "s"}
