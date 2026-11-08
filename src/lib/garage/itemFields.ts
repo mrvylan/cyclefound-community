@@ -1,5 +1,10 @@
-/** Public listing description — AI may draft; owner edits before save. */
-export const ITEM_DESCRIPTION_MAX = 400;
+/**
+ * Public listing description — AI may draft; owner edits before save.
+ * Keep this high enough that existing marketplace copy doesn’t get
+ * chopped the moment someone types in the edit field (HTML maxLength
+ * truncates on first input when value already exceeds the cap).
+ */
+export const ITEM_DESCRIPTION_MAX = 4000;
 
 export type ItemPrivateMeta = {
   /** Owner-only — never shown to other members. */
@@ -8,6 +13,7 @@ export type ItemPrivateMeta = {
   provenance?: string;
 };
 
+/** Clamp on save only — do not trim while the user is typing. */
 export function clampItemDescription(value: string, max = ITEM_DESCRIPTION_MAX) {
   return value.trim().slice(0, max);
 }

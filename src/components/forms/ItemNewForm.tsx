@@ -457,12 +457,12 @@ export function ItemNewForm() {
             </label>
             <textarea
               id="item-description"
-              rows={4}
+              rows={6}
               value={description}
-              maxLength={ITEM_DESCRIPTION_MAX}
+              maxLength={Math.max(ITEM_DESCRIPTION_MAX, description.length)}
               onChange={(e) => {
                 descriptionTouchedRef.current = true;
-                setDescription(e.target.value.slice(0, ITEM_DESCRIPTION_MAX));
+                setDescription(e.target.value);
               }}
               placeholder="Condition, notable features, what’s original…"
               className={textarea}

@@ -351,12 +351,10 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
             </label>
             <textarea
               id="edit-description"
-              rows={4}
+              rows={6}
               value={description}
-              maxLength={ITEM_DESCRIPTION_MAX}
-              onChange={(e) =>
-                setDescription(e.target.value.slice(0, ITEM_DESCRIPTION_MAX))
-              }
+              maxLength={Math.max(ITEM_DESCRIPTION_MAX, description.length)}
+              onChange={(e) => setDescription(e.target.value)}
               className={textarea}
             />
             <p className="m-0 text-right font-mono text-[12px] tabular-nums text-meta">
