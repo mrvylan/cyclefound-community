@@ -1,31 +1,237 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Camera, SlidersHorizontal, X } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { PlaceholderPhoto, StatusChip } from "@/components/ui";
-import { getAllItems, getMergedPerson, subscribeStore } from "@/lib/data/local-store";
+import { ITEM_CATEGORIES } from "@/lib/data/categories";
+import {
+  getAllItems,
+  getItemPhotoUrls,
+  getMergedPerson,
+  subscribeStore,
+} from "@/lib/data/local-store";
+import { formatAskPrice } from "@/lib/garage/itemFields";
+import { CONDITIONS } from "@/lib/garage/mapAiCategory";
 import { cityFromLoc, type GarageItem, type ItemStatus } from "@/lib/data/seed";
 
 const MARKET: ItemStatus[] = ["For sale", "Open to offers", "Trade only"];
 
+type SortKey = "newest" | "price-asc" | "price-desc";
+type Facet = "cat" | "status" | "cond";
+type Filters = Record<Facet, string[]>;
+const EMPTY_FILTERS: Filters = { cat: [], status: [], cond: [] };
+
+const FACET_LABEL: Record<Facet, string> = {
+  cat: "Category",
+  status: "Status",
+  cond: "Condition",
+};
+
+/** "$1,200" → 1200; "—" or unparseable → null. */
+function askNumber(ask: string): number | null {
+  const n = Number(ask.replace(/[^0-9.]/g, ""));
+  return /\d/.test(ask) && Number.isFinite(n) ? n : null;
+}
+
+function hasAsk(item: GarageItem) {
+  return Boolean(item.ask && item.ask.trim() && item.ask.trim() !== "—");
+}
+
+function Asking({ item }: { item: GarageItem }) {
+  if (hasAsk(item)) {
+    return <span className="font-mono tabular-nums">{formatAskPrice(item.ask)}</span>;
+  }
+  if (item.status === "Open to offers") {
+    return <span className="text-[13px] font-semibold text-status-offers">Make an offer</span>;
+  }
+  return (
+    <span className="font-mono tabular-nums text-meta">
+      —<span className="sr-only"> no asking price listed</span>
+    </span>
+  );
+}
+
+function FilterFields({
+  options,
+  filters,
+  onToggle,
+  idPrefix,
+}: {
+  options: Record<Facet, { value: string; n: number }[]>;
+  filters: Filters;
+  onToggle: (facet: Facet, value: string) => void;
+  idPrefix: string;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      {(Object.keys(FACET_LABEL) as Facet[]).map((facet) =>
+        options[facet].length ? (
+          <fieldset key={facet} className="m-0 min-w-0 border-0 p-0">
+            <legend className="mb-1.5 p-0 font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-meta">
+              {FACET_LABEL[facet]}
+            </legend>
+            <div className="flex flex-col">
+              {options[facet].map((o) => {
+                const id = `${idPrefix}-${facet}-${o.value.replace(/\W+/g, "-")}`;
+                return (
+                  <label
+                    key={o.value}
+                    htmlFor={id}
+                    className="flex min-h-11 cursor-pointer items-center gap-3 text-[14px] text-ink"
+                  >
+                    <input
+                      id={id}
+                      type="checkbox"
+                      checked={filters[facet].includes(o.value)}
+                      onChange={() => onToggle(facet, o.value)}
+                      className="size-[18px] shrink-0 accent-[#527D31]"
+                    />
+                    <span className="min-w-0 flex-1">{o.value}</span>
+                    <span className="font-mono text-[12px] tabular-nums text-meta">{o.n}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        ) : null,
+      )}
+    </div>
+  );
+}
+
 export default function MarketPage() {
   const [listings, setListings] = useState<GarageItem[]>([]);
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<SortKey>("newest");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    // Newest first: member-posted items are appended after seed data.
     const load = () =>
-      setListings(getAllItems().filter((i) => MARKET.includes(i.status)));
+      setListings(
+        getAllItems()
+          .filter((i) => MARKET.includes(i.status))
+          .reverse(),
+      );
     load();
     return subscribeStore(load);
   }, []);
+
+  useEffect(() => {
+    if (!sheetOpen) return;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSheetOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [sheetOpen]);
+
+  const options = useMemo(() => {
+    const tally = (pick: (i: GarageItem) => string) => {
+      const m = new Map<string, number>();
+      for (const i of listings) {
+        const v = pick(i);
+        if (v) m.set(v, (m.get(v) ?? 0) + 1);
+      }
+      return m;
+    };
+    const byCat = tally((i) => i.catShort);
+    const byStatus = tally((i) => i.status);
+    const byCond = tally((i) => i.cond);
+    // Hide zero-count options until the catalog grows (keep an active filter visible).
+    const withActive = (
+      all: { value: string; n: number }[],
+      active: string[],
+    ) =>
+      all.filter((o) => o.n > 0 || active.includes(o.value));
+
+    return {
+      cat: withActive(
+        ITEM_CATEGORIES.map((value) => ({
+          value,
+          n: byCat.get(value) ?? 0,
+        })),
+        filters.cat,
+      ),
+      status: withActive(
+        MARKET.map((value) => ({
+          value,
+          n: byStatus.get(value) ?? 0,
+        })),
+        filters.status,
+      ),
+      cond: withActive(
+        CONDITIONS.map((value) => ({
+          value,
+          n: byCond.get(value) ?? 0,
+        })),
+        filters.cond,
+      ),
+    } satisfies Record<Facet, { value: string; n: number }[]>;
+  }, [listings, filters]);
+
+  const visible = useMemo(() => {
+    const list = listings.filter(
+      (i) =>
+        (!filters.cat.length || filters.cat.includes(i.catShort)) &&
+        (!filters.status.length || filters.status.includes(i.status)) &&
+        (!filters.cond.length || filters.cond.includes(i.cond)),
+    );
+    if (sort === "newest") return list;
+    const dir = sort === "price-asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const pa = askNumber(a.ask);
+      const pb = askNumber(b.ask);
+      if (pa == null && pb == null) return 0;
+      if (pa == null) return 1; // unpriced listings always last
+      if (pb == null) return -1;
+      return (pa - pb) * dir;
+    });
+  }, [listings, filters, sort]);
+
+  const activeCount = filters.cat.length + filters.status.length + filters.cond.length;
+
+  function toggle(facet: Facet, value: string) {
+    setFilters((f) => ({
+      ...f,
+      [facet]: f[facet].includes(value) ? f[facet].filter((v) => v !== value) : [...f[facet], value],
+    }));
+  }
+
+  const sortSelect = (
+    <div className="flex items-center gap-2">
+      <label htmlFor="market-sort" className="text-[13px] font-semibold text-ink">
+        Sort
+      </label>
+      <select
+        id="market-sort"
+        value={sort}
+        onChange={(e) => setSort(e.target.value as SortKey)}
+        className="cf-select h-11 rounded-[10px] border border-[#D4D3CD] bg-white pl-3 text-[14px] text-ink"
+      >
+        <option value="newest">Newest</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+    </div>
+  );
 
   return (
     <>
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-8 pb-8 pt-12">
           <p className="eyebrow m-0">Buy · Sell · Trade</p>
-          <h1 className="font-display m-0 text-[clamp(36px,6vw,64px)]">
+          <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
             Parts and bikes from real garages
           </h1>
           <p className="m-0 max-w-[640px] text-[18px] leading-[1.55] text-muted-2">
@@ -44,54 +250,185 @@ export default function MarketPage() {
             actionHref="/item/new"
           />
         ) : (
-          <>
-            <p className="mb-5 mt-0 text-[15px] text-muted-2">
-              <strong className="text-ink">{listings.length} available</strong> right now
-            </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-              {listings.map((item) => {
-                const owner = getMergedPerson(item.ownerHandle);
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/i/${item.id}`}
-                    className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline hover:text-ink"
+          <div className="flex items-start gap-8">
+            <aside
+              aria-label="Filters"
+              className="sticky top-24 hidden w-[240px] shrink-0 rounded-[14px] border border-line bg-surface p-5 lg:block"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="m-0 text-[15px] font-bold normal-case tracking-normal">Filters</h2>
+                {activeCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setFilters(EMPTY_FILTERS)}
+                    className="min-h-8 text-[13px] font-semibold text-accent-hover underline underline-offset-2"
                   >
-                    <PlaceholderPhoto
-                      label={`${item.year} · ${item.cond}`}
-                      className="h-[180px]"
-                    />
-                    <div className="flex flex-col gap-2 p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-[11px] text-muted">{item.cat}</span>
-                        <StatusChip status={item.status} />
-                      </div>
-                      <span className="text-[16px] font-semibold leading-snug">{item.name}</span>
-                      {owner ? (
-                        <span className="text-[13px] text-muted">
-                          {owner.name} · {cityFromLoc(owner.loc)}
-                        </span>
-                      ) : null}
-                      <div className="flex justify-between gap-2 text-[13px]">
-                        <Feature name="marketValues">
-                          <span>
-                            <span className="block text-[11px] text-muted">MARKET</span>
-                            <span className="font-mono">{item.mkt}</span>
-                          </span>
-                        </Feature>
-                        <span className="text-right">
-                          <span className="block text-[11px] text-muted">ASKING</span>
-                          <span className="font-mono">{item.ask}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                    Clear ({activeCount})
+                  </button>
+                ) : null}
+              </div>
+              <FilterFields
+                idPrefix="rail"
+                options={options}
+                filters={filters}
+                onToggle={toggle}
+              />
+            </aside>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <p className="m-0 text-[15px] text-muted-2" aria-live="polite">
+                  <strong className="text-ink">{visible.length} available</strong>
+                  {activeCount > 0 ? ` of ${listings.length}` : ""} right now
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSheetOpen(true)}
+                    aria-haspopup="dialog"
+                    className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[#D4D3CD] bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink lg:hidden"
+                  >
+                    <SlidersHorizontal className="size-4" aria-hidden />
+                    Filters
+                    {activeCount > 0 ? (
+                      <span className="rounded-full bg-ink px-2 py-0.5 font-mono text-[11px] text-white">
+                        {activeCount}
+                      </span>
+                    ) : null}
+                  </button>
+                  {sortSelect}
+                </div>
+              </div>
+
+              {visible.length === 0 ? (
+                <div className="flex flex-col items-start gap-3 rounded-[14px] border border-dashed border-line bg-surface px-6 py-10">
+                  <h3 className="m-0 text-[17px] font-semibold text-ink">No listings match</h3>
+                  <p className="m-0 max-w-[420px] text-[15px] text-muted-2">
+                    Loosen a filter to see more of what members have listed.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFilters(EMPTY_FILTERS)}
+                    className="inline-flex h-11 items-center rounded-[10px] border-0 bg-accent px-4 text-[14px] font-semibold text-white hover:bg-accent-hover"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
+                  {visible.map((item) => {
+                    const owner = getMergedPerson(item.ownerHandle);
+                    const photos = getItemPhotoUrls(item);
+                    return (
+                      <Link
+                        key={item.id}
+                        href={`/i/${item.id}`}
+                        className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline outline-none ring-ink ring-offset-2 ring-offset-ground hover:border-ink hover:text-ink hover:ring-2 focus-visible:border-ink focus-visible:ring-2"
+                      >
+                        {photos.length ? (
+                          <div className="relative h-[180px] overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={photos[0]} alt="" className="size-full object-cover" />
+                            <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-ink/80 px-2 py-1 font-mono text-[12px] text-white">
+                              <Camera className="size-3.5" aria-hidden />
+                              {photos.length}
+                              <span className="sr-only"> photo{photos.length === 1 ? "" : "s"}</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <PlaceholderPhoto
+                            silhouette
+                            label={`${item.year} · ${item.cond}`}
+                            className="h-[180px]"
+                          />
+                        )}
+                        <div className="flex flex-col gap-2 p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-[11px] text-meta">{item.cat}</span>
+                            <StatusChip status={item.status} />
+                          </div>
+                          <span className="text-[16px] font-semibold leading-snug">{item.name}</span>
+                          {owner ? (
+                            <span className="text-[13px] text-meta">
+                              {owner.name} · {cityFromLoc(owner.loc)}
+                            </span>
+                          ) : null}
+                          <div className="flex items-end justify-between gap-2 text-[13px]">
+                            <Feature name="marketValues">
+                              <span>
+                                <span className="block text-[11px] text-meta">MARKET</span>
+                                <span className="font-mono tabular-nums">{item.mkt}</span>
+                              </span>
+                            </Feature>
+                            <span className="ml-auto text-right">
+                              <span className="block text-[11px] text-meta">ASKING</span>
+                              <Asking item={item} />
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
+
+      {sheetOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-ink/50"
+            onClick={() => setSheetOpen(false)}
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filter listings"
+            className="absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-2xl bg-surface shadow-[0_-8px_30px_rgba(16,23,27,0.18)]"
+          >
+            <div className="flex items-center justify-between border-b border-line px-5 py-3">
+              <h2 className="m-0 text-[16px] font-bold normal-case tracking-normal">Filters</h2>
+              <button
+                ref={closeRef}
+                type="button"
+                aria-label="Close filters"
+                onClick={() => setSheetOpen(false)}
+                className="inline-flex size-11 items-center justify-center rounded-[10px] border border-line bg-white"
+              >
+                <X className="size-5" aria-hidden />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4">
+              <FilterFields
+                idPrefix="sheet"
+                options={options}
+                filters={filters}
+                onToggle={toggle}
+              />
+            </div>
+            <div className="flex gap-3 border-t border-line px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setFilters(EMPTY_FILTERS)}
+                disabled={activeCount === 0}
+                className="h-11 flex-1 rounded-[10px] border border-[#D4D3CD] bg-white text-[14px] font-semibold text-ink disabled:text-meta disabled:opacity-60"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => setSheetOpen(false)}
+                className="h-11 flex-[2] rounded-[10px] border-0 bg-ink text-[14px] font-semibold text-white"
+              >
+                Show {visible.length} result{visible.length === 1 ? "" : "s"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

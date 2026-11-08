@@ -9,12 +9,7 @@ import { AccountMenu } from "./auth/AccountMenu";
 import { SearchTrigger } from "./search/SearchOverlay";
 import { Feature } from "./Feature";
 import { openCookieSettings } from "@/lib/cookie-consent";
-import {
-  getSessionHandle,
-  isMockDataEnabled,
-  listMembers,
-  subscribeStore,
-} from "@/lib/data/local-store";
+import { subscribeStore } from "@/lib/data/local-store";
 import { FEATURES } from "@/lib/features";
 import { LEGAL } from "@/lib/legal";
 
@@ -24,20 +19,10 @@ type NavItem = {
   match: "community" | "garages" | "members" | "experts" | "resources" | "market";
 };
 
-function garageNavHref() {
-  const me = getSessionHandle();
-  if (me) return `/u/${me}/garage`;
-  if (isMockDataEnabled()) {
-    const first = listMembers()[0];
-    if (first) return `/u/${first.handle}/garage`;
-  }
-  return "/members";
-}
-
 function betaNav(): NavItem[] {
   return [
     { href: "/", label: "Community", match: "community" },
-    { href: garageNavHref(), label: "Garages", match: "garages" },
+    { href: "/garages", label: "Garages", match: "garages" },
     { href: "/members", label: "Members", match: "members" },
     { href: "/market", label: "Market", match: "market" },
   ];
@@ -67,6 +52,8 @@ export function activeNavFromPath(pathname: string): NavItem["match"] | null {
   if (
     pathname.startsWith("/auth") ||
     pathname.startsWith("/messages") ||
+    pathname.startsWith("/notifications") ||
+    pathname.startsWith("/onboarding") ||
     pathname.startsWith("/account") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/search")
@@ -74,7 +61,13 @@ export function activeNavFromPath(pathname: string): NavItem["match"] | null {
     return null;
   }
   if (pathname === "/" || pathname.startsWith("/q/")) return "community";
-  if (pathname.startsWith("/i/") || pathname.includes("/garage")) return "garages";
+  if (
+    pathname.startsWith("/garages") ||
+    pathname.startsWith("/i/") ||
+    pathname.includes("/garage")
+  ) {
+    return "garages";
+  }
   if (pathname.startsWith("/members")) return "members";
   if (pathname.startsWith("/experts") || (pathname.startsWith("/u/") && !pathname.includes("/garage"))) {
     return FEATURES.expertsDirectory ? "experts" : "members";
@@ -127,7 +120,7 @@ export function SiteHeader() {
         {!onAuth ? (
           <nav
             aria-label="Primary"
-            className="hidden min-w-0 shrink items-center gap-x-[22px] text-[15px] font-bold lg:flex"
+            className="hidden min-w-0 flex-1 items-center gap-x-[22px] text-[15px] font-bold lg:flex"
           >
             {nav.map((item) => {
               const on = active === item.match;
@@ -146,20 +139,20 @@ export function SiteHeader() {
               );
             })}
           </nav>
-        ) : null}
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
 
-        {!onAuth ? <SearchTrigger /> : <div className="min-w-0 flex-1" />}
-
-        {!onAuth ? (
-          <Link
-            href="/ask"
-            className="hidden h-[42px] shrink-0 items-center rounded-[10px] bg-accent px-[18px] text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white lg:inline-flex"
-          >
-            Ask the community
-          </Link>
-        ) : null}
-
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {!onAuth ? <SearchTrigger /> : null}
+          {!onAuth ? (
+            <Link
+              href="/ask"
+              className="hidden h-[42px] shrink-0 items-center rounded-[10px] bg-accent px-[18px] text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white lg:inline-flex"
+            >
+              Ask the community
+            </Link>
+          ) : null}
           {!onAuth ? (
             <button
               type="button"

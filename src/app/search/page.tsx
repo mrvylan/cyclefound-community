@@ -60,7 +60,7 @@ function SearchInner() {
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-8 pb-8 pt-12">
           <p className="eyebrow m-0">Search</p>
-          <h1 className="font-display m-0 text-[clamp(36px,6vw,64px)]">
+          <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
             Find people, questions, and garage items
           </h1>
           <p className="m-0 max-w-[640px] text-[18px] leading-[1.55] text-muted-2">
@@ -123,7 +123,7 @@ function SearchInner() {
 
             {grouped.members.length ? (
               <section>
-                <h2 className="font-display mb-4 mt-0 text-[22px]">
+                <h2 className="section-title mb-4 mt-0 text-[20px]">
                   {sectionTitle("member", grouped.members.length)}
                 </h2>
                 <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 p-0">
@@ -155,7 +155,7 @@ function SearchInner() {
 
             {grouped.questions.length ? (
               <section>
-                <h2 className="font-display mb-4 mt-0 text-[22px]">
+                <h2 className="section-title mb-4 mt-0 text-[20px]">
                   {sectionTitle("question", grouped.questions.length)}
                 </h2>
                 <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -178,7 +178,7 @@ function SearchInner() {
 
             {grouped.items.length ? (
               <section>
-                <h2 className="font-display mb-4 mt-0 text-[22px]">
+                <h2 className="section-title mb-4 mt-0 text-[20px]">
                   {sectionTitle("item", grouped.items.length)}
                 </h2>
                 <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3 p-0">

@@ -22,6 +22,8 @@ const config: Config = {
           DEFAULT: "#737772",
           2: "#525651",
         },
+        /** Accessible meta text on light surfaces (4.5:1+). */
+        meta: "#5B6166",
         "on-dark-muted": "#B8BCC2",
         accent: {
           DEFAULT: "#527D31",

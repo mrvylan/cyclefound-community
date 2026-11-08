@@ -142,7 +142,7 @@ function MessagesInner() {
         <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
           Messages
         </p>
-        <h1 className="font-display mt-2 text-[44px] font-extrabold uppercase leading-[0.95] text-ink [font-stretch:75%]">
+        <h1 className="section-title mt-2 text-[44px] text-ink">
           Your conversations
         </h1>
         <p className="mt-4 text-[16px] text-muted-2">
@@ -169,7 +169,7 @@ function MessagesInner() {
           <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
             Messages
           </p>
-          <h1 className="font-display m-0 text-[36px] font-extrabold uppercase leading-[0.95] text-ink [font-stretch:75%] sm:text-[44px]">
+          <h1 className="section-title m-0 text-[36px] text-ink sm:text-[44px]">
             {detail ? detail.subject.title : "Inbox"}
           </h1>
           {detail ? (

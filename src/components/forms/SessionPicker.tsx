@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
+  canUseAdminSessionSwitch,
   handleFromAuthProfile,
-  isDemoSessionEnabled,
 } from "@/lib/demo-session";
 import {
   getSessionHandle,
@@ -20,11 +20,11 @@ import {
  * Otherwise sync to the signed-in user (or hide when logged out).
  */
 export function SessionPicker({ className = "" }: { className?: string }) {
-  const demo = isDemoSessionEnabled();
+  const adminSwitch = canUseAdminSessionSwitch();
   const { ready, profile } = useAuth();
   const [handle, setHandle] = useState("");
   const [mock, setMock] = useState(false);
-  const [members, setMembers] = useState(listMembers());
+  const [members, setMembers] = useState<ReturnType<typeof listMembers>>([]);
 
   useEffect(() => {
     function syncMembers() {
@@ -36,7 +36,7 @@ export function SessionPicker({ className = "" }: { className?: string }) {
     return subscribeStore(syncMembers);
   }, []);
 
-  const canSwitchActors = demo && members.length > 1;
+  const canSwitchActors = adminSwitch && mock && members.length > 1;
 
   useEffect(() => {
     if (!ready) return;
@@ -66,19 +66,10 @@ export function SessionPicker({ className = "" }: { className?: string }) {
     }
 
     setHandle(getSessionHandle());
-  }, [canSwitchActors, demo, mock, profile, ready]);
+  }, [canSwitchActors, mock, profile, ready]);
 
-  if (!canSwitchActors) {
-    if (!ready || !profile) return null;
-    return (
-      <p className={`m-0 text-[13px] text-muted ${className}`}>
-        Posting as{" "}
-        <span className="font-semibold text-ink">
-          {profile.displayName || profile.fullName}
-        </span>
-      </p>
-    );
-  }
+  // Actor switcher is admin/dev seeding only — hide entirely for real testers.
+  if (!canSwitchActors) return null;
 
   if (!members.length) return null;
 

@@ -53,6 +53,13 @@ a:hover {
   color: var(--accent-hover);
 }
 
+/*
+ * Type scale (Cycle Found Community):
+ * - .hero-display  → marketing hero only (ALL CAPS poster)
+ * - .section-title → page H1s + section H2s (sentence case)
+ * - .font-display  → numerals / marks only (stats, steps, avatar initials)
+ */
+
 .font-display {
   font-family: var(--font-archivo), sans-serif;
   font-stretch: 75%;
@@ -60,6 +67,26 @@ a:hover {
   text-transform: uppercase;
   letter-spacing: -0.01em;
   line-height: 0.95;
+}
+
+.section-title {
+  font-family: var(--font-archivo), sans-serif;
+  font-stretch: 85%;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  /* Inherit text color so light/dark surfaces can set text-ink / text-white */
+}
+
+.hero-display {
+  font-family: var(--font-archivo), sans-serif;
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+  text-wrap: balance;
 }
 
 .eyebrow {

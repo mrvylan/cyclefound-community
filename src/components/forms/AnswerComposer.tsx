@@ -36,7 +36,7 @@ export function AnswerComposer({
       className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display m-0 text-[22px]">Your answer</h2>
+        <h2 className="section-title m-0 text-[20px]">Your answer</h2>
         <SessionPicker />
       </div>
       <label htmlFor="answer-body" className="sr-only">

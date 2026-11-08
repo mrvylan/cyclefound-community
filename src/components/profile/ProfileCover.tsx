@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlaceholderPhoto } from "@/components/ui";
 import { resolvePerson, subscribeStore } from "@/lib/data/local-store";
+import { seedGarageCover } from "@/lib/data/seed";
 
 export function ProfileCover({
   handle,
@@ -21,20 +21,17 @@ export function ProfileCover({
     return subscribeStore(sync);
   }, [handle]);
 
-  if (coverUrl) {
-    return (
-      <div className="relative h-[200px] w-full overflow-hidden bg-ink-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={coverUrl}
-          alt=""
-          className="size-full object-cover"
-        />
-      </div>
-    );
-  }
+  const src = coverUrl || seedGarageCover;
 
   return (
-    <PlaceholderPhoto dark label={fallbackLabel} className="h-[200px] justify-end" />
+    <div className="relative h-[200px] w-full overflow-hidden bg-ink-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="size-full object-cover" />
+      {!coverUrl ? (
+        <span className="absolute bottom-3 left-3 rounded-md bg-white/95 px-2 py-1 font-mono text-[12px] text-ink">
+          {fallbackLabel}
+        </span>
+      ) : null}
+    </div>
   );
 }

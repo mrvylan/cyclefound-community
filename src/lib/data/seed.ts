@@ -1,3 +1,5 @@
+import { seedGarageCover, seedPhotoForCategory } from "./seed-photos";
+
 export type ItemStatus = "For sale" | "Open to offers" | "Trade only" | "Not for sale";
 export type Level = "RIDER" | "PRO" | "MASTER" | "LEGEND";
 
@@ -44,6 +46,8 @@ export type GarageItem = {
   catShort: string;
   cat: string;
   year: string;
+  /** Frame / bike size when relevant (e.g. "56 cm"). */
+  size?: string;
   name: string;
   cond: string;
   mkt: string;
@@ -52,6 +56,10 @@ export type GarageItem = {
   links: string;
   trend: string;
   photo?: string;
+  /** Soft-hidden from the active garage; still recoverable. */
+  archived?: boolean;
+  /** Public blurb shown on garage listings and item page. */
+  description?: string;
 };
 
 export type WantedRequest = {
@@ -77,6 +85,8 @@ export type Question = {
   answers: number;
   solved: boolean;
   expert: string;
+  /** Handle of the accepted answerer when known. */
+  expertHandle?: string;
   linked: string;
   views?: number;
   following?: number;
@@ -133,7 +143,7 @@ export const people: Person[] = [
     items: 2,
     reply: "within 1 day",
     bio: "Building Cycle Found — a place for bike people to ask, share, and ride. Documenting my own garage while we shape the community.",
-    skills: ["Community", "Vintage steel", "Product"],
+    skills: ["Vintage steel", "Valuation", "Rare parts"],
     consult: "",
     verified: true,
     roleBadge: "Founding expert",
@@ -221,7 +231,7 @@ export const people: Person[] = [
     items: 1,
     reply: "within 1 day",
     bio: "Custom steel frames, TIG and fillet-brazed. Happy to review geometry before you commit to a build.",
-    skills: ["Frame building", "Brazing", "Geometry"],
+    skills: ["Frame building", "Columbus", "Paint & finish"],
     consult: "$60 / 45 min",
     verified: true,
     roleBadge: "Founding expert",
@@ -369,7 +379,7 @@ export const people: Person[] = [
     items: 0,
     reply: "within 2 days",
     bio: "One-owner Stumpjumper in the garage — deciding whether to sell.",
-    skills: ["Valuation", "Vintage"],
+    skills: ["Valuation", "Vintage steel"],
     consult: "",
     verified: false,
     memberSince: "2025",
@@ -390,7 +400,7 @@ export const people: Person[] = [
     items: 0,
     reply: "within 1 day",
     bio: "Planning a loaded gravel frame with a local builder.",
-    skills: ["Build", "Geometry"],
+    skills: ["Gravel build", "Frame building"],
     consult: "",
     verified: false,
     memberSince: "2025",
@@ -411,7 +421,7 @@ export const people: Person[] = [
     items: 0,
     reply: "within 1 day",
     bio: "Rebuilding vintage rims onto modern hubs.",
-    skills: ["Wheels", "Tubeless"],
+    skills: ["Wheelbuilding", "Tubeless"],
     consult: "",
     verified: false,
     memberSince: "2025",
@@ -494,7 +504,7 @@ export const garages: Garage[] = [
 ];
 
 /** Canonical item inventory — every garage page and the Market read from this. */
-export const items: GarageItem[] = [
+const itemsRaw: GarageItem[] = [
   {
     id: "dylan-steel-road-1985",
     ownerHandle: SOLO_SEED_HANDLE,
@@ -512,8 +522,8 @@ export const items: GarageItem[] = [
   {
     id: "dylan-campy-nr-crank",
     ownerHandle: SOLO_SEED_HANDLE,
-    catShort: "Groupsets",
-    cat: "GROUPSET",
+    catShort: "Components",
+    cat: "COMPONENT",
     year: "1982",
     name: "Campagnolo Nuovo Record crankset, 170 mm",
     cond: "Excellent",
@@ -568,8 +578,8 @@ export const items: GarageItem[] = [
   {
     id: "super-record-group",
     ownerHandle: "lugged_marco",
-    catShort: "Groupsets",
-    cat: "GROUPSET",
+    catShort: "Components",
+    cat: "COMPONENT",
     year: "1982",
     name: "Campagnolo Super Record, complete",
     cond: "Excellent",
@@ -770,12 +780,17 @@ export const items: GarageItem[] = [
     name: "Colnago Super frameset, 55 cm",
     cond: "Good",
     mkt: "$1.2–1.8k",
-    ask: "—",
+    ask: "Make an offer",
     status: "Open to offers",
     links: "1 guide · 2 threads",
     trend: "+5% 12mo",
   },
 ];
+
+export const items: GarageItem[] = itemsRaw.map((item) => ({
+  ...item,
+  photo: item.photo || seedPhotoForCategory(item.cat),
+}));
 
 /** @deprecated Prefer `items` — alias kept for gradual migration. */
 export const garageItems = items;
@@ -1121,6 +1136,7 @@ export function enrichQuestion(
     answers: thread.length,
     solved: Boolean(accepted),
     expert: accepted?.name ?? "",
+    expertHandle: accepted?.handle,
   };
 }
 
@@ -1138,11 +1154,12 @@ export const leaders = [
   { rank: 5, name: "Kai Yamamoto", handle: "kai_suspension", init: "KY", bg: "#B45309", role: "Suspension tuner", gain: "532" },
 ];
 
+/** Sidebar chips — labels match FEED_TOPICS / skill taxonomy. */
 export const areas = [
   { label: "Vintage restoration", n: 86 },
   { label: "Wheelbuilding", n: 63 },
   { label: "Frame building", n: 41 },
-  { label: "Suspension service", n: 37 },
+  { label: "Suspension", n: 37 },
   { label: "Electronic shifting", n: 52 },
   { label: "Bike fit", n: 29 },
   { label: "Paint & finish", n: 18 },
@@ -1208,20 +1225,39 @@ export function formatWantedMatches(w: WantedRequest) {
   return `${n} garage match${n === 1 ? "" : "es"}`;
 }
 
+/** Accepted-answer counts derived from seed answers (overrides inflated display hints). */
+export function acceptedCountForHandle(handle: string) {
+  return answers.filter((a) => a.handle === handle && a.accepted).length;
+}
+
+export function answerCountForHandle(handle: string) {
+  return answers.filter((a) => a.handle === handle).length;
+}
+
+/** Sync person.accepted / person.items with seed answers + inventory where possible. */
+people.forEach((p) => {
+  const derivedAccepted = acceptedCountForHandle(p.handle);
+  if (derivedAccepted > 0 || p.handle === SOLO_SEED_HANDLE || p.handle === PARTNER_SEED_HANDLE) {
+    p.accepted = derivedAccepted;
+  }
+  p.items = getItemsByOwner(p.handle).length;
+});
+
 export const featuredGarages = garages
-  .filter((g) =>
-    ["lugged_marco", "priya_wheels", "campy_tomas"].includes(g.ownerHandle),
-  )
+  .filter((g) => getItemsByOwner(g.ownerHandle).some((i) => Boolean(i.photo)))
+  .slice(0, 6)
   .map((g) => {
     const owner = getPerson(g.ownerHandle)!;
     const owned = getItemsByOwner(g.ownerHandle);
+    const withPhoto = owned.find((i) => i.photo) || owned[0];
     return {
       name: g.name,
       handle: g.ownerHandle,
       owner: `${owner.name} · ${cityFromLoc(owner.loc)}`,
       init: owner.init,
       bg: owner.bg,
-      photo: owned[0]?.name ?? g.name,
+      photo: withPhoto?.photo || withPhoto?.name || g.name,
+      photoLabel: withPhoto?.name ?? g.name,
       items: owned.length,
       value:
         g.ownerHandle === "lugged_marco"
@@ -1233,12 +1269,39 @@ export const featuredGarages = garages
     };
   });
 
+export function garageActivityFor(handle: string) {
+  const owned = getItemsByOwner(handle);
+  const lines: { title: string; time: string }[] = [];
+  owned.slice(0, 3).forEach((item, idx) => {
+    const times = ["2 days ago", "5 days ago", "1 week ago"];
+    if (item.status === "For sale" || item.status === "Open to offers") {
+      lines.push({
+        title: `Listed ${item.name}${item.status === "For sale" ? " for sale" : " as open to offers"}`,
+        time: times[idx] || "Recently",
+      });
+    } else {
+      lines.push({
+        title: `Added ${item.name} to the garage`,
+        time: times[idx] || "Recently",
+      });
+    }
+  });
+  return lines;
+}
+
+/** Default brand-pattern cover for profiles without a custom banner. */
+export { seedGarageCover };
+
+/** @deprecated Prefer FEED_TOPICS in `@/lib/skills/feedTopics`. */
 export const topicRoutes: Record<string, number> = {
   "Repair & maintenance": 214,
-  "Rare / vintage parts": 86,
+  "Rare parts": 86,
   "Frame building": 41,
-  Wheels: 63,
+  Wheelbuilding: 63,
   Valuation: 58,
+  "Vintage restoration": 72,
+  Suspension: 37,
+  "Electronic shifting": 52,
 };
 
 export const marcoProfile = {
@@ -1269,11 +1332,6 @@ export const marcoProfile = {
     { votes: 41, q: "How to date a Colnago by its serial number and lug details", meta: "Valuation · 3d ago", acc: true, id: "seized-seatpost" },
     { votes: 27, q: "Is a 1981 Super Record crankset worth re-polishing?", meta: "Restoration · 1w ago", acc: false, id: "seized-seatpost" },
     { votes: 19, q: "Best decal suppliers for Italian frames in 2026", meta: "Paint & finish · 2w ago", acc: true, id: "seized-seatpost" },
-  ],
-  builds: [
-    { name: "1979 Masi Gran Criterium — full resto", steps: 24, meta: "Completed Mar 2026 · 312 followers" },
-    { name: "Saronni-red Colnago Super", steps: 17, meta: "Completed 2025 · 488 followers" },
-    { name: "De Rosa Professional, barn find", steps: 6, meta: "In progress · 140 followers" },
   ],
   reviews: [
     {

@@ -3,7 +3,10 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Pencil } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Feature } from "@/components/Feature";
+import { GarageItemActions } from "@/components/garage/GarageItemActions";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
 import {
   Avatar,
@@ -11,12 +14,17 @@ import {
   PlaceholderPhoto,
   StatusChip,
 } from "@/components/ui";
+import { handleFromAuthProfile } from "@/lib/demo-session";
 import { FEATURES } from "@/lib/features";
 import {
+  canManageGarageItem,
   getItemLocal,
+  getItemPrivateMeta,
   getMergedPerson,
+  getSessionHandle,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { formatAskPrice, itemYearLabel } from "@/lib/garage/itemFields";
 import {
   getGarage,
   itemDetail,
@@ -26,15 +34,21 @@ import {
 
 export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { profile } = useAuth();
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [photo, setPhoto] = useState(0);
   const [range, setRange] = useState<"1Y" | "5Y" | "All">("5Y");
   const [watching, setWatching] = useState(false);
+  const [sessionHandle, setSessionHandle] = useState("");
 
   useEffect(() => {
     setReady(true);
-    return subscribeStore(() => setTick((t) => t + 1));
+    setSessionHandle(getSessionHandle());
+    return subscribeStore(() => {
+      setSessionHandle(getSessionHandle());
+      setTick((t) => t + 1);
+    });
   }, []);
 
   void tick;
@@ -42,6 +56,12 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const item = getItemLocal(id);
   const owner = item ? getMergedPerson(item.ownerHandle) : undefined;
   const garage = item ? getGarage(item.ownerHandle) : undefined;
+  const authHandle = profile ? handleFromAuthProfile(profile) : "";
+  const isOwner = Boolean(
+    item &&
+      (canManageGarageItem(item, sessionHandle) ||
+        canManageGarageItem(item, authHandle)),
+  );
 
   if (!ready) {
     return (
@@ -60,11 +80,8 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       ? sessionStorage.getItem(`cf_i_photos_${id}`)
       : null;
   const itemPhotos: string[] = itemPhotosRaw ? JSON.parse(itemPhotosRaw) : [];
-  const itemMetaRaw =
-    typeof window !== "undefined" ? sessionStorage.getItem(`cf_i_meta_${id}`) : null;
-  const itemMeta: { notes?: string; provenance?: string } = itemMetaRaw
-    ? JSON.parse(itemMetaRaw)
-    : {};
+  const itemMeta = getItemPrivateMeta(id);
+  const yearLabel = itemYearLabel(item.year);
 
   const trend = itemDetail.trendBars[range];
   const labels = itemDetail.photoLabels;
@@ -73,11 +90,12 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const showRichDetail = item.id === "colnago-super-1984";
   const basicSpecs = [
     { k: "Category", v: item.catShort },
-    { k: "Year", v: item.year },
+    ...(yearLabel ? [{ k: "Year", v: yearLabel }] : []),
+    ...(item.size?.trim() ? [{ k: "Size", v: item.size.trim() }] : []),
     { k: "Condition", v: item.cond },
     { k: "Status", v: item.status },
     ...(FEATURES.marketValues ? [{ k: "Market", v: item.mkt }] : []),
-    { k: "Asking", v: item.ask },
+    { k: "Asking", v: formatAskPrice(item.ask) },
   ];
   const rawSpecs = showRichDetail ? itemDetail.specs : basicSpecs;
   const specs = FEATURES.verifiedBadges
@@ -86,7 +104,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <div className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 py-6 pb-16">
-      <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-[13px] text-muted">
+      <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-[13px] text-meta">
         <Link href={`/u/${owner.handle}/garage`}>Garages</Link>
         <span aria-hidden>/</span>
         <Link href={`/u/${owner.handle}`}>{owner.name}</Link>
@@ -135,7 +153,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           </div>
 
           <section className="rounded-2xl border border-line bg-surface p-6">
-            <h2 className="font-display mb-4 mt-0 text-[22px]">Specs</h2>
+            <h2 className="section-title mb-4 mt-0 text-[20px]">Specs</h2>
             <dl className="m-0 divide-y divide-line-soft">
               {specs.map((s) => (
                 <div
@@ -153,181 +171,273 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         <aside className="flex min-w-0 flex-[1_1_400px] flex-col gap-[18px]">
           <div className="flex flex-wrap items-center gap-2">
             <StatusChip status={item.status} />
+            {item.archived ? (
+              <span className="inline-flex items-center rounded-full border border-line bg-ground px-2.5 py-1 text-[11px] font-bold tracking-[0.02em] text-muted-2">
+                Archived
+              </span>
+            ) : null}
             <span className="font-mono text-[12px] text-muted">{item.cat}</span>
+            {isOwner ? (
+              <div className="ml-auto">
+                <GarageItemActions item={item} compact />
+              </div>
+            ) : null}
           </div>
-          <h1 className="font-display m-0 text-[clamp(36px,5vw,56px)]">
-            {item.year} {item.name.split(",")[0]}
+          <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">
+            {yearLabel ? `${yearLabel} ` : ""}
+            {item.name.split(",")[0]}
           </h1>
           <p className="m-0 text-[17px] text-muted-2">
             {showRichDetail
               ? "Saronni red · 56 cm c-t-c · Campagnolo Super Record · Excellent original condition"
               : `${item.cond} · ${item.catShort}`}
           </p>
+          {!showRichDetail && item.description ? (
+            <p className="m-0 text-[15px] leading-[1.55] text-ink">{item.description}</p>
+          ) : null}
 
-          <Link
-            href={`/u/${owner.handle}`}
-            className="flex items-center gap-3 rounded-[14px] border border-line bg-white p-3.5 text-ink no-underline hover:text-ink"
+          <section
+            aria-label={isOwner ? "Your garage" : "Owner"}
+            className="flex flex-col gap-3 rounded-[14px] border border-line bg-white p-3.5"
           >
-            <Avatar init={owner.init} bg={owner.bg} size={46} />
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold">{owner.name}</span>
-              <span className="block text-[13px] text-muted">
-                ★ {owner.rating}
-                <Feature name="spokesCurrency">
-                  <> · {owner.spokesNum.toLocaleString()} Spokes</>
-                </Feature>
-                {" · "}Member since {owner.memberSince}
-              </span>
-              {owner.roleBadge ? (
-                <span className="mt-1 block font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover">
-                  {owner.roleBadge}
+            <div className="flex items-center gap-3">
+              <Avatar init={owner.init} bg={owner.bg} size={46} src={owner.avatarUrl} />
+              <span className="min-w-0 flex-1">
+                <Link
+                  href={`/u/${owner.handle}`}
+                  className="block font-bold text-ink no-underline hover:text-accent-hover"
+                >
+                  {owner.name}
+                </Link>
+                <span className="block text-[13px] text-meta">
+                  @{owner.handle}
+                  {owner.rating && owner.rating !== "New" ? ` · ★ ${owner.rating}` : ""}
+                  <Feature name="spokesCurrency">
+                    <> · {owner.spokesNum.toLocaleString()} Spokes</>
+                  </Feature>
+                  {" · "}Member since {owner.memberSince}
                 </span>
-              ) : null}
-            </span>
-            <Feature name="spokesLevels">
-              <LevelBadge level={owner.level} bright />
-            </Feature>
-          </Link>
+                {owner.roleBadge && owner.roleBadge.toLowerCase() !== "member" ? (
+                  <span className="mt-1 block font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover">
+                    {owner.roleBadge}
+                  </span>
+                ) : null}
+              </span>
+              <Feature name="spokesLevels">
+                <LevelBadge level={owner.level} bright />
+              </Feature>
+            </div>
+            {!isOwner ? (
+              <>
+                <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 border-t border-line-soft pt-3 text-[13px] text-meta">
+                  <span>
+                    <span className="font-mono tabular-nums text-ink">{owner.accepted}</span>{" "}
+                    solved
+                  </span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/u/${owner.handle}`}
+                    className="inline-flex h-11 items-center rounded-[10px] border border-[#D4D3CD] bg-white px-4 text-[14px] font-semibold text-ink no-underline hover:border-ink hover:text-ink"
+                  >
+                    View profile
+                  </Link>
+                  <Link
+                    href={`/u/${owner.handle}/garage`}
+                    className="inline-flex h-11 items-center rounded-[10px] border border-[#D4D3CD] bg-white px-4 text-[14px] font-semibold text-ink no-underline hover:border-ink hover:text-ink"
+                  >
+                    See their garage
+                  </Link>
+                </div>
+              </>
+            ) : null}
+          </section>
 
           <section className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-5">
-            <Feature name="marketValues">
+            {isOwner ? (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="m-0 text-[15px] font-bold normal-case tracking-normal">
-                    Market value
-                  </h2>
-                  {showRichDetail ? (
-                    <div
-                      role="group"
-                      aria-label="Range"
-                      className="flex gap-0.5 rounded-lg bg-line-soft p-0.5"
-                    >
-                      {(["1Y", "5Y", "All"] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setRange(r)}
-                          className={`h-[30px] rounded-md border-0 px-2.5 text-[12px] font-semibold ${
-                            range === r
-                              ? "bg-white text-ink"
-                              : "bg-transparent text-muted-2"
+                <p className="m-0 text-[14px] leading-normal text-muted-2">
+                  This is in your garage
+                  {item.status === "Not for sale" ? " — not listed for sale" : ""}.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/item/${item.id}/edit`}
+                    className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center gap-2 rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+                  >
+                    <Pencil className="size-4" aria-hidden />
+                    Edit item
+                  </Link>
+                  <Link
+                    href={`/u/${owner.handle}/garage`}
+                    className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] border border-[#D4D3CD] bg-white px-4 text-[15px] font-semibold text-ink no-underline hover:border-ink hover:text-ink"
+                  >
+                    Back to garage
+                  </Link>
+                </div>
+              </>
+            ) : item.status === "Not for sale" ? (
+              <>
+                <p className="m-0 text-[14px] leading-normal text-muted-2">
+                  Documented in {owner.name.split(" ")[0]}&apos;s garage — not listed for sale.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/u/${owner.handle}/garage`}
+                    className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] bg-ink px-4 text-[15px] font-semibold text-white no-underline hover:text-white"
+                  >
+                    Back to garage
+                  </Link>
+                  <Link
+                    href="/ask"
+                    className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] border border-[#D4D3CD] bg-white px-4 text-[15px] font-semibold text-ink no-underline hover:border-ink hover:text-ink"
+                  >
+                    Ask about this
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <Feature name="marketValues">
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h2 className="m-0 text-[15px] font-bold normal-case tracking-normal">
+                        Market value
+                      </h2>
+                      {showRichDetail ? (
+                        <div
+                          role="group"
+                          aria-label="Range"
+                          className="flex gap-0.5 rounded-lg bg-line-soft p-0.5"
+                        >
+                          {(["1Y", "5Y", "All"] as const).map((r) => (
+                            <button
+                              key={r}
+                              type="button"
+                              onClick={() => setRange(r)}
+                              className={`h-[30px] rounded-md border-0 px-2.5 text-[12px] font-semibold ${
+                                range === r
+                                  ? "bg-white text-ink"
+                                  : "bg-transparent text-muted-2"
+                              }`}
+                            >
+                              {r}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-baseline gap-3">
+                      <span className="font-display text-[44px]">{item.mkt}</span>
+                      {showRichDetail ? (
+                        <span className="text-[14px] font-semibold text-value-up">{trend.t}</span>
+                      ) : item.trend !== "Flat" ? (
+                        <span
+                          className={`text-[14px] font-semibold ${
+                            item.trend.startsWith("−") || item.trend.startsWith("-")
+                              ? "text-value-down"
+                              : "text-value-up"
                           }`}
                         >
-                          {r}
-                        </button>
-                      ))}
+                          {item.trend}
+                        </span>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-baseline gap-3">
-                  <span className="font-display text-[44px]">{item.mkt}</span>
-                  {showRichDetail ? (
-                    <span className="text-[14px] font-semibold text-value-up">{trend.t}</span>
-                  ) : item.trend !== "Flat" ? (
-                    <span
-                      className={`text-[14px] font-semibold ${
-                        item.trend.startsWith("−") || item.trend.startsWith("-")
-                          ? "text-value-down"
-                          : "text-value-up"
-                      }`}
-                    >
-                      {item.trend}
-                    </span>
-                  ) : null}
-                </div>
-                {showRichDetail ? (
-                  <>
-                    <div
-                      className="flex h-[110px] items-end gap-1.5"
-                      role="img"
-                      aria-label="Median value trend chart"
-                    >
-                      {trend.v.map((v, i) => (
+                    {showRichDetail ? (
+                      <>
                         <div
-                          key={i}
-                          className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+                          className="flex h-[110px] items-end gap-1.5"
+                          role="img"
+                          aria-label="Median value trend chart"
                         >
-                          <span
-                            className="w-full rounded-t"
-                            style={{
-                              height: `${v}%`,
-                              background:
-                                i === trend.v.length - 1 ? "var(--accent)" : "var(--ink)",
-                            }}
-                          />
-                          <span className="font-mono text-[10px] text-muted">
-                            {trend.l[i]}
-                          </span>
+                          {trend.v.map((v, i) => (
+                            <div
+                              key={i}
+                              className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+                            >
+                              <span
+                                className="w-full rounded-t"
+                                style={{
+                                  height: `${v}%`,
+                                  background:
+                                    i === trend.v.length - 1 ? "var(--accent)" : "var(--ink)",
+                                }}
+                              />
+                              <span className="font-mono text-[10px] text-muted">
+                                {trend.l[i]}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <p className="m-0 text-[12px] leading-normal text-muted">
-                      Median $2,780. Based on 23 comparable sales and 6 member appraisals. Values
-                      are estimates — verify condition and originality.
-                    </p>
+                        <p className="m-0 text-[12px] leading-normal text-muted">
+                          Median $2,780. Based on 23 comparable sales and 6 member appraisals.
+                          Values are estimates — verify condition and originality.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="m-0 text-[12px] leading-normal text-muted">
+                        Values are estimates — verify condition and originality.
+                      </p>
+                    )}
                   </>
-                ) : (
-                  <p className="m-0 text-[12px] leading-normal text-muted">
-                    Values are estimates — verify condition and originality.
-                  </p>
-                )}
-              </>
-            </Feature>
-            <div
-              className={`flex flex-wrap items-center justify-between gap-2.5 ${
-                FEATURES.marketValues ? "border-t border-line-soft pt-3.5" : ""
-              }`}
-            >
-              <span>
-                <span className="block text-[12px] text-muted">
-                  {owner.name.split(" ")[0].toUpperCase()} WOULD LET IT GO FOR
-                </span>
-                <span className="font-mono text-2xl font-medium">{item.ask}</span>
-              </span>
-              <span className="text-right text-[13px] text-muted-2">
-                Local pickup, {garage?.location ?? owner.loc.split("·")[0]?.trim()}
-                <br />
-                {item.status}
-              </span>
-            </div>
-            <MessageOwner
-              itemId={item.id}
-              itemName={item.name}
-              priceLabel={item.ask}
-              ownerHandle={owner.handle}
-              ownerName={owner.name}
-            >
-              <Feature name="makeOffer">
-                {item.status !== "Not for sale" ? (
-                  <button
-                    type="button"
-                    className="h-12 min-w-[140px] flex-1 rounded-[10px] border-0 bg-accent text-[15px] font-semibold text-white"
-                  >
-                    Make an offer
-                  </button>
-                ) : null}
-              </Feature>
-              <Link
-                href="/ask"
-                className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] bg-ink px-4 text-[15px] font-semibold text-white no-underline hover:text-white"
-              >
-                Ask about this
-              </Link>
-              <Feature name="watchItem">
-                <button
-                  type="button"
-                  onClick={() => setWatching((w) => !w)}
-                  className="h-12 rounded-[10px] border border-[#D4D3CD] bg-white px-4 font-semibold"
+                </Feature>
+                <div
+                  className={`flex flex-wrap items-center justify-between gap-2.5 ${
+                    FEATURES.marketValues ? "border-t border-line-soft pt-3.5" : ""
+                  }`}
                 >
-                  {watching ? "Watching" : "Watch"}
-                </button>
-              </Feature>
-            </MessageOwner>
+                  <span>
+                    <span className="block text-[12px] text-muted">
+                      {owner.name.split(" ")[0].toUpperCase()} WOULD LET IT GO FOR
+                    </span>
+                    <span className="font-mono text-2xl font-medium tabular-nums">
+                      {formatAskPrice(item.ask)}
+                    </span>
+                  </span>
+                  <span className="text-right text-[13px] text-muted-2">
+                    Local pickup, {garage?.location ?? owner.loc.split("·")[0]?.trim()}
+                    <br />
+                    {item.status}
+                  </span>
+                </div>
+                <MessageOwner
+                  itemId={item.id}
+                  itemName={item.name}
+                  priceLabel={formatAskPrice(item.ask)}
+                  ownerHandle={owner.handle}
+                  ownerName={owner.name}
+                >
+                  <Feature name="makeOffer">
+                    <button
+                      type="button"
+                      className="h-12 min-w-[140px] flex-1 rounded-[10px] border-0 bg-accent text-[15px] font-semibold text-white"
+                    >
+                      Make an offer
+                    </button>
+                  </Feature>
+                  <Link
+                    href="/ask"
+                    className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] bg-ink px-4 text-[15px] font-semibold text-white no-underline hover:text-white"
+                  >
+                    Ask about this
+                  </Link>
+                  <Feature name="watchItem">
+                    <button
+                      type="button"
+                      onClick={() => setWatching((w) => !w)}
+                      className="h-12 rounded-[10px] border border-[#D4D3CD] bg-white px-4 font-semibold"
+                    >
+                      {watching ? "Watching" : "Watch"}
+                    </button>
+                  </Feature>
+                </MessageOwner>
+              </>
+            )}
           </section>
 
           {showRichDetail ? (
             <section className="rounded-2xl border border-line bg-surface p-6">
-              <h2 className="font-display mb-4 mt-0 text-[22px]">Provenance</h2>
+              <h2 className="section-title mb-4 mt-0 text-[20px]">Provenance</h2>
               <ol className="m-0 flex list-none flex-col gap-3 p-0">
                 {itemDetail.history.map((h) => (
                   <li key={h.y} className="flex gap-3 border-b border-line-soft pb-3">
@@ -341,19 +451,27 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 chainstay. Tubulars are period-correct but not original to the bike.
               </p>
             </section>
-          ) : itemMeta.notes || itemMeta.provenance ? (
-            <section className="rounded-2xl border border-line bg-surface p-6">
-              <h2 className="font-display mb-4 mt-0 text-[22px]">Notes & provenance</h2>
-              {itemMeta.notes ? (
-                <p className="mt-0 text-[14px] leading-normal text-muted-2">{itemMeta.notes}</p>
-              ) : null}
+          ) : (
+            <>
               {itemMeta.provenance ? (
-                <p className="mb-0 mt-3 whitespace-pre-wrap text-[14px] leading-normal text-ink">
-                  {itemMeta.provenance}
-                </p>
+                <section className="rounded-2xl border border-line bg-surface p-6">
+                  <h2 className="section-title mb-4 mt-0 text-[20px]">Where it came from</h2>
+                  <p className="mb-0 mt-0 whitespace-pre-wrap text-[14px] leading-normal text-ink">
+                    {itemMeta.provenance}
+                  </p>
+                </section>
               ) : null}
-            </section>
-          ) : null}
+              {isOwner && itemMeta.notes ? (
+                <section className="rounded-2xl border border-line bg-surface p-6">
+                  <h2 className="section-title mb-2 mt-0 text-[20px]">Private notes</h2>
+                  <p className="m-0 mb-3 text-[12px] text-meta">Only visible to you</p>
+                  <p className="mb-0 mt-0 whitespace-pre-wrap text-[14px] leading-normal text-ink">
+                    {itemMeta.notes}
+                  </p>
+                </section>
+              ) : null}
+            </>
+          )}
         </aside>
       </div>
 
@@ -361,7 +479,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         <>
           <Feature name="sameModelElsewhere">
             <section>
-              <h2 className="font-display mb-4 mt-0 text-[28px]">Same model in other garages</h2>
+              <h2 className="section-title mb-4 mt-0 text-[28px]">Same model in other garages</h2>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
                 {sameModels.map((o) =>
                   o ? (
@@ -389,7 +507,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
             <Feature name="resourceHub">
               <section className="rounded-2xl border border-line bg-surface p-5">
-                <h2 className="font-display mb-3 mt-0 text-[22px]">Resource hub</h2>
+                <h2 className="section-title mb-3 mt-0 text-[20px]">Resource hub</h2>
                 <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                   {itemDetail.guides.map((g) => (
                     <li key={g.t} className="border-b border-line-soft pb-2.5">
@@ -403,7 +521,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </Feature>
             <Feature name="compatibleParts">
               <section className="rounded-2xl border border-line bg-surface p-5">
-                <h2 className="font-display mb-3 mt-0 text-[22px]">Compatible parts nearby</h2>
+                <h2 className="section-title mb-3 mt-0 text-[20px]">Compatible parts nearby</h2>
                 <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                   {compatibleParts.map((p) => (
                     <li
@@ -421,7 +539,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               </section>
             </Feature>
             <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="font-display mb-3 mt-0 text-[22px]">People who know this</h2>
+              <h2 className="section-title mb-3 mt-0 text-[20px]">People who know this</h2>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {itemDetail.experts.map((e) => (
                   <li key={e.handle}>

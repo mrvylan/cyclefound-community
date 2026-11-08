@@ -80,7 +80,7 @@ export function SiteGate({ children }: { children: React.ReactNode }) {
             priority
           />
           <p className="eyebrow mb-2 mt-6 text-accent">Pre-Alpha · Demo</p>
-          <h1 className="font-display m-0 text-[36px] leading-[1.02]">
+          <h1 className="section-title m-0 text-[36px] leading-[1.02]">
             Community preview
           </h1>
           <p className="mt-3 mb-0 text-[15px] leading-[1.55] text-muted-2">

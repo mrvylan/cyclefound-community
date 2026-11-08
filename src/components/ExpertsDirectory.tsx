@@ -4,15 +4,31 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Avatar, LevelBadge } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
-import { areas } from "@/lib/data/seed";
-import { getExpertsLocal, subscribeStore } from "@/lib/data/local-store";
+import { getExpertsLocal, listMembers, subscribeStore } from "@/lib/data/local-store";
 import type { Person } from "@/lib/data/seed";
+import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 
 export function ExpertsDirectory() {
   const [experts, setExperts] = useState<Person[]>([]);
+  const [skillChips, setSkillChips] = useState<string[]>([]);
 
   useEffect(() => {
-    const sync = () => setExperts(getExpertsLocal());
+    const sync = () => {
+      setExperts(getExpertsLocal());
+      const counts = new Map<string, number>();
+      for (const p of listMembers()) {
+        for (const s of normalizeSkillLabels(p.skills)) {
+          counts.set(s, (counts.get(s) ?? 0) + 1);
+        }
+      }
+      setSkillChips(
+        [...counts.entries()]
+          .filter(([, n]) => n > 0)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, 6)
+          .map(([label]) => label),
+      );
+    };
     sync();
     return subscribeStore(sync);
   }, []);
@@ -22,28 +38,34 @@ export function ExpertsDirectory() {
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-[18px] px-8 pb-8 pt-12">
           <p className="eyebrow m-0">The people behind the answers</p>
-          <h1 className="font-display m-0 text-[clamp(36px,6vw,64px)]">
+          <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
             Find someone who&apos;s done it before
           </h1>
           <p className="m-0 max-w-[680px] text-[18px] leading-[1.55] text-muted-2">
             Every expert is ranked by what they&apos;ve actually contributed — accepted answers,
             reviews from members they&apos;ve helped, and the garages they&apos;ve documented.
           </p>
-          <div className="mt-1.5 flex flex-wrap gap-2">
-            {["All", ...areas.slice(0, 6).map((a) => a.label)].map((label, i) => (
-              <button
-                key={label}
-                type="button"
-                className={`h-9 rounded-full border px-3.5 text-[13px] font-medium ${
-                  i === 0
-                    ? "border-ink bg-ink text-white"
-                    : "border-[#D4D3CD] bg-white text-ink"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {skillChips.length ? (
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {["All", ...skillChips].map((label, i) => (
+                <Link
+                  key={label}
+                  href={
+                    label === "All"
+                      ? "/members"
+                      : `/members?skill=${encodeURIComponent(label)}`
+                  }
+                  className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-medium no-underline ${
+                    i === 0
+                      ? "border-ink bg-ink text-white hover:text-white"
+                      : "border-[#D4D3CD] bg-white text-ink hover:border-ink hover:text-ink"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 

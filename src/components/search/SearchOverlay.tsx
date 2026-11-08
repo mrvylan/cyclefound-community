@@ -386,7 +386,7 @@ export function SearchOverlay({ open, onOpenChange, initialQuery = "" }: Props) 
   return createPortal(overlay, document.body);
 }
 
-/** Compact header control that opens the search card. */
+/** Icon-only header control that opens the search overlay (⌘K / Ctrl K). */
 export function SearchTrigger({ className = "" }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [shortcut, setShortcut] = useState("⌘K");
@@ -415,17 +415,13 @@ export function SearchTrigger({ className = "" }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`flex h-[42px] min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-ground px-3 text-left hover:border-[#D4D3CD] ${className}`}
+        className={`inline-flex size-[42px] shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-ink hover:bg-ground ${className}`}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-label={`Search Cycle Found (${shortcut})`}
+        title={`Search (${shortcut})`}
       >
-        <Search className="size-[18px] shrink-0 text-muted" aria-hidden />
-        <span className="min-w-0 flex-1 truncate text-[14px] text-[#929792]">
-          Search Cycle Found
-        </span>
-        <kbd className="hidden shrink-0 rounded-md border border-line bg-white px-1.5 py-0.5 font-mono text-[11px] text-muted sm:inline">
-          {shortcut}
-        </kbd>
+        <Search className="size-[18px]" aria-hidden />
       </button>
       <SearchOverlay open={open} onOpenChange={setOpen} />
     </>

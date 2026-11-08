@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { ArrowLeftRight, Bike, EyeOff, Handshake, Star, Tag } from "lucide-react";
 import type { ItemStatus, Level } from "@/lib/data/seed";
 
 export function Avatar({
@@ -103,19 +103,27 @@ export function ExpertiseBadge({ area }: { area: string }) {
   );
 }
 
+const STATUS_STYLE: Record<
+  string,
+  { cls: string; Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }> }
+> = {
+  "For sale": { cls: "bg-status-sale text-white", Icon: Tag },
+  "Open to offers": { cls: "bg-status-offers text-white", Icon: Handshake },
+  "Trade only": { cls: "border border-ink bg-white text-ink", Icon: ArrowLeftRight },
+  "Not for sale": { cls: "border border-line bg-white text-[#3D4249]", Icon: EyeOff },
+};
+
+/** Status is always icon + text label — never colour alone. */
 export function StatusChip({ status }: { status: ItemStatus | string }) {
-  const map: Record<string, string> = {
-    "For sale": "bg-status-sale text-white",
-    "Open to offers": "bg-status-offers text-white",
-    "Trade only": "border border-ink bg-white text-ink",
-    "Not for sale": "border border-line bg-white text-[#3D4249]",
-  };
+  const style = STATUS_STYLE[status];
+  const Icon = style?.Icon;
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[0.02em] ${
-        map[status] ?? "border border-line bg-white text-muted"
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[0.02em] ${
+        style?.cls ?? "border border-line bg-white text-meta"
       }`}
     >
+      {Icon ? <Icon className="size-3 shrink-0" aria-hidden /> : null}
       {status}
     </span>
   );
@@ -123,30 +131,50 @@ export function StatusChip({ status }: { status: ItemStatus | string }) {
 
 export function TagChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-md border border-line bg-ground px-2 py-0.5 font-mono text-[12px] text-[#3D4249]">
+    <span className="inline-flex min-h-8 items-center rounded-md border border-line bg-ground px-2.5 py-1 font-mono text-[12px] leading-none text-[#3D4249]">
       {children}
     </span>
   );
+}
+
+const chipFocus =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+export function chipClass(active?: boolean) {
+  return `inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border px-3.5 py-1 text-[13px] font-medium ${chipFocus} ${
+    active ? "border-ink bg-ink text-white" : "border-[#D4D3CD] bg-white text-ink hover:border-ink"
+  }`;
 }
 
 export function FilterChip({
   active,
   children,
   onClick,
+  role,
+  tabIndex,
+  onKeyDown,
+  chipRef,
 }: {
   active?: boolean;
   children: React.ReactNode;
   onClick?: () => void;
+  /** Use "radio" inside a radiogroup (aria-checked); default is a toggle button (aria-pressed). */
+  role?: "radio";
+  tabIndex?: number;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
+  chipRef?: (el: HTMLButtonElement | null) => void;
 }) {
+  const a11y =
+    role === "radio" ? { role, "aria-checked": Boolean(active) } : { "aria-pressed": Boolean(active) };
   return (
     <button
       type="button"
+      ref={chipRef}
       onClick={onClick}
-      className={`h-9 rounded-full border px-3.5 text-[13px] font-medium ${
-        active
-          ? "border-ink bg-ink text-white"
-          : "border-[#D4D3CD] bg-white text-ink"
-      }`}
+      tabIndex={tabIndex}
+      onKeyDown={onKeyDown}
+      className={chipClass(active)}
+      {...a11y}
     >
       {children}
     </button>
@@ -179,7 +207,7 @@ export function SegmentedControl({
             role="tab"
             aria-selected={on}
             onClick={() => onChange(opt)}
-            className={`h-9 rounded-lg px-3.5 text-[13px] font-semibold ${
+            className={`h-9 rounded-lg px-3.5 text-[13px] font-semibold ${chipFocus} ${
               on ? "bg-white text-ink shadow-sm" : "bg-transparent text-muted-2"
             }`}
           >
@@ -222,15 +250,26 @@ export function PlaceholderPhoto({
   label,
   className = "",
   dark = false,
+  silhouette = false,
 }: {
   label?: string;
   className?: string;
   dark?: boolean;
+  /** Centered bike silhouette so empty photo slots read as "no photo yet". */
+  silhouette?: boolean;
 }) {
   return (
     <div className={`${dark ? "phd" : "ph"} relative flex items-end ${className}`}>
+      {silhouette ? (
+        <Bike
+          className={`absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 stroke-[1.25] ${
+            dark ? "text-white/25" : "text-[#9AA08F]"
+          }`}
+          aria-hidden
+        />
+      ) : null}
       {label ? (
-        <span className="m-3 rounded-md bg-white px-2 py-1 font-mono text-[12px] text-ink">
+        <span className="relative m-3 rounded-md bg-white px-2 py-1 font-mono text-[12px] text-ink">
           {label}
         </span>
       ) : null}

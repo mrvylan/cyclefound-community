@@ -81,16 +81,29 @@ export function profileFromUser(user: User | null): AuthProfile | null {
   };
 }
 
-export function signupMetadata(fullName: string) {
+export function signupMetadata(fullName: string, displayName?: string) {
   const trimmed = String(fullName).trim();
+  const publicName = String(displayName || "").trim() || firstName(trimmed) || "Rider";
   const attestedAt = new Date().toISOString();
   return {
     full_name: trimmed,
-    display_name: firstName(trimmed) || "Rider",
+    display_name: publicName,
     age_attested: true,
     age_attested_at: attestedAt,
     accepted_terms: true,
     accepted_terms_at: attestedAt,
     accepted_terms_version: TERMS_VERSION,
   };
+}
+
+/** Compact label for menus (e.g. "Dylan S."). */
+export function abbreviatedDisplayName(fullOrDisplay: string) {
+  const parts = String(fullOrDisplay || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]} ${parts[1]![0]!.toUpperCase()}.`;
+  }
+  return parts[0] || "Rider";
 }

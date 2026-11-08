@@ -16,7 +16,10 @@ import {
   type Question,
   wanted as seedWanted,
 } from "./seed";
+import { normalizeItemCategory } from "./categories";
 import { isValidMemberHandle } from "./handles";
+import { normalizeAskInput } from "@/lib/garage/itemFields";
+import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 
 export { isValidMemberHandle } from "./handles";
 export {
@@ -59,6 +62,27 @@ function initialsFromDisplayName(name: string) {
   return "CF";
 }
 
+export type GarageItemPatch = Partial<
+  Pick<
+    GarageItem,
+    | "name"
+    | "catShort"
+    | "cat"
+    | "year"
+    | "size"
+    | "cond"
+    | "mkt"
+    | "ask"
+    | "status"
+    | "photo"
+    | "archived"
+    | "description"
+  >
+> & {
+  /** Permanently remove from garage views (seed + user items). */
+  deleted?: boolean;
+};
+
 type LocalStore = {
   sessionHandle: string;
   /** When true, seed/mock community data is visible for UI demos. Off by default. */
@@ -66,6 +90,8 @@ type LocalStore = {
   extraQuestions: Question[];
   extraAnswers: Answer[];
   extraItems: GarageItem[];
+  /** Edits / archive / delete overlays for seed or user items. */
+  itemPatches: Record<string, GarageItemPatch>;
   profilePatches: Record<string, LocalProfilePatch>;
   /** Overrides accepted answer id per question */
   acceptedByQuestion: Record<string, string | null>;
@@ -77,6 +103,7 @@ const defaultStore = (): LocalStore => ({
   extraQuestions: [],
   extraAnswers: [],
   extraItems: [],
+  itemPatches: {},
   profilePatches: {},
   acceptedByQuestion: {},
 });
@@ -86,7 +113,16 @@ function readStore(): LocalStore {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultStore();
-    return { ...defaultStore(), ...JSON.parse(raw) } as LocalStore;
+    const parsed = JSON.parse(raw) as Partial<LocalStore>;
+    return {
+      ...defaultStore(),
+      ...parsed,
+      itemPatches: parsed.itemPatches ?? {},
+      profilePatches: parsed.profilePatches ?? {},
+      extraItems: parsed.extraItems ?? [],
+      extraQuestions: parsed.extraQuestions ?? [],
+      extraAnswers: parsed.extraAnswers ?? [],
+    };
   } catch {
     return defaultStore();
   }
@@ -158,7 +194,7 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
     role: "Member",
     loc: patch?.loc ?? "",
     level: "RIDER",
-    skills: patch?.skills ?? [],
+    skills: normalizeSkillLabels(patch?.skills ?? []),
     bio: patch?.bio ?? "",
     rating: "New",
     reviews: 0,
@@ -193,7 +229,7 @@ export function getMergedPerson(handle: string): Person | undefined {
     init: patch.name ? initialsFromDisplayName(name) : base.init,
     loc: patch.loc ?? base.loc,
     bio: patch.bio ?? base.bio,
-    skills: patch.skills ?? base.skills,
+    skills: normalizeSkillLabels(patch.skills ?? base.skills),
     avatarUrl: patch.avatarUrl ?? base.avatarUrl,
     coverUrl: patch.coverUrl ?? base.coverUrl,
   };
@@ -225,10 +261,14 @@ export function getWantedLines(handle: string): string[] {
 
 export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
   const store = readStore();
-  store.profilePatches[handle] = {
+  const next = {
     ...store.profilePatches[handle],
     ...patch,
   };
+  if (patch.skills) {
+    next.skills = normalizeSkillLabels(patch.skills);
+  }
+  store.profilePatches[handle] = next;
   writeStore(store);
 }
 
@@ -287,13 +327,36 @@ export function getAllAnswers(questionId: string): Answer[] {
     });
 }
 
+function applyItemPatch(item: GarageItem, patch?: GarageItemPatch): GarageItem | null {
+  if (!patch) return item;
+  if (patch.deleted) return null;
+  const { deleted: _deleted, ...fields } = patch;
+  return { ...item, ...fields };
+}
+
+function resolveOwnedItems(raw: GarageItem[], patches: Record<string, GarageItemPatch>) {
+  const out: GarageItem[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    const next = applyItemPatch(item, patches[item.id]);
+    if (next) out.push(next);
+  }
+  return out;
+}
+
 export function getGarageItemsFor(handle: string): GarageItem[] {
   const store = readStore();
   const seeded =
     isMockDataEnabled() || defaultSeedVisible(handle)
       ? seedItemsByOwner(handle)
       : [];
-  return [...seeded, ...store.extraItems.filter((i) => i.ownerHandle === handle)];
+  const raw = [
+    ...seeded,
+    ...store.extraItems.filter((i) => i.ownerHandle === handle),
+  ];
+  return resolveOwnedItems(raw, store.itemPatches);
 }
 
 export function getAllItems(): GarageItem[] {
@@ -309,11 +372,156 @@ export function getAllItems(): GarageItem[] {
       (i) => i.ownerHandle === me || defaultSeedVisible(i.ownerHandle),
     );
   }
-  return all;
+  return resolveOwnedItems(all, store.itemPatches);
+}
+
+/** Photos for a garage item — seed `photo` plus any uploaded this session. */
+export function getItemPhotoUrls(item: GarageItem): string[] {
+  const out: string[] = [];
+  if (item.photo) out.push(item.photo);
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.sessionStorage.getItem(`cf_i_photos_${item.id}`);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        for (const p of parsed) if (typeof p === "string" && p) out.push(p);
+      }
+    } catch {
+      /* ignore malformed session data */
+    }
+  }
+  return out;
 }
 
 export function getItemLocal(id: string): GarageItem | undefined {
   return getAllItems().find((i) => i.id === id);
+}
+
+function mergeItemPatch(id: string, patch: GarageItemPatch) {
+  const store = readStore();
+  store.itemPatches[id] = { ...store.itemPatches[id], ...patch };
+  // Keep extraItems in sync when the row lives there (avoids stale list data).
+  const idx = store.extraItems.findIndex((i) => i.id === id);
+  if (idx >= 0) {
+    if (patch.deleted) {
+      store.extraItems.splice(idx, 1);
+      delete store.itemPatches[id];
+    } else {
+      const { deleted: _d, ...fields } = patch;
+      store.extraItems[idx] = { ...store.extraItems[idx]!, ...fields };
+    }
+  }
+  writeStore(store);
+}
+
+export function getItemPrivateMeta(id: string): {
+  notes: string;
+  provenance: string;
+} {
+  if (typeof window === "undefined") return { notes: "", provenance: "" };
+  try {
+    const raw = sessionStorage.getItem(`cf_i_meta_${id}`);
+    if (!raw) return { notes: "", provenance: "" };
+    const parsed = JSON.parse(raw) as { notes?: string; provenance?: string };
+    return {
+      notes: typeof parsed.notes === "string" ? parsed.notes : "",
+      provenance: typeof parsed.provenance === "string" ? parsed.provenance : "",
+    };
+  } catch {
+    return { notes: "", provenance: "" };
+  }
+}
+
+function writeItemPrivateMeta(
+  id: string,
+  meta: { notes: string; provenance: string },
+) {
+  const notes = meta.notes.trim();
+  const provenance = meta.provenance.trim();
+  if (!notes && !provenance) {
+    sessionStorage.removeItem(`cf_i_meta_${id}`);
+    return;
+  }
+  sessionStorage.setItem(
+    `cf_i_meta_${id}`,
+    JSON.stringify({ notes, provenance }),
+  );
+}
+
+export function updateGarageItem(
+  id: string,
+  input: {
+    title: string;
+    category: string;
+    year: string;
+    size?: string;
+    condition: string;
+    status: ItemStatus;
+    askingPrice: string;
+    ownerEstValue: string;
+    description: string;
+    notes: string;
+    provenance: string;
+    photoDataUrls: string[];
+  },
+): GarageItem | undefined {
+  const existing = getItemLocal(id);
+  if (!existing) return undefined;
+  const catShort = normalizeItemCategory(input.category);
+  mergeItemPatch(id, {
+    name: input.title.trim(),
+    catShort,
+    cat: catShort.toUpperCase(),
+    year: input.year.trim() || "—",
+    size: input.size?.trim() || undefined,
+    cond: input.condition,
+    status: input.status,
+    ask: normalizeAskInput(input.askingPrice) || "—",
+    mkt: input.ownerEstValue.trim() || existing.mkt,
+    description: input.description.trim(),
+    archived: false,
+  });
+  if (input.photoDataUrls.length) {
+    sessionStorage.setItem(`cf_i_photos_${id}`, JSON.stringify(input.photoDataUrls));
+  } else {
+    sessionStorage.removeItem(`cf_i_photos_${id}`);
+  }
+  writeItemPrivateMeta(id, {
+    notes: input.notes,
+    provenance: input.provenance,
+  });
+  return getItemLocal(id);
+}
+
+export function archiveGarageItem(id: string) {
+  if (!getItemLocal(id)) return;
+  mergeItemPatch(id, { archived: true });
+}
+
+export function unarchiveGarageItem(id: string) {
+  if (!getItemLocal(id)) return;
+  mergeItemPatch(id, { archived: false });
+}
+
+export function deleteGarageItem(id: string) {
+  const existing = getItemLocal(id);
+  const store = readStore();
+  const known =
+    Boolean(existing) ||
+    store.extraItems.some((i) => i.id === id) ||
+    seedItems.some((i) => i.id === id);
+  if (!known) return;
+  mergeItemPatch(id, { deleted: true });
+  try {
+    sessionStorage.removeItem(`cf_i_photos_${id}`);
+    sessionStorage.removeItem(`cf_i_meta_${id}`);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function canManageGarageItem(item: GarageItem, sessionHandle: string | null | undefined) {
+  return Boolean(sessionHandle && sessionHandle === item.ownerHandle);
 }
 
 function slugify(text: string) {
@@ -410,47 +618,59 @@ export function postItem(input: {
   title: string;
   category: string;
   year: string;
+  size?: string;
   condition: string;
   status: ItemStatus;
   askingPrice: string;
   ownerEstValue: string;
+  description: string;
   notes: string;
   provenance: string;
   photoDataUrls: string[];
 }): GarageItem {
   const store = readStore();
   const id = `${slugify(input.title) || "item"}-${Date.now().toString(36)}`;
-  const catShort = input.category;
+  const catShort = normalizeItemCategory(input.category);
+  const size = input.size?.trim();
   const item: GarageItem = {
     id,
     ownerHandle: store.sessionHandle,
     catShort,
     cat: catShort.toUpperCase(),
-    year: input.year,
+    year: input.year.trim() || "—",
+    ...(size ? { size } : {}),
     name: input.title.trim(),
     cond: input.condition,
     mkt: input.ownerEstValue.trim() || "—",
-    ask: input.askingPrice.trim() || "—",
+    ask: normalizeAskInput(input.askingPrice) || "—",
     status: input.status,
     links: "0 guides · 0 threads",
     trend: "Flat",
+    description: input.description.trim(),
   };
   if (input.photoDataUrls.length) {
     sessionStorage.setItem(`cf_i_photos_${id}`, JSON.stringify(input.photoDataUrls));
   }
-  if (input.notes || input.provenance) {
-    sessionStorage.setItem(
-      `cf_i_meta_${id}`,
-      JSON.stringify({ notes: input.notes, provenance: input.provenance }),
-    );
-  }
+  writeItemPrivateMeta(id, {
+    notes: input.notes,
+    provenance: input.provenance,
+  });
   store.extraItems.unshift(item);
   writeStore(store);
   return item;
 }
 
 export function listMembers(): Person[] {
-  if (isMockDataEnabled()) return people;
+  const withSkills = (person: Person | undefined) => {
+    if (!person) return undefined;
+    return { ...person, skills: normalizeSkillLabels(person.skills) };
+  };
+
+  if (isMockDataEnabled()) {
+    return people
+      .map((p) => withSkills(getMergedPerson(p.handle) ?? p))
+      .filter((p): p is Person => Boolean(p));
+  }
   const me = getSessionHandle();
   if (!me) return [];
 
@@ -458,9 +678,10 @@ export function listMembers(): Person[] {
   const seen = new Set<string>();
 
   function push(person: Person | undefined) {
-    if (!person || seen.has(person.handle)) return;
-    seen.add(person.handle);
-    out.push(person);
+    const next = withSkills(person);
+    if (!next || seen.has(next.handle)) return;
+    seen.add(next.handle);
+    out.push(next);
   }
 
   push(

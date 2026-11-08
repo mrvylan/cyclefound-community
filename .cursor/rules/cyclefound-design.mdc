@@ -38,7 +38,9 @@ Logo: use `/community-logo.png` on light backgrounds and `/community-logo-revers
 Never use red/green alone to mean state; status is blue/green plus a text label.
 
 ## Type
-- Display/headings: Archivo, `font-stretch: 75%`, weight 800, UPPERCASE, tight line-height (0.95–1.05). H1 56–76px, section H2 22–44px.
+- Marketing hero only: `.hero-display` — Archivo condensed, weight 800, UPPERCASE, tight leading. Use once per promotional surface (Community logged-out hero). Soften copy; control line breaks (`<br />` or `text-wrap: balance`); brand green accent on a key phrase is OK.
+- Page & section headings: `.section-title` — same family, stretch ~85%, weight 700, **sentence case** (not all caps), ~20–40px for sections, larger clamps for page H1s. Default for Members, Market, Garage, forms, sidebars, etc.
+- `.font-display` — reserved for compact numerals / marks (stat strips, step numbers, avatar initials), not for reading headlines.
 - Body: IBM Plex Sans 15–17px, line-height 1.5–1.65.
 - Data (prices, Spokes, years, serials, tags, eyebrows): IBM Plex Mono. Eyebrows are 12–13px, letter-spacing 0.12em, uppercase.
 

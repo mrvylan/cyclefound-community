@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { saveMessageDraft } from "@/lib/auth/drafts";
 import { authHref } from "@/lib/auth/redirects";
 import { getSessionHandle, subscribeStore } from "@/lib/data/local-store";
 import { messagingService } from "@/lib/messaging";
@@ -112,12 +113,32 @@ export function MessageOwner({
           </p>
 
           {needsLogin ? (
-            <Link
-              href={authHref("login", nextPath)}
-              className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-            >
-              Log in to message owner
-            </Link>
+            <div className="flex flex-col gap-2.5">
+              <textarea
+                rows={3}
+                minLength={20}
+                maxLength={2000}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Ask about condition, meetup area, or availability…"
+                className="rounded-[10px] border border-line bg-white px-3 py-2.5 text-[15px] font-normal text-ink outline-none focus:border-accent"
+              />
+              <Link
+                href={authHref("join", nextPath)}
+                className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+                onClick={() =>
+                  saveMessageDraft({
+                    handle: ownerHandle,
+                    name: ownerName,
+                    message,
+                    kind: "garage",
+                    itemId,
+                  })
+                }
+              >
+                Join to message owner
+              </Link>
+            </div>
           ) : null}
 
           {isOwner && !needsLogin ? (

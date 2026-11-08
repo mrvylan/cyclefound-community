@@ -116,7 +116,7 @@ export default function QuestionPage({
               ))}
             </div>
 
-            <h1 className="font-display m-0 text-[clamp(28px,4vw,40px)] leading-[1.05]">
+            <h1 className="section-title m-0 text-[clamp(28px,4vw,40px)] leading-[1.05]">
               {q.title}
             </h1>
 
@@ -218,7 +218,7 @@ export default function QuestionPage({
           </article>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display m-0 text-[28px]">
+            <h2 className="section-title m-0 text-[28px]">
               {thread.length} answer{thread.length === 1 ? "" : "s"}
             </h2>
             <Feature name="answerSort">
@@ -372,7 +372,7 @@ export default function QuestionPage({
         <aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
           {sidebarExperts.length > 0 ? (
             <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="font-display mb-3 mt-0 text-[22px]">Members on this topic</h2>
+              <h2 className="section-title mb-3 mt-0 text-[20px]">Members on this topic</h2>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {sidebarExperts.map((e) => (
                   <li key={e.handle}>
@@ -396,7 +396,7 @@ export default function QuestionPage({
 
           <Feature name="partsInGarages">
             <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="font-display mb-3 mt-0 text-[22px]">Parts in garages</h2>
+              <h2 className="section-title mb-3 mt-0 text-[20px]">Parts in garages</h2>
               <ul className="m-0 flex list-none flex-col gap-2.5 p-0 text-[14px]">
                 {[
                   ["Campagnolo Record seatpost 27.0", "3 garages · open to offers", "from $85"],
@@ -419,7 +419,7 @@ export default function QuestionPage({
 
           {showMockRelated ? (
             <section className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="font-display mb-3 mt-0 text-[22px]">Related</h2>
+              <h2 className="section-title mb-3 mt-0 text-[20px]">Related</h2>
               <ul className="m-0 flex list-none flex-col gap-2.5 p-0 text-[14px]">
                 <li>
                   <Link

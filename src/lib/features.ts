@@ -33,8 +33,8 @@ export const FEATURES = {
   partsInGarages: false,
   /** Automatic wanted↔garage matching labels */
   wantedMatching: false,
-  /** Home-page Wanted board (wanted lives on profile/garage in beta) */
-  homeWantedBoard: false,
+  /** Home-page Wanted board sample panel (renders only when mock data is on; real wanted lives on profile/garage) */
+  homeWantedBoard: true,
   /** Resource hub / guides */
   resourceHub: false,
   /** "Save to resources" */

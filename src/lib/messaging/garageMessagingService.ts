@@ -61,6 +61,14 @@ export function subscribeMessages(onChange: () => void) {
   };
 }
 
+/** Sync unread count for header / account menu badges. */
+export function unreadMessageCount(viewer: { id: string; handle?: string }) {
+  if (!viewer?.id) return 0;
+  return readStore().threads.filter(
+    (t) => participates(t, viewer) && isUnread(t, viewer.id),
+  ).length;
+}
+
 function newId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

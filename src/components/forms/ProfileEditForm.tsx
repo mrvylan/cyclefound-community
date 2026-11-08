@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import { Camera, X } from "lucide-react";
 import { SessionPicker } from "./SessionPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Avatar, TagChip } from "@/components/ui";
+import { Avatar } from "@/components/ui";
+import { SkillsEditor } from "@/components/forms/SkillsEditor";
+import { authHref } from "@/lib/auth/redirects";
 import { handleFromAuthProfile } from "@/lib/demo-session";
 import {
+  getGarageItemsFor,
   getMergedPerson,
   getSessionHandle,
   getWantedLines,
@@ -24,18 +27,7 @@ import {
 } from "@/lib/profile/avatarUpload";
 import { profileService } from "@/lib/profile/profileService";
 import { colorForId, initialsFromName } from "@/lib/auth/user";
-
-const SKILL_SUGGESTIONS = [
-  "Vintage restoration",
-  "Wheelbuilding",
-  "Frame building",
-  "Electronic shifting",
-  "Valuation",
-  "Campagnolo",
-  "Suspension",
-  "Bike fit",
-  "Paint & finish",
-];
+import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 
 export function ProfileEditForm() {
   const router = useRouter();
@@ -43,14 +35,14 @@ export function ProfileEditForm() {
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
 
-  const [handle, setHandle] = useState(getSessionHandle());
+  // Empty on SSR + first client paint — session handle lives in localStorage.
+  const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [city, setCity] = useState("");
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
   const [wantedText, setWantedText] = useState("");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -59,12 +51,13 @@ export function ProfileEditForm() {
   const [uploading, setUploading] = useState(false);
 
   function load(h: string) {
+    if (!h) return;
     const person = getMergedPerson(h);
     if (person) {
       setDisplayName(person.name);
       setCity(person.loc.split("·")[0]?.trim() ?? person.loc);
       setBio(person.bio);
-      setSkills(person.skills);
+      setSkills(normalizeSkillLabels(person.skills));
       setWantedText(getWantedLines(h).join("\n"));
       setAvatarUrl(person.avatarUrl || "");
       setCoverUrl(person.coverUrl || "");
@@ -77,14 +70,25 @@ export function ProfileEditForm() {
   }
 
   useEffect(() => {
-    load(getSessionHandle());
+    const fromAuth = profile ? handleFromAuthProfile(profile) : "";
+    const h = getSessionHandle() || fromAuth;
+    setHandle(h);
+    load(h);
     return subscribeStore(() => {
-      const h = getSessionHandle();
-      setHandle(h);
-      load(h);
+      const next = getSessionHandle() || fromAuth;
+      setHandle(next);
+      load(next);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when auth profile arrives
   }, [profile?.id, profile?.displayName, profile?.avatarUrl]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const hasSession = Boolean(user) || Boolean(getSessionHandle());
+    if (!hasSession) {
+      router.replace(authHref("login", "/settings/profile"));
+    }
+  }, [ready, user, router]);
 
   useEffect(() => {
     if (!ready || !user || !profile) return;
@@ -104,13 +108,6 @@ export function ProfileEditForm() {
       cancelled = true;
     };
   }, [ready, user, profile]);
-
-  function addSkill(raw: string) {
-    const s = raw.trim();
-    if (!s || skills.includes(s) || skills.length >= 8) return;
-    setSkills([...skills, s]);
-    setSkillInput("");
-  }
 
   async function onPickAvatar(file: File | null) {
     if (!file) return;
@@ -189,7 +186,7 @@ export function ProfileEditForm() {
         name,
         loc: city.trim(),
         bio: bio.trim(),
-        skills,
+        skills: normalizeSkillLabels(skills),
         wantedLines: wantedText
           .split("\n")
           .map((l) => l.trim())
@@ -243,7 +240,7 @@ export function ProfileEditForm() {
     <div className="mx-auto flex max-w-[640px] flex-col gap-5 px-8 py-10 pb-16">
       <div className="flex flex-col gap-2">
         <p className="eyebrow m-0">Account</p>
-        <h1 className="font-display m-0 text-[clamp(36px,5vw,56px)]">Edit profile</h1>
+        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Edit profile</h1>
         <SessionPicker />
       </div>
 
@@ -394,40 +391,16 @@ export function ProfileEditForm() {
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-[14px] font-semibold">Expertise tags</span>
-          <div className="flex flex-wrap gap-1.5">
-            {skills.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSkills(skills.filter((x) => x !== s))}
-                className="rounded-full border border-line bg-ground px-2.5 py-1 text-[12px]"
-              >
-                {s} ×
-              </button>
-            ))}
-          </div>
-          <input
-            value={skillInput}
-            onChange={(e) => setSkillInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addSkill(skillInput);
-              }
-            }}
-            placeholder="Add a tag and press Enter"
-            className={field}
-          />
-          <div className="flex flex-wrap gap-1.5">
-            {SKILL_SUGGESTIONS.filter((s) => !skills.includes(s)).map((s) => (
-              <button key={s} type="button" onClick={() => addSkill(s)}>
-                <TagChip>{s}</TagChip>
-              </button>
-            ))}
-          </div>
-        </div>
+        <SkillsEditor
+          value={skills}
+          onChange={setSkills}
+          bio={bio}
+          role={displayName}
+          city={city}
+          garageHints={getGarageItemsFor(handle).map((i) =>
+            [i.catShort, i.name].filter(Boolean).join(" · "),
+          )}
+        />
 
         <div className="flex flex-col gap-2">
           <label htmlFor="p-wanted" className="text-[14px] font-semibold">
@@ -460,7 +433,7 @@ export function ProfileEditForm() {
             {saving ? "Saving…" : "Save profile"}
           </button>
           <Link
-            href={`/u/${handle}`}
+            href={handle ? `/u/${handle}` : "/"}
             className="inline-flex h-12 items-center rounded-[10px] border border-line bg-white px-5 text-[15px] font-semibold text-ink no-underline"
           >
             Cancel

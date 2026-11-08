@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   getAllQuestions,
@@ -8,15 +8,59 @@ import {
   isMockDataEnabled,
   subscribeStore,
 } from "@/lib/data/local-store";
+import type { Question } from "@/lib/data/seed";
+import {
+  FEED_INTENT_OPTIONS,
+  questionMatchesIntent,
+} from "@/lib/skills/feedTopics";
+import { ChipRadioGroup } from "./ChipRadioGroup";
 import { EmptyState } from "./EmptyState";
 import { QuestionCard } from "./QuestionCard";
-import { SegmentedControl } from "./ui";
 
-const tabs = ["Trending", "Unanswered", "Rare parts", "Repairs", "Builds"];
+const SORTS = [
+  { value: "Unanswered", label: "Unanswered" },
+  { value: "Newest", label: "Newest" },
+] as const;
+type Sort = (typeof SORTS)[number]["value"];
+
+const PAGE_SIZE = 5;
+
+/** "6h ago" / "2d ago" / "just now" → hours. Unknown strings count as a day old. */
+function ageHours(time: string): number {
+  const t = time.trim().toLowerCase();
+  if (!t || t.includes("just now")) return 0;
+  const m = t.match(/(\d+)\s*(m|min|h|hr|d|w|mo|y)/);
+  if (!m) return 24;
+  const n = Number(m[1]);
+  switch (m[2]) {
+    case "m":
+    case "min":
+      return n / 60;
+    case "h":
+    case "hr":
+      return n;
+    case "d":
+      return n * 24;
+    case "w":
+      return n * 24 * 7;
+    case "mo":
+      return n * 24 * 30;
+    default:
+      return n * 24 * 365;
+  }
+}
+
+/** votes + 2 × answers, halved every 72h. */
+export function trendingScore(q: Question): number {
+  return (Math.max(q.votes, 0) + q.answers * 2 + 1) / (1 + ageHours(q.time) / 72);
+}
 
 export function HomeFeed() {
-  const [tab, setTab] = useState("Trending");
-  const [questions, setQuestions] = useState(() => getAllQuestions());
+  const [sort, setSort] = useState<Sort>("Unanswered");
+  const [category, setCategory] = useState("All");
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const [ready, setReady] = useState(false);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [signedIn, setSignedIn] = useState(false);
   const [mock, setMock] = useState(false);
 
@@ -25,19 +69,30 @@ export function HomeFeed() {
       setQuestions(getAllQuestions());
       setSignedIn(Boolean(getSessionHandle()));
       setMock(isMockDataEnabled());
+      setReady(true);
     }
     sync();
     return subscribeStore(sync);
   }, []);
 
-  const filtered = questions.filter((q) => {
-    if (tab === "Unanswered") return !q.solved;
-    if (tab === "Rare parts")
-      return q.tags.some((t) => t.includes("rare") || t.includes("campagnolo"));
-    if (tab === "Repairs") return q.tags.includes("repair");
-    if (tab === "Builds") return q.tags.includes("build");
-    return true;
-  });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("sort");
+    if (s === "Unanswered" || s === "Newest" || s === "Trending") {
+      setSort(s === "Trending" ? "Unanswered" : s);
+    }
+  }, []);
+
+  const filtered = useMemo(() => {
+    const list = questions.filter((q) => {
+      if (sort === "Unanswered" && q.solved) return false;
+      return questionMatchesIntent(q.tags, category);
+    });
+    return list.sort((a, b) => ageHours(a.time) - ageHours(b.time));
+  }, [questions, sort, category]);
+
+  const shown = filtered.slice(0, visible);
+  const remaining = filtered.length - shown.length;
 
   const empty =
     filtered.length === 0
@@ -45,7 +100,7 @@ export function HomeFeed() {
         ? {
             title: "No questions in this view",
             description:
-              "Be the first to ask — repairs, rare parts, and builds all belong here.",
+              "Try another filter, or ask the community — Fix, Find, Value, or Build.",
             actionLabel: "Ask the community",
             actionHref: "/ask",
           }
@@ -68,16 +123,53 @@ export function HomeFeed() {
 
   return (
     <div className="flex min-w-0 flex-[999_1_600px] flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h2 className="font-display m-0 text-[34px]">From the workbench</h2>
-        <SegmentedControl
-          options={tabs}
-          value={tab}
-          onChange={setTab}
-          ariaLabel="Filter questions"
+      <h2 className="section-title m-0 text-[28px]">From the workbench</h2>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <ChipRadioGroup
+          ariaLabel="Filter by intent"
+          className="flex min-w-0 flex-[1_1_280px] flex-wrap gap-2"
+          options={FEED_INTENT_OPTIONS}
+          value={category}
+          onChange={(v) => {
+            setCategory(v);
+            setVisible(PAGE_SIZE);
+          }}
         />
+        <label className="ml-auto inline-flex items-center gap-2 text-[14px] text-muted">
+          <span className="sr-only sm:not-sr-only">Sort</span>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as Sort);
+              setVisible(PAGE_SIZE);
+            }}
+            className="cf-select h-10 rounded-[10px] border border-[#D4D3CD] bg-white pl-3 text-[14px] font-semibold text-ink"
+            aria-label="Sort questions"
+          >
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      {empty ? (
+
+      {!ready ? (
+        <div
+          className="flex flex-col gap-3"
+          aria-busy="true"
+          aria-label="Loading questions"
+        >
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-[7.5rem] animate-pulse rounded-[14px] border border-line bg-surface"
+            />
+          ))}
+        </div>
+      ) : empty ? (
         <EmptyState
           title={empty.title}
           description={empty.description}
@@ -85,12 +177,38 @@ export function HomeFeed() {
           actionHref={empty.actionHref}
         />
       ) : (
-        filtered.map((q) => <QuestionCard key={q.id} q={q} />)
+        shown.map((q) => <QuestionCard key={q.id} q={q} />)
       )}
-      {filtered.length > 0 ? (
-        <Link href="/ask" className="self-center px-5 py-3 text-[15px] font-semibold">
-          Ask a question
-        </Link>
+
+      {ready && filtered.length > 0 ? (
+        <div className="flex flex-col items-center gap-4 pt-2">
+          {remaining > 0 ? (
+            <button
+              type="button"
+              onClick={() => setVisible((v) => v + PAGE_SIZE)}
+              className="inline-flex h-11 items-center rounded-[10px] border border-[#D4D3CD] bg-white px-6 text-[15px] font-semibold text-ink hover:border-ink"
+            >
+              Load more
+              <span className="ml-2 font-mono text-[12px] text-meta">{remaining} left</span>
+            </button>
+          ) : (
+            <p className="m-0 text-[13px] text-meta">You&apos;re all caught up.</p>
+          )}
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-[14px] border border-accent-soft-border bg-accent-soft p-5">
+            <div>
+              <p className="m-0 text-[17px] font-semibold text-ink">Didn&apos;t find it?</p>
+              <p className="m-0 text-[14px] text-muted-2">
+                Ask the community — Fix it, Find it, Value it, or Build it.
+              </p>
+            </div>
+            <Link
+              href="/ask"
+              className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+            >
+              Ask the community
+            </Link>
+          </div>
+        </div>
       ) : null}
     </div>
   );

@@ -183,7 +183,7 @@ export function AccountPage() {
   if (!configured || !hasSupabaseConfig()) {
     return (
       <div className="mx-auto max-w-[720px] px-8 py-16">
-        <h1 className="font-display m-0 text-[clamp(36px,5vw,56px)]">Your account</h1>
+        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Your account</h1>
         <p className="mt-4 text-[16px] text-muted-2">
           Supabase is not configured. Add credentials to use account settings.
         </p>
@@ -194,7 +194,7 @@ export function AccountPage() {
   if (!user || !profile) {
     return (
       <div className="mx-auto max-w-[560px] px-8 py-16">
-        <h1 className="font-display m-0 text-[clamp(36px,5vw,56px)]">
+        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">
           Log in to view your account
         </h1>
         <p className="mt-4 text-[16px] text-muted-2">
@@ -220,7 +220,7 @@ export function AccountPage() {
     <div className="mx-auto flex max-w-[720px] flex-col gap-8 px-8 py-10 pb-20">
       <div>
         <p className="eyebrow m-0">Account</p>
-        <h1 className="font-display m-0 mt-2 text-[clamp(36px,5vw,56px)]">Your account</h1>
+        <h1 className="section-title m-0 mt-2 text-[clamp(36px,5vw,56px)]">Your account</h1>
         <p className="mt-3 text-[16px] text-muted-2">
           Manage your garage and the details others see. Your email stays private.
         </p>
@@ -266,7 +266,7 @@ export function AccountPage() {
       <section className="rounded-[14px] border border-line bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="font-display m-0 text-[22px]">My Garage</h2>
+            <h2 className="section-title m-0 text-[20px]">My Garage</h2>
             <p className="mt-1 mb-0 text-[14px] text-muted-2">
               Keep track of the bikes, parts, and tools you own
               {garageCount ? ` · ${garageCount} item${garageCount === 1 ? "" : "s"}` : ""}.
@@ -290,7 +290,7 @@ export function AccountPage() {
       </section>
 
       <section>
-        <h2 className="font-display m-0 text-[22px]">Member profile</h2>
+        <h2 className="section-title m-0 text-[20px]">Member profile</h2>
         <p className="mt-1 text-[14px] text-muted-2">
           Display name is what others see — not your email.
         </p>
@@ -409,7 +409,7 @@ export function AccountPage() {
         className="rounded-[14px] border border-[#E8C4C4] bg-[#FDF8F8] p-5"
         aria-labelledby="account-delete-title"
       >
-        <h2 id="account-delete-title" className="font-display m-0 text-[22px] text-ink">
+        <h2 id="account-delete-title" className="section-title m-0 text-[20px] text-ink">
           Delete account
         </h2>
         <p className="mt-2 text-[14px] leading-snug text-muted-2">

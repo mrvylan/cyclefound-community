@@ -31,6 +31,7 @@ type PendingAuth = {
   email: string;
   intent: OtpIntent;
   fullName?: string;
+  displayName?: string;
   next: string;
 };
 
@@ -115,6 +116,7 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -132,6 +134,7 @@ export function AuthForm() {
       setEmail(pending.email);
       setOtpIntent(pending.intent);
       if (pending.fullName) setFullName(pending.fullName);
+      if (pending.displayName) setDisplayName(pending.displayName);
       if (initialMode === "otp" || (!searchParams.get("mode") && pending.email)) {
         // Keep otp screen if we already sent a code this session.
         if (initialMode === "otp") setMode("otp");
@@ -142,8 +145,12 @@ export function AuthForm() {
   useEffect(() => {
     if (!ready || !profile) return;
     if (mode === "set-password" || mode === "otp") return;
-    router.replace(next);
-  }, [ready, profile, mode, next, router]);
+    const dest =
+      otpIntent === "join" && (next === "/" || next.startsWith("/auth"))
+        ? "/onboarding"
+        : next;
+    router.replace(dest);
+  }, [ready, profile, mode, next, router, otpIntent]);
 
   function go(nextMode: Mode) {
     setBanner(null);
@@ -155,17 +162,30 @@ export function AuthForm() {
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   }
 
-  async function sendOtp(intent: OtpIntent, targetEmail: string, name?: string) {
+  function joinRedirect() {
+    return next === "/" || next.startsWith("/auth") ? "/onboarding" : next;
+  }
+
+  async function sendOtp(
+    intent: OtpIntent,
+    targetEmail: string,
+    name?: string,
+    publicName?: string,
+  ) {
     const cleanEmail = validateEmail(targetEmail);
     const supabase = createClient();
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    const dest = intent === "join" ? joinRedirect() : next;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
         shouldCreateUser: intent === "join",
         emailRedirectTo,
-        data: intent === "join" && name ? signupMetadata(name) : undefined,
+        data:
+          intent === "join" && name
+            ? signupMetadata(name, publicName)
+            : undefined,
       },
     });
     if (error) throw error;
@@ -174,7 +194,8 @@ export function AuthForm() {
       email: cleanEmail,
       intent,
       fullName: name,
-      next,
+      displayName: publicName,
+      next: dest,
     });
     setEmail(cleanEmail);
     setOtpIntent(intent);
@@ -186,18 +207,38 @@ export function AuthForm() {
     });
   }
 
+  async function startOAuth(provider: "google" | "apple") {
+    setBanner(null);
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const dest = mode === "join" ? joinRedirect() : next;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      setBanner({ type: "error", text: toAuthErrorMessage(error) });
+      setLoading(false);
+    }
+  }
+
   async function onJoin(e: React.FormEvent) {
     e.preventDefault();
     setBanner(null);
     setLoading(true);
     try {
       if (!fullName.trim()) throw new Error("Full name is required.");
+      if (!displayName.trim()) throw new Error("Display name is required.");
       if (!acceptedTerms) {
         throw new Error(
           "Please confirm you are 18+ and agree to the Terms and Privacy Policy.",
         );
       }
-      await sendOtp("join", email, fullName.trim());
+      await sendOtp("join", email, fullName.trim(), displayName.trim());
     } catch (error) {
       setBanner({ type: "error", text: toAuthErrorMessage(error) });
     } finally {
@@ -276,11 +317,18 @@ export function AuthForm() {
 
       const intent = pending?.intent || otpIntent;
       if (intent === "join" && pending?.fullName && data.user) {
-        await supabase.auth.updateUser({ data: signupMetadata(pending.fullName) });
+        await supabase.auth.updateUser({
+          data: signupMetadata(pending.fullName, pending.displayName),
+        });
       }
 
       clearPending();
       await refresh();
+
+      const dest =
+        intent === "join"
+          ? pending?.next || joinRedirect()
+          : pending?.next || next;
 
       if (intent === "recovery" || intent === "join") {
         setSkipPassword(intent === "join");
@@ -295,7 +343,7 @@ export function AuthForm() {
         return;
       }
 
-      router.replace(next);
+      router.replace(dest);
     } catch (error) {
       setBanner({ type: "error", text: toAuthErrorMessage(error) });
     } finally {
@@ -316,7 +364,7 @@ export function AuthForm() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       await refresh();
-      router.replace(next);
+      router.replace(otpIntent === "join" ? joinRedirect() : next);
     } catch (error) {
       setBanner({ type: "error", text: toAuthErrorMessage(error) });
     } finally {
@@ -328,12 +376,47 @@ export function AuthForm() {
     setBanner(null);
     setLoading(true);
     try {
-      await sendOtp(otpIntent, email, fullName || undefined);
+      await sendOtp(
+        otpIntent,
+        email,
+        fullName || undefined,
+        displayName || undefined,
+      );
     } catch (error) {
       setBanner({ type: "error", text: toAuthErrorMessage(error) });
     } finally {
       setLoading(false);
     }
+  }
+
+  function OAuthButtons() {
+    return (
+      <div className="space-y-2.5">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => startOAuth("google")}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-line bg-white text-[15px] font-semibold text-ink hover:bg-ground disabled:opacity-60"
+        >
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => startOAuth("apple")}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-line bg-ink text-[15px] font-semibold text-white hover:bg-ink-2 disabled:opacity-60"
+        >
+          Continue with Apple
+        </button>
+        <div className="flex items-center gap-3 py-1">
+          <span className="h-px flex-1 bg-line" aria-hidden />
+          <span className="text-[12px] font-medium tracking-wide text-muted uppercase">
+            or email
+          </span>
+          <span className="h-px flex-1 bg-line" aria-hidden />
+        </div>
+      </div>
+    );
   }
 
   if (!configured) {
@@ -350,7 +433,7 @@ export function AuthForm() {
   const titles: Record<Mode, { title: string; lead: string }> = {
     login: {
       title: "Log in",
-      lead: "Enter your email and we’ll send a one-time code.",
+      lead: "We’ll email you a 6-digit code. No password needed.",
     },
     "login-password": {
       title: "Log in with password",
@@ -358,7 +441,7 @@ export function AuthForm() {
     },
     join: {
       title: "Join Cycle Found",
-      lead: "Create an account with an email code. You’ll be signed in on Cycle Found Community.",
+      lead: "We’ll email you a 6-digit code. No password needed.",
     },
     otp: {
       title: "Enter your code",
@@ -382,7 +465,7 @@ export function AuthForm() {
   return (
     <div className="rounded-[14px] border border-line bg-white p-8 shadow-[0_8px_28px_rgba(16,23,27,0.06)]">
       <p className="eyebrow mb-3">Account</p>
-      <h1 className="font-display text-[2.35rem] text-ink sm:text-[2.75rem]">{copy.title}</h1>
+      <h1 className="section-title text-[2.35rem] text-ink sm:text-[2.75rem]">{copy.title}</h1>
       <p className="mt-3 text-[15px] text-muted-2">{copy.lead}</p>
 
       {banner ? (
@@ -400,6 +483,7 @@ export function AuthForm() {
 
       {mode === "join" ? (
         <form className="mt-7 space-y-4" onSubmit={onJoin}>
+          <OAuthButtons />
           <Field id="fullName" label="Full name">
             <input
               id="fullName"
@@ -407,6 +491,17 @@ export function AuthForm() {
               autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+          </Field>
+          <Field id="displayName" label="Display name (public)">
+            <input
+              id="displayName"
+              className={inputClass}
+              autoComplete="nickname"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="How others will see you"
               required
             />
           </Field>
@@ -458,6 +553,7 @@ export function AuthForm() {
 
       {mode === "login" ? (
         <form className="mt-7 space-y-4" onSubmit={onLoginOtp}>
+          <OAuthButtons />
           <Field id="email" label="Email">
             <input
               id="email"
@@ -612,7 +708,7 @@ export function AuthForm() {
             <button
               type="button"
               className="inline-flex h-11 w-full items-center justify-center rounded-[10px] border border-line text-[15px] font-semibold text-ink hover:bg-ground"
-              onClick={() => router.replace(next)}
+              onClick={() => router.replace(joinRedirect())}
             >
               Skip for now
             </button>

@@ -1,0 +1,136 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Avatar, PlaceholderPhoto } from "@/components/ui";
+import {
+  getGarageItemsFor,
+  getItemPhotoUrls,
+  getSessionHandle,
+  listMembers,
+  subscribeStore,
+} from "@/lib/data/local-store";
+import { cityFromLoc, getGarage } from "@/lib/data/seed";
+
+export default function GaragesIndexPage() {
+  const [rows, setRows] = useState<
+    {
+      person: ReturnType<typeof listMembers>[number];
+      garage: ReturnType<typeof getGarage>;
+      items: number;
+      forSale: number;
+      photo?: string;
+    }[]
+  >([]);
+  const [me, setMe] = useState("");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const sync = () => {
+      const handle = getSessionHandle();
+      setMe(handle);
+      const next = listMembers()
+        .map((person) => {
+          const garage = getGarage(person.handle);
+          const items = getGarageItemsFor(person.handle);
+          const photo = items.map((i) => getItemPhotoUrls(i)[0]).find(Boolean);
+          return {
+            person,
+            garage,
+            items: items.length,
+            forSale: items.filter((i) => i.status !== "Not for sale").length,
+            photo,
+          };
+        })
+        .filter((row) => row.items > 0 || row.person.handle === handle)
+        .sort((a, b) => b.items - a.items);
+      setRows(next);
+      setReady(true);
+    };
+    sync();
+    return subscribeStore(sync);
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-[1280px] px-8 py-10 pb-16">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Garages</h1>
+          <p className="mt-2 max-w-[540px] text-[16px] leading-relaxed text-muted-2">
+            Browse member garages — bikes, frames, and parts documented in Cycle Found.
+          </p>
+        </div>
+        {me ? (
+          <Link
+            href={`/u/${me}/garage`}
+            className="mt-1 inline-flex h-11 shrink-0 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline hover:bg-ground"
+          >
+            Your garage
+          </Link>
+        ) : (
+          <Link
+            href="/auth?mode=join&next=/garages"
+            className="mt-1 inline-flex h-11 shrink-0 items-center rounded-[10px] bg-accent px-4 text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white"
+          >
+            Join to add yours
+          </Link>
+        )}
+      </div>
+
+      {!ready ? (
+        <p className="text-[15px] text-muted">Loading garages…</p>
+      ) : rows.length === 0 ? (
+        <div className="rounded-[14px] border border-line bg-surface p-8 text-center">
+          <p className="m-0 text-[16px] font-semibold text-ink">No garages to show yet</p>
+          <p className="mt-2 text-[14px] text-muted-2">
+            Insert mock data from the Pre-Alpha banner, or sign in and add your first item.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+          {rows.map(({ person, garage, items, forSale, photo }) => (
+            <Link
+              key={person.handle}
+              href={`/u/${person.handle}/garage`}
+              className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline hover:border-[#D4D3CD]"
+            >
+              {photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photo} alt="" className="h-[160px] w-full object-cover" />
+              ) : (
+                <PlaceholderPhoto
+                  silhouette
+                  label={garage?.name || "Garage"}
+                  className="h-[160px]"
+                />
+              )}
+              <div className="flex flex-col gap-2 p-4">
+                <div className="flex items-center gap-2.5">
+                  <Avatar
+                    init={person.init}
+                    bg={person.bg}
+                    size={36}
+                    src={person.avatarUrl}
+                    label={person.name}
+                  />
+                  <div className="min-w-0">
+                    <p className="m-0 truncate text-[15px] font-semibold">
+                      {garage?.name || `${person.name.split(" ")[0]}'s garage`}
+                    </p>
+                    <p className="m-0 truncate text-[13px] text-meta">
+                      {person.name} · {cityFromLoc(person.loc)}
+                    </p>
+                  </div>
+                </div>
+                <p className="m-0 font-mono text-[12px] text-muted">
+                  {items} item{items === 1 ? "" : "s"}
+                  {forSale ? ` · ${forSale} listed` : ""}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
