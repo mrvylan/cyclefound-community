@@ -26,7 +26,12 @@ import {
   wanted,
 } from "@/lib/data/seed";
 import { abbreviatedDisplayName } from "@/lib/auth/user";
-import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
+import {
+  groupForLabel,
+  normalizeSkillLabels,
+  SKILL_GROUPS,
+  type SkillGroup,
+} from "@/lib/skills/taxonomy";
 
 /** Home side panels for verified experts and market highlights (empty when none). */
 export function HomeExpertsOnline() {
@@ -296,7 +301,9 @@ export function HomeWantedBoard() {
 }
 
 export function HomeBrowseExpertise() {
-  const [chips, setChips] = useState<{ label: string; n: number }[]>([]);
+  const [groups, setGroups] = useState<
+    Partial<Record<SkillGroup, { label: string; n: number }[]>>
+  >({});
 
   useEffect(() => {
     function sync() {
@@ -306,35 +313,51 @@ export function HomeBrowseExpertise() {
           counts.set(s, (counts.get(s) ?? 0) + 1);
         }
       }
-      const next = [...counts.entries()]
-        .map(([label, n]) => ({ label, n }))
-        .filter((x) => x.n > 0)
-        .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label))
-        .slice(0, 12);
-      setChips(next);
+      const next: Partial<Record<SkillGroup, { label: string; n: number }[]>> = {};
+      for (const [label, n] of counts) {
+        if (n <= 0) continue;
+        const g = groupForLabel(label);
+        if (!g) continue;
+        (next[g] ??= []).push({ label, n });
+      }
+      for (const g of SKILL_GROUPS) {
+        next[g]?.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
+        if (next[g]?.length) next[g] = next[g]!.slice(0, 8);
+      }
+      setGroups(next);
     }
     sync();
     return subscribeStore(sync);
   }, []);
 
-  if (!chips.length) return null;
+  const visibleGroups = SKILL_GROUPS.filter((g) => (groups[g]?.length ?? 0) > 0);
+  if (!visibleGroups.length) return null;
 
   return (
     <section className="rounded-[14px] border border-line bg-surface p-5">
       <h2 className="section-title mb-1 mt-0 text-[20px]">Browse members by expertise</h2>
       <p className="mb-3.5 mt-0 text-[13px] text-meta">
-        Find people who can help — only skills with members are shown.
+        Skills and brands are grouped — only tags with members are shown.
       </p>
-      <div className="flex flex-wrap gap-2">
-        {chips.map((a) => (
-          <Link
-            key={a.label}
-            href={`/members?skill=${encodeURIComponent(a.label)}`}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#D4D3CD] px-3 py-1 text-[13px] text-ink no-underline hover:border-ink hover:text-ink"
-          >
-            {a.label}
-            <span className="font-mono text-[11px] text-meta">{a.n}</span>
-          </Link>
+      <div className="flex flex-col gap-3.5">
+        {visibleGroups.map((g) => (
+          <div key={g}>
+            <p className="mb-2 mt-0 font-mono text-[11px] font-medium tracking-[0.12em] text-meta uppercase">
+              {g === "Brands" ? "Brands" : g === "Systems" ? "Systems" : "Expertise"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {groups[g]!.map((a) => (
+                <Link
+                  key={a.label}
+                  href={`/members?skill=${encodeURIComponent(a.label)}`}
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#D4D3CD] px-3 py-1 text-[13px] text-ink no-underline hover:border-ink hover:text-ink"
+                >
+                  {a.label}
+                  <span className="font-mono text-[11px] text-meta">{a.n}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </section>

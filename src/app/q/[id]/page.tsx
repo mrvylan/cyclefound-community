@@ -37,15 +37,38 @@ export default function QuestionPage({
   const [ready, setReady] = useState(false);
   const [sessionHandle, setSessionHandle] = useState("ben_carver");
   const [voted, setVoted] = useState(false);
+  const [sentTo, setSentTo] = useState<{
+    count: number;
+    topic: string | null;
+  } | null>(null);
 
   useEffect(() => {
     setReady(true);
     setSessionHandle(getSessionHandle());
+    try {
+      const raw = sessionStorage.getItem("cf_ask_sent");
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          questionId?: string;
+          count?: number;
+          topic?: string | null;
+        };
+        if (parsed.questionId === id) {
+          setSentTo({
+            count: Number(parsed.count) || 0,
+            topic: parsed.topic ?? null,
+          });
+          sessionStorage.removeItem("cf_ask_sent");
+        }
+      }
+    } catch {
+      /* ignore */
+    }
     return subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
     });
-  }, []);
+  }, [id]);
 
   // tick forces re-read after local store writes
   void tick;
@@ -182,17 +205,46 @@ export default function QuestionPage({
               </Link>
             ) : null}
 
-            <div className="flex flex-wrap gap-2 border-t border-line-soft pt-4">
-              <button
-                type="button"
-                onClick={() => setVoted((v) => !v)}
-                className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#D4D3CD] px-3.5 text-[14px] font-semibold ${
-                  voted ? "bg-ink text-white" : "bg-white text-ink"
-                }`}
+            {sentTo && sentTo.count > 0 ? (
+              <p
+                className="m-0 rounded-[12px] border border-accent-soft-border bg-accent-soft px-4 py-3 text-[14px] leading-[1.45] text-ink"
+                role="status"
               >
-                <ChevronUp className="size-[15px] stroke-[2.2]" aria-hidden />
-                Useful · {votes}
-              </button>
+                Sent to{" "}
+                <strong>
+                  {sentTo.count} member{sentTo.count === 1 ? "" : "s"}
+                </strong>
+                {sentTo.topic ? (
+                  <>
+                    {" "}
+                    who know <strong>{sentTo.topic}</strong>
+                  </>
+                ) : null}
+                .
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 border-t border-line-soft pt-4">
+              {isAsker ? (
+                <span
+                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-line bg-ground px-3.5 text-[14px] font-semibold text-meta"
+                  title="You can’t vote on your own question"
+                >
+                  <ChevronUp className="size-[15px] stroke-[2.2] opacity-40" aria-hidden />
+                  Useful · {q.votes}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setVoted((v) => !v)}
+                  className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#D4D3CD] px-3.5 text-[14px] font-semibold ${
+                    voted ? "bg-ink text-white" : "bg-white text-ink"
+                  }`}
+                >
+                  <ChevronUp className="size-[15px] stroke-[2.2]" aria-hidden />
+                  Useful · {votes}
+                </button>
+              )}
               <Feature name="followGarage">
                 <button
                   type="button"
@@ -302,14 +354,29 @@ export default function QuestionPage({
                         </div>
                       </div>
                       <div className="flex flex-col items-center">
-                        <button
-                          type="button"
-                          aria-label="Upvote answer"
-                          className="inline-flex h-9 w-11 items-center justify-center rounded-lg border border-line"
-                        >
-                          <ChevronUp className="size-4" aria-hidden />
-                        </button>
-                        <span className="font-mono font-medium">{a.votes}</span>
+                        {sessionHandle && a.handle === sessionHandle ? (
+                          <>
+                            <span
+                              className="inline-flex h-9 w-11 items-center justify-center rounded-lg border border-line bg-ground text-meta"
+                              title="You can’t vote on your own answer"
+                              aria-hidden
+                            >
+                              <ChevronUp className="size-4 opacity-40" />
+                            </span>
+                            <span className="font-mono font-medium">{a.votes}</span>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              aria-label="Upvote answer"
+                              className="inline-flex h-9 w-11 items-center justify-center rounded-lg border border-line"
+                            >
+                              <ChevronUp className="size-4" aria-hidden />
+                            </button>
+                            <span className="font-mono font-medium">{a.votes}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     {a.body.map((p) => (

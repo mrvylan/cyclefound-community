@@ -61,7 +61,7 @@ export function HomeHero() {
               What&apos;s rolling around in your head?
             </h1>
             <p className="m-0 mt-2 max-w-[560px] text-[16px] leading-[1.55] text-muted-2">
-              Questions go to members whose garages and expertise match.
+              Ask once — we&apos;ll show who your question will reach as you type.
             </p>
           </div>
           <HomeAskBox compact />

@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, X } from "lucide-react";
+import { membersReachedByTopics } from "@/lib/community/routing-reach";
 import {
   ASK_INTENT_OPTIONS,
   intentById,
   suggestIntentFromText,
   suggestTopicsFromText,
 } from "@/lib/skills/feedTopics";
+import { subscribeStore } from "@/lib/data/local-store";
 import { ChipRadioGroup } from "./ChipRadioGroup";
 import { chipClass } from "./ui";
 
@@ -19,6 +21,9 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
   const [text, setText] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [removedTopics, setRemovedTopics] = useState<string[]>([]);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => subscribeStore(() => setTick((n) => n + 1)), []);
 
   const suggestions = useMemo(() => suggestTopicsFromText(text), [text]);
 
@@ -73,8 +78,14 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
     ...suggestions.filter((s) => !selectedTopics.includes(s)),
   ].slice(0, 8);
 
+  const reach = useMemo(() => {
+    void tick;
+    return membersReachedByTopics(selectedTopics);
+  }, [selectedTopics, tick]);
+
   return (
     <form
+      id="home-ask-composer"
       className={`flex flex-col gap-3.5 rounded-[14px] border border-[#D4D3CD] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)] ${
         compact ? "p-4" : "p-[18px]"
       }`}
@@ -136,10 +147,18 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 max-w-[420px] text-[13px] text-meta">
-          {intentMeta ? (
+        <p className="m-0 max-w-[420px] text-[13px] leading-[1.45] text-meta" aria-live="polite">
+          {reach.count > 0 && reach.topTopic ? (
             <>
-              {intentMeta.blurb}
+              Will reach{" "}
+              <strong className="font-semibold text-ink">
+                {reach.count} member{reach.count === 1 ? "" : "s"}
+              </strong>{" "}
+              who know <strong className="font-semibold text-ink">{reach.topTopic}</strong>
+            </>
+          ) : selectedTopics.length || text.trim().length >= 12 ? (
+            <>
+              Keep adding expertise matches — we&apos;ll show who this will reach.
               {intent === "find" ? (
                 <>
                   {" "}
@@ -152,8 +171,10 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
                 </>
               ) : null}
             </>
+          ) : intentMeta ? (
+            intentMeta.blurb
           ) : (
-            "Questions go to members whose garages and expertise match."
+            "Pick an intent and start typing — we’ll show who this will reach."
           )}
         </p>
         <button

@@ -80,6 +80,8 @@ export function activeNavFromPath(pathname: string): NavItem["match"] | null {
 export function SiteHeader() {
   const pathname = usePathname();
   const onAuth = pathname.startsWith("/auth");
+  /** Home already shows the ask composer — hide the competing header CTA. */
+  const hideHeaderAsk = pathname === "/";
   const nextPath = onAuth ? "/" : pathname || "/";
   const active = activeNavFromPath(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -145,7 +147,7 @@ export function SiteHeader() {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {!onAuth ? <SearchTrigger /> : null}
-          {!onAuth ? (
+          {!onAuth && !hideHeaderAsk ? (
             <Link
               href="/ask"
               className="hidden h-[42px] shrink-0 items-center rounded-[10px] bg-accent px-[18px] text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white lg:inline-flex"
@@ -197,13 +199,15 @@ export function SiteHeader() {
               );
             })}
           </nav>
-          <Link
-            href="/ask"
-            className="mt-3 inline-flex h-[44px] w-full items-center justify-center rounded-[10px] bg-accent text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white"
-            onClick={() => setMenuOpen(false)}
-          >
-            Ask the community
-          </Link>
+          {!hideHeaderAsk ? (
+            <Link
+              href="/ask"
+              className="mt-3 inline-flex h-[44px] w-full items-center justify-center rounded-[10px] bg-accent text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white"
+              onClick={() => setMenuOpen(false)}
+            >
+              Ask the community
+            </Link>
+          ) : null}
         </div>
       ) : null}
     </header>

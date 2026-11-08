@@ -210,12 +210,12 @@ export function HomeFeed() {
                 Ask the community — Fix it, Find it, Value it, or Build it.
               </p>
             </div>
-            <Link
-              href="/ask"
+            <a
+              href="#home-ask-composer"
               className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
             >
-              Ask the community
-            </Link>
+              Ask above
+            </a>
           </div>
         </div>
       ) : null}

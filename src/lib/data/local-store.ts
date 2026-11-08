@@ -8,6 +8,11 @@ import {
   type Person,
   type Question,
 } from "./seed";
+import {
+  getStarterAnswers,
+  getStarterQuestion,
+  STARTER_QUESTIONS,
+} from "./starter-feed";
 import { normalizeItemCategory } from "./categories";
 import { isValidMemberHandle } from "./handles";
 import { normalizeAskInput } from "@/lib/garage/itemFields";
@@ -314,28 +319,46 @@ export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
   writeStore(store);
 }
 
+function enrichUserQuestion(q: Question): Question {
+  const thread = getAllAnswers(q.id);
+  const accepted = thread.find((a) => a.accepted);
+  return {
+    ...q,
+    answers: thread.length,
+    solved: Boolean(accepted),
+    expert: accepted?.name ?? q.expert ?? "",
+    expertHandle: accepted?.handle ?? q.expertHandle,
+  };
+}
+
 export function getAllQuestions(): Question[] {
   const store = readStore();
-  // User-authored questions only (seed Q&A removed).
-  return store.extraQuestions.map((q) => {
+  const userQs = store.extraQuestions.map(enrichUserQuestion);
+  const userIds = new Set(userQs.map((q) => q.id));
+  // Starter Community threads fill an empty Pre-Alpha feed (read-only catalog).
+  const starters = STARTER_QUESTIONS.filter((q) => !userIds.has(q.id)).map((q) => {
     const thread = getAllAnswers(q.id);
     const accepted = thread.find((a) => a.accepted);
     return {
       ...q,
       answers: thread.length,
       solved: Boolean(accepted),
-      expert: accepted?.name ?? "",
+      expert: accepted?.name ?? q.expert,
+      expertHandle: accepted?.handle ?? q.expertHandle,
     };
   });
+  return [...userQs, ...starters];
 }
 
 export function getQuestionLocal(id: string): Question | undefined {
-  return getAllQuestions().find((q) => q.id === id);
+  return getAllQuestions().find((q) => q.id === id) || getStarterQuestion(id);
 }
 
 export function getAllAnswers(questionId: string): Answer[] {
   const store = readStore();
-  const merged = store.extraAnswers.filter((a) => a.questionId === questionId);
+  const local = store.extraAnswers.filter((a) => a.questionId === questionId);
+  const starter = local.length ? [] : getStarterAnswers(questionId);
+  const merged = [...local, ...starter];
   const acceptedId = store.acceptedByQuestion[questionId];
   return merged
     .map((a) => {

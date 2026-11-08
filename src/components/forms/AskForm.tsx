@@ -19,12 +19,12 @@ import {
   getGarageItemsFor,
   getItemPhotoUrls,
   getSessionHandle,
-  listMembers,
   postQuestion,
   subscribeStore,
   tagSuggestions,
 } from "@/lib/data/local-store";
 import type { Question } from "@/lib/data/seed";
+import { membersReachedByTopics } from "@/lib/community/routing-reach";
 import {
   ASK_INTENT_OPTIONS,
   intentById,
@@ -167,22 +167,15 @@ export function AskForm() {
   }, [title]);
 
   const routing = useMemo(() => {
+    void storeTick;
     if (!intentMeta && !tags.length) return null;
-    const needles = tags.map((t) => t.toLowerCase().replace(/-/g, " "));
-    const matched = needles.length
-      ? listMembers().filter((p) =>
-          p.skills.some((s) => {
-            const skill = s.toLowerCase();
-            return needles.some((n) => skill.includes(n) || n.includes(skill));
-          }),
-        )
-      : [];
+    const reach = membersReachedByTopics(tags);
     return {
       intentLabel: intentMeta?.label ?? null,
-      expertiseCount: matched.length,
-      topTag: tags[0] ?? null,
+      expertiseCount: reach.count,
+      topTag: reach.topTopic,
     };
-  }, [intentMeta, tags]);
+  }, [intentMeta, tags, storeTick]);
 
   function addTag(raw: string) {
     const t = normalizeTag(raw);
@@ -240,6 +233,20 @@ export function AskForm() {
       linkedItemId: linkedItemId || undefined,
       photoDataUrls: photos,
     });
+    const reach = membersReachedByTopics(tags);
+    try {
+      sessionStorage.setItem(
+        "cf_ask_sent",
+        JSON.stringify({
+          questionId: q.id,
+          count: reach.count,
+          topic: reach.topTopic,
+          intent: intentMeta?.label ?? null,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
     router.push(`/q/${q.id}`);
   }
 
@@ -439,32 +446,39 @@ export function AskForm() {
         </div>
 
         {routing ? (
-          <div className="rounded-[12px] border border-accent-soft-border bg-accent-soft px-4 py-3">
+          <div
+            className="rounded-[12px] border border-accent-soft-border bg-accent-soft px-4 py-3"
+            aria-live="polite"
+          >
             <p className="eyebrow m-0 text-accent-hover">Routing</p>
             <p className="mt-1.5 mb-0 text-[14px] leading-[1.45] text-ink">
-              {routing.intentLabel ? (
+              {routing.expertiseCount > 0 && routing.topTag ? (
                 <>
-                  Lands in <strong>{routing.intentLabel}</strong>
-                  {routing.expertiseCount > 0 ? " · " : "."}
-                </>
-              ) : null}
-              {routing.expertiseCount > 0 ? (
-                <>
-                  Notifies about{" "}
+                  Will reach{" "}
                   <strong>
                     {routing.expertiseCount} member
                     {routing.expertiseCount === 1 ? "" : "s"}
-                  </strong>
-                  {routing.topTag ? (
+                  </strong>{" "}
+                  who know <strong>{routing.topTag}</strong>
+                  {routing.intentLabel ? (
                     <>
                       {" "}
-                      with “{routing.topTag}” expertise
+                      · lands in <strong>{routing.intentLabel}</strong>
                     </>
                   ) : null}
                   .
                 </>
               ) : tags.length ? (
-                <>No exact expertise matches yet — tags still help search.</>
+                <>
+                  Keep refining expertise tags — we&apos;ll show who this will reach
+                  {routing.intentLabel ? (
+                    <>
+                      {" "}
+                      · lands in <strong>{routing.intentLabel}</strong>
+                    </>
+                  ) : null}
+                  .
+                </>
               ) : (
                 <>Add expertise tags to match helpers.</>
               )}
