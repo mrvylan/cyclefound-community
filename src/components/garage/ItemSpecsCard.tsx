@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import {
   BIKE_COMPONENT_LABELS,
+  BIKE_COMPONENT_ORIGIN_LABELS,
   componentHasDetails,
+  componentOrigin,
   componentSummary,
   type BikeComponent,
 } from "@/lib/garage/bike-components";
-import { BikeSideView } from "./BikeSideView";
+import { BuildOriginBadge } from "./BuildOriginBadge";
 import { ComponentDetailModal } from "./ComponentDetailModal";
 
 type SpecRow = { k: string; v: string };
@@ -92,29 +94,48 @@ export function ItemSpecsCard({
           ))}
         </dl>
       ) : (
-        <div role="tabpanel" className="flex flex-col gap-5">
-          <BikeSideView components={filled} onSelect={setSelected} />
-
+        <div role="tabpanel" className="flex flex-col gap-4">
           {filled.length ? (
-            <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
-              {filled.map((c) => (
-                <li key={c.slot}>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(c)}
-                    className="flex w-full flex-col items-start gap-0.5 rounded-[12px] border border-line bg-white px-3.5 py-3 text-left hover:border-ink"
-                  >
-                    <span className="font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
-                      {BIKE_COMPONENT_LABELS[c.slot]}
-                    </span>
-                    <span className="text-[14px] font-semibold text-ink">
-                      {componentSummary(c)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+            <>
+              <BuildOriginBadge components={filled} />
+              <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+                {filled.map((c) => {
+                  const origin = componentOrigin(c);
+                  return (
+                    <li key={c.slot}>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(c)}
+                        className="flex w-full flex-col items-start gap-1 rounded-[12px] border border-line bg-white px-3.5 py-3 text-left hover:border-ink"
+                      >
+                        <span className="flex w-full items-center justify-between gap-2">
+                          <span className="font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
+                            {BIKE_COMPONENT_LABELS[c.slot]}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] uppercase ${
+                              origin === "aftermarket"
+                                ? "bg-accent-soft text-accent-hover"
+                                : "bg-ground text-muted-2"
+                            }`}
+                          >
+                            {BIKE_COMPONENT_ORIGIN_LABELS[origin]}
+                          </span>
+                        </span>
+                        <span className="text-[14px] font-semibold text-ink">
+                          {componentSummary(c)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ) : (
+            <p className="m-0 rounded-[12px] border border-dashed border-line bg-ground px-4 py-6 text-center text-[14px] text-muted-2">
+              No component details yet. Add them when editing this garage item.
+            </p>
+          )}
         </div>
       )}
 

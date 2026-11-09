@@ -90,7 +90,7 @@ Return JSON only with this shape:
     "frameMaterial": string,
     "condition": "Like New"|"Excellent"|"Good"|"Fair"|"Needs Work"|"",
     "components": string,
-    "componentList": [{"slot": string, "brand": string, "model": string, "notes": string}],
+    "componentList": [{"slot": string, "brand": string, "model": string, "notes": string, "origin": "stock"|"aftermarket"}],
     "description": string,
     "confidence": "Low"|"Medium"|"High",
     "evidence": string,
@@ -107,7 +107,7 @@ Rules:
 - Do NOT invent precise years. Use "Unknown" or a range and low yearConfidence unless a year is clearly printed.
 - description: 1–3 sentences for the public garage listing (visible condition, notable features). No prices or invented ownership history. Under 400 characters.
 - components: short freeform summary of visible parts (optional).
-- componentList: for complete bikes, list only parts you can reasonably see or infer. slot MUST be one of: ${slotList}. Omit slots you cannot support. Prefer brand+model when legible; otherwise leave brand empty and put what you see in model/notes. Never invent specific models.
+- componentList: for complete bikes, list only parts you can reasonably see or infer. slot MUST be one of: ${slotList}. Omit slots you cannot support. Prefer brand+model when legible; otherwise leave brand empty and put what you see in model/notes. Never invent specific models. origin defaults to "stock" unless the photo clearly shows a non-original / aftermarket part.
 - These are suggestions for the owner to confirm — never claim certainty.`;
 
   const model =

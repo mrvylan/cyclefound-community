@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Camera } from "lucide-react";
 import { Feature } from "@/components/Feature";
+import { BuildOriginBadge } from "@/components/garage/BuildOriginBadge";
 import { PlaceholderPhoto, StatusChip } from "@/components/ui";
 import { cityFromLoc, type GarageItem } from "@/lib/data/seed";
 import { getItemPhotoUrls, resolvePerson } from "@/lib/data/local-store";
@@ -136,6 +137,9 @@ export function ItemCard({
           <span className="text-[16px] font-semibold leading-snug">{title}</span>
           {meta ? (
             <span className="font-mono text-[12px] text-meta">{meta}</span>
+          ) : null}
+          {item.bikeComponents?.length ? (
+            <BuildOriginBadge components={item.bikeComponents} compact />
           ) : null}
           {showDescription && item.description ? (
             <p className="m-0 line-clamp-2 text-[13px] leading-snug text-muted-2">

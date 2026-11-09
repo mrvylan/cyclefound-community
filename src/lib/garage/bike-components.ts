@@ -1,4 +1,4 @@
-/** Canonical bike component slots for garage documentation + side-view hotspots. */
+/** Canonical bike component slots for garage documentation. */
 
 export const BIKE_COMPONENT_SLOTS = [
   "saddle",
@@ -24,6 +24,9 @@ export const BIKE_COMPONENT_SLOTS = [
 
 export type BikeComponentSlot = (typeof BIKE_COMPONENT_SLOTS)[number];
 
+/** Factory / as-sold part vs owner-fitted aftermarket part. */
+export type BikeComponentOrigin = "stock" | "aftermarket";
+
 export type BikeComponent = {
   slot: BikeComponentSlot;
   /** Brand / maker when known */
@@ -32,6 +35,13 @@ export type BikeComponent = {
   model?: string;
   /** Freeform notes (condition, year, serial, etc.) */
   notes?: string;
+  /** Defaults to stock when omitted (legacy rows). */
+  origin?: BikeComponentOrigin;
+};
+
+export const BIKE_COMPONENT_ORIGIN_LABELS: Record<BikeComponentOrigin, string> = {
+  stock: "Stock",
+  aftermarket: "Aftermarket",
 };
 
 export const BIKE_COMPONENT_LABELS: Record<BikeComponentSlot, string> = {
@@ -54,32 +64,6 @@ export const BIKE_COMPONENT_LABELS: Record<BikeComponentSlot, string> = {
   cassette: "Cassette",
   front_derailleur: "Front derailleur",
   rear_derailleur: "Rear derailleur",
-};
-
-/** Rough side-view hotspot centers (viewBox 0 0 640 360). */
-export const BIKE_COMPONENT_HOTSPOTS: Record<
-  BikeComponentSlot,
-  { cx: number; cy: number; r?: number }
-> = {
-  saddle: { cx: 360, cy: 78, r: 16 },
-  seatpost: { cx: 350, cy: 120, r: 12 },
-  handlebar: { cx: 168, cy: 72, r: 16 },
-  stem: { cx: 188, cy: 95, r: 11 },
-  shifters: { cx: 150, cy: 95, r: 12 },
-  fork: { cx: 148, cy: 180, r: 14 },
-  headset: { cx: 178, cy: 118, r: 11 },
-  front_brake: { cx: 125, cy: 155, r: 12 },
-  rear_brake: { cx: 430, cy: 155, r: 12 },
-  front_wheel: { cx: 118, cy: 250, r: 22 },
-  rear_wheel: { cx: 458, cy: 250, r: 22 },
-  tires: { cx: 290, cy: 300, r: 12 },
-  crank: { cx: 278, cy: 230, r: 16 },
-  pedals: { cx: 248, cy: 268, r: 12 },
-  bottom_bracket: { cx: 278, cy: 248, r: 11 },
-  chain: { cx: 340, cy: 248, r: 12 },
-  cassette: { cx: 458, cy: 248, r: 12 },
-  front_derailleur: { cx: 300, cy: 200, r: 11 },
-  rear_derailleur: { cx: 490, cy: 268, r: 13 },
 };
 
 const SLOT_ALIASES: Record<string, BikeComponentSlot> = {
@@ -153,11 +137,55 @@ export function componentHasDetails(c: BikeComponent | undefined | null): boolea
   );
 }
 
+export function componentOrigin(c: BikeComponent | undefined | null): BikeComponentOrigin {
+  return c?.origin === "aftermarket" ? "aftermarket" : "stock";
+}
+
 export function componentSummary(c: BikeComponent): string {
   const brand = String(c.brand || "").trim();
   const model = String(c.model || "").trim();
   if (brand && model) return `${brand} ${model}`;
   return brand || model || String(c.notes || "").trim() || BIKE_COMPONENT_LABELS[c.slot];
+}
+
+export function normalizeComponentOrigin(
+  raw: string | null | undefined,
+): BikeComponentOrigin {
+  const key = String(raw || "")
+    .trim()
+    .toLowerCase();
+  if (
+    key === "aftermarket" ||
+    key === "modified" ||
+    key === "modded" ||
+    key === "upgraded" ||
+    key === "replaced"
+  ) {
+    return "aftermarket";
+  }
+  return "stock";
+}
+
+export type BuildOriginSummary = {
+  kind: "unknown" | "all_stock" | "mixed" | "all_aftermarket";
+  filled: number;
+  aftermarket: BikeComponent[];
+};
+
+/** Roll-up for cards / hero — no need to open the component list. */
+export function summarizeBuildOrigin(
+  list: BikeComponent[] | undefined | null,
+): BuildOriginSummary {
+  const filled = (list || []).filter(componentHasDetails);
+  if (!filled.length) return { kind: "unknown", filled: 0, aftermarket: [] };
+  const aftermarket = filled.filter((c) => componentOrigin(c) === "aftermarket");
+  if (!aftermarket.length) {
+    return { kind: "all_stock", filled: filled.length, aftermarket: [] };
+  }
+  if (aftermarket.length === filled.length) {
+    return { kind: "all_aftermarket", filled: filled.length, aftermarket };
+  }
+  return { kind: "mixed", filled: filled.length, aftermarket };
 }
 
 export function sanitizeBikeComponent(raw: unknown): BikeComponent | null {
@@ -176,7 +204,10 @@ export function sanitizeBikeComponent(raw: unknown): BikeComponent | null {
   const notes = String(row.notes || row.detail || row.description || "")
     .trim()
     .slice(0, 400);
-  const next: BikeComponent = { slot };
+  const origin = normalizeComponentOrigin(
+    String(row.origin || row.source || row.fitment || ""),
+  );
+  const next: BikeComponent = { slot, origin };
   if (brand) next.brand = brand;
   if (model) next.model = model;
   if (notes) next.notes = notes;
@@ -230,7 +261,7 @@ export function parseComponentsBlurb(blurb: string): BikeComponent[] {
       slot = "rear_derailleur";
     }
     if (!slot) continue;
-    out.push({ slot, model: part.slice(0, 120) });
+    out.push({ slot, model: part.slice(0, 120), origin: "stock" });
   }
   return normalizeBikeComponents(out);
 }

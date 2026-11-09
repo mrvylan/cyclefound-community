@@ -4,6 +4,8 @@ import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import {
   BIKE_COMPONENT_LABELS,
+  BIKE_COMPONENT_ORIGIN_LABELS,
+  componentOrigin,
   componentSummary,
   type BikeComponent,
 } from "@/lib/garage/bike-components";
@@ -35,6 +37,7 @@ export function ComponentDetailModal({ component, onClose }: Props) {
   if (!component) return null;
 
   const rows = [
+    { k: "Origin", v: BIKE_COMPONENT_ORIGIN_LABELS[componentOrigin(component)] },
     { k: "Brand", v: component.brand?.trim() },
     { k: "Model", v: component.model?.trim() },
     { k: "Notes", v: component.notes?.trim() },

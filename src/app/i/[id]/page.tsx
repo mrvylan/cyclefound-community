@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
+import { BuildOriginBadge } from "@/components/garage/BuildOriginBadge";
 import { ItemDescription } from "@/components/garage/ItemDescription";
 import { ItemSpecsCard } from "@/components/garage/ItemSpecsCard";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
@@ -214,6 +215,9 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               ? "Saronni red · 56 cm c-t-c · Campagnolo Super Record · Excellent original condition"
               : [item.cond, item.size?.trim()].filter(Boolean).join(" · ")}
           </p>
+          {item.bikeComponents?.length ? (
+            <BuildOriginBadge components={item.bikeComponents} />
+          ) : null}
           {!showRichDetail && item.description ? (
             <ItemDescription text={item.description} />
           ) : null}
