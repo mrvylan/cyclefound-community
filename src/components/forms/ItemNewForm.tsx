@@ -13,6 +13,8 @@ import { PhotoPicker } from "./PhotoPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { BikeComponent } from "@/lib/garage/bike-components";
 import {
+  componentHasDetails,
+  mergeComponentsWithTemplate,
   normalizeBikeComponents,
   parseComponentsBlurb,
 } from "@/lib/garage/bike-components";
@@ -197,7 +199,19 @@ export function ItemNewForm() {
       fromList.length === 0 && s.components ? parseComponentsBlurb(s.components) : [];
     const nextComponents = fromList.length ? fromList : fromBlurb;
     if (nextComponents.length) {
-      setBikeComponents((cur) => (cur.length ? cur : nextComponents));
+      setBikeComponents((cur) => {
+        const hasOwnerEdits = cur.some(componentHasDetails);
+        const base = hasOwnerEdits ? cur : nextComponents;
+        const merged = hasOwnerEdits
+          ? [
+              ...cur,
+              ...nextComponents.filter(
+                (n) => !cur.some((c) => c.slot === n.slot && componentHasDetails(c)),
+              ),
+            ]
+          : base;
+        return mergeComponentsWithTemplate(merged, discipline || null);
+      });
     }
     setAiApplied(true);
   }
@@ -551,7 +565,11 @@ export function ItemNewForm() {
 
         {showComponents ? (
           <section className="flex flex-col gap-4">
-            <BikeComponentsEditor value={bikeComponents} onChange={setBikeComponents} />
+            <BikeComponentsEditor
+              value={bikeComponents}
+              onChange={setBikeComponents}
+              discipline={discipline}
+            />
           </section>
         ) : null}
 

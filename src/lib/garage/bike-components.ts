@@ -1,25 +1,63 @@
-/** Canonical bike component slots for garage documentation. */
+/**
+ * Bike component catalog for garage documentation.
+ * Derived from bike-components-by-type.xlsx (Component Matrix + Shared Lists).
+ *
+ * Templates:
+ * - standard — parts required for a functional acoustic bike (Road column ✓ + pedals)
+ * - ebike — standard base without bottom bracket, plus Electrical (eBike only) group
+ *           (mid-drive replaces the BB per Shared Lists)
+ */
+
+import type { Discipline } from "@/lib/garage/disciplines";
 
 export const BIKE_COMPONENT_SLOTS = [
-  "saddle",
-  "seatpost",
+  // Frame & Fork
+  "frame",
+  "fork",
+  "rear_shock",
+  "headset",
+  "thru_axles",
+  "derailleur_hanger",
+  // Cockpit
   "handlebar",
   "stem",
+  "grips",
+  "bar_tape",
+  "brake_levers",
   "shifters",
-  "fork",
-  "headset",
-  "front_brake",
-  "rear_brake",
-  "front_wheel",
-  "rear_wheel",
-  "tires",
-  "crank",
+  // Contact points
+  "saddle",
+  "seatpost",
+  "seatpost_clamp",
   "pedals",
+  // Drivetrain
+  "crankset",
   "bottom_bracket",
   "chain",
   "cassette",
-  "front_derailleur",
   "rear_derailleur",
+  "front_derailleur",
+  "shift_cables",
+  // Brakes
+  "brake_calipers",
+  "brake_rotors",
+  "brake_hoses",
+  "brake_pads",
+  // Wheels
+  "rims",
+  "hubs",
+  "spokes",
+  "tires",
+  "tubes_tubeless",
+  // Electrical (eBike only)
+  "motor",
+  "battery",
+  "controller",
+  "display",
+  "sensors",
+  "wiring_harness",
+  "charger",
+  "lights",
 ] as const;
 
 export type BikeComponentSlot = (typeof BIKE_COMPONENT_SLOTS)[number];
@@ -39,62 +77,257 @@ export type BikeComponent = {
   origin?: BikeComponentOrigin;
 };
 
+export type BikeComponentTemplate = "standard" | "ebike";
+
 export const BIKE_COMPONENT_ORIGIN_LABELS: Record<BikeComponentOrigin, string> = {
   stock: "Stock",
   aftermarket: "Aftermarket",
 };
 
 export const BIKE_COMPONENT_LABELS: Record<BikeComponentSlot, string> = {
-  saddle: "Saddle",
-  seatpost: "Seatpost",
+  frame: "Frame",
+  fork: "Fork",
+  rear_shock: "Rear shock",
+  headset: "Headset",
+  thru_axles: "Thru-axles / quick-release",
+  derailleur_hanger: "Derailleur hanger",
   handlebar: "Handlebar",
   stem: "Stem",
+  grips: "Grips",
+  bar_tape: "Bar tape",
+  brake_levers: "Brake levers",
   shifters: "Shifters",
-  fork: "Fork",
-  headset: "Headset",
-  front_brake: "Front brake",
-  rear_brake: "Rear brake",
-  front_wheel: "Front wheel",
-  rear_wheel: "Rear wheel",
-  tires: "Tires",
-  crank: "Crank",
+  saddle: "Saddle",
+  seatpost: "Seatpost",
+  seatpost_clamp: "Seatpost clamp",
   pedals: "Pedals",
+  crankset: "Crankset",
   bottom_bracket: "Bottom bracket",
   chain: "Chain",
   cassette: "Cassette",
-  front_derailleur: "Front derailleur",
   rear_derailleur: "Rear derailleur",
+  front_derailleur: "Front derailleur",
+  shift_cables: "Shift cables / electronic shifting",
+  brake_calipers: "Brake calipers",
+  brake_rotors: "Brake rotors",
+  brake_hoses: "Brake hoses / cables",
+  brake_pads: "Brake pads",
+  rims: "Rims",
+  hubs: "Hubs",
+  spokes: "Spokes + nipples",
+  tires: "Tires",
+  tubes_tubeless: "Tubes / tubeless setup",
+  motor: "Motor",
+  battery: "Battery + mount",
+  controller: "Controller",
+  display: "Display / remote",
+  sensors: "Speed / torque sensors",
+  wiring_harness: "Wiring harness",
+  charger: "Charger",
+  lights: "Lights",
 };
 
+export const BIKE_COMPONENT_GROUPS: { id: string; label: string; slots: BikeComponentSlot[] }[] =
+  [
+    {
+      id: "frame",
+      label: "Frame & fork",
+      slots: ["frame", "fork", "rear_shock", "headset", "thru_axles", "derailleur_hanger"],
+    },
+    {
+      id: "cockpit",
+      label: "Cockpit",
+      slots: ["handlebar", "stem", "grips", "bar_tape", "brake_levers", "shifters"],
+    },
+    {
+      id: "contact",
+      label: "Contact points",
+      slots: ["saddle", "seatpost", "seatpost_clamp", "pedals"],
+    },
+    {
+      id: "drivetrain",
+      label: "Drivetrain",
+      slots: [
+        "crankset",
+        "bottom_bracket",
+        "chain",
+        "cassette",
+        "rear_derailleur",
+        "front_derailleur",
+        "shift_cables",
+      ],
+    },
+    {
+      id: "brakes",
+      label: "Brakes",
+      slots: ["brake_calipers", "brake_rotors", "brake_hoses", "brake_pads"],
+    },
+    {
+      id: "wheels",
+      label: "Wheels",
+      slots: ["rims", "hubs", "spokes", "tires", "tubes_tubeless"],
+    },
+    {
+      id: "electrical",
+      label: "Electrical (e-bike)",
+      slots: [
+        "motor",
+        "battery",
+        "controller",
+        "display",
+        "sensors",
+        "wiring_harness",
+        "charger",
+        "lights",
+      ],
+    },
+  ];
+
+/** Required parts for a functional acoustic bike (Road ✓ + pedals). */
+export const STANDARD_FUNCTIONAL_SLOTS: readonly BikeComponentSlot[] = [
+  "frame",
+  "fork",
+  "headset",
+  "thru_axles",
+  "derailleur_hanger",
+  "handlebar",
+  "stem",
+  "bar_tape",
+  "brake_levers",
+  "shifters",
+  "saddle",
+  "seatpost",
+  "seatpost_clamp",
+  "pedals",
+  "crankset",
+  "bottom_bracket",
+  "chain",
+  "cassette",
+  "rear_derailleur",
+  "front_derailleur",
+  "shift_cables",
+  "brake_calipers",
+  "brake_rotors",
+  "brake_hoses",
+  "brake_pads",
+  "rims",
+  "hubs",
+  "spokes",
+  "tires",
+  "tubes_tubeless",
+] as const;
+
+/** eBike electrical add-ons (Component Matrix Electrical group ✓). */
+export const EBIKE_ELECTRICAL_SLOTS: readonly BikeComponentSlot[] = [
+  "motor",
+  "battery",
+  "controller",
+  "display",
+  "sensors",
+  "wiring_harness",
+  "charger",
+  "lights",
+] as const;
+
+/**
+ * eBike build sheet: functional bike without BB (replaced by mid-drive) + electrical.
+ * Flat-bar / drop-bar cockpit still covered via handlebar/stem/levers/shifters.
+ */
+export const EBIKE_FUNCTIONAL_SLOTS: readonly BikeComponentSlot[] = [
+  "frame",
+  "fork",
+  "headset",
+  "thru_axles",
+  "derailleur_hanger",
+  "handlebar",
+  "stem",
+  "brake_levers",
+  "shifters",
+  "saddle",
+  "seatpost",
+  "seatpost_clamp",
+  "pedals",
+  "crankset",
+  "chain",
+  "cassette",
+  "rear_derailleur",
+  "shift_cables",
+  "brake_calipers",
+  "brake_rotors",
+  "brake_hoses",
+  "brake_pads",
+  "rims",
+  "hubs",
+  "spokes",
+  "tires",
+  "tubes_tubeless",
+  ...EBIKE_ELECTRICAL_SLOTS,
+] as const;
+
 const SLOT_ALIASES: Record<string, BikeComponentSlot> = {
+  // Legacy slots from the first components pass
   seat: "saddle",
   saddle: "saddle",
   seatpost: "seatpost",
   "seat post": "seatpost",
+  "seatpost clamp": "seatpost_clamp",
+  clamp: "seatpost_clamp",
   handlebar: "handlebar",
   handlebars: "handlebar",
   bars: "handlebar",
   stem: "stem",
+  grips: "grips",
+  grip: "grips",
+  "bar tape": "bar_tape",
+  bartape: "bar_tape",
+  tape: "bar_tape",
   shifter: "shifters",
   shifters: "shifters",
   brifters: "shifters",
+  "brake lever": "brake_levers",
+  "brake levers": "brake_levers",
+  levers: "brake_levers",
   fork: "fork",
+  frame: "frame",
   headset: "headset",
-  "front brake": "front_brake",
-  "rear brake": "rear_brake",
-  brake: "front_brake",
-  brakes: "front_brake",
-  "front wheel": "front_wheel",
-  "rear wheel": "rear_wheel",
-  wheel: "front_wheel",
-  wheels: "front_wheel",
+  "rear shock": "rear_shock",
+  shock: "rear_shock",
+  "thru axle": "thru_axles",
+  "thru axles": "thru_axles",
+  "quick release": "thru_axles",
+  qr: "thru_axles",
+  hanger: "derailleur_hanger",
+  "derailleur hanger": "derailleur_hanger",
+  "front brake": "brake_calipers",
+  "rear brake": "brake_calipers",
+  brake: "brake_calipers",
+  brakes: "brake_calipers",
+  caliper: "brake_calipers",
+  calipers: "brake_calipers",
+  rotor: "brake_rotors",
+  rotors: "brake_rotors",
+  "brake pads": "brake_pads",
+  pads: "brake_pads",
+  "front wheel": "rims",
+  "rear wheel": "rims",
+  wheel: "rims",
+  wheels: "rims",
+  rim: "rims",
+  rims: "rims",
+  hub: "hubs",
+  hubs: "hubs",
+  spoke: "spokes",
+  spokes: "spokes",
   tire: "tires",
   tires: "tires",
   tyre: "tires",
   tyres: "tires",
-  crank: "crank",
-  cranks: "crank",
-  crankset: "crank",
+  tube: "tubes_tubeless",
+  tubes: "tubes_tubeless",
+  tubeless: "tubes_tubeless",
+  crank: "crankset",
+  cranks: "crankset",
+  crankset: "crankset",
   pedal: "pedals",
   pedals: "pedals",
   "bottom bracket": "bottom_bracket",
@@ -107,10 +340,22 @@ const SLOT_ALIASES: Record<string, BikeComponentSlot> = {
   "rear derailleur": "rear_derailleur",
   derailleur: "rear_derailleur",
   derailer: "rear_derailleur",
-  derailleur_front: "front_derailleur",
-  derailleur_rear: "rear_derailleur",
   fd: "front_derailleur",
   rd: "rear_derailleur",
+  "shift cable": "shift_cables",
+  "shift cables": "shift_cables",
+  motor: "motor",
+  battery: "battery",
+  controller: "controller",
+  display: "display",
+  remote: "display",
+  sensor: "sensors",
+  sensors: "sensors",
+  wiring: "wiring_harness",
+  harness: "wiring_harness",
+  charger: "charger",
+  light: "lights",
+  lights: "lights",
 };
 
 export function normalizeBikeComponentSlot(
@@ -122,10 +367,73 @@ export function normalizeBikeComponentSlot(
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ");
   if (!key) return null;
-  if ((BIKE_COMPONENT_SLOTS as readonly string[]).includes(key.replace(/ /g, "_"))) {
-    return key.replace(/ /g, "_") as BikeComponentSlot;
+  const underscored = key.replace(/ /g, "_");
+  if ((BIKE_COMPONENT_SLOTS as readonly string[]).includes(underscored)) {
+    return underscored as BikeComponentSlot;
   }
+  // Legacy single-wheel / brake slots
+  if (underscored === "front_wheel" || underscored === "rear_wheel") return "rims";
+  if (underscored === "front_brake" || underscored === "rear_brake") return "brake_calipers";
+  if (underscored === "crank") return "crankset";
   return SLOT_ALIASES[key] || null;
+}
+
+export function resolveComponentTemplate(
+  discipline?: Discipline | string | null,
+): BikeComponentTemplate {
+  const d = String(discipline || "")
+    .trim()
+    .toLowerCase();
+  if (d === "e-bike" || d === "ebike" || /e\s*bike|electric/.test(d)) return "ebike";
+  return "standard";
+}
+
+export function slotsForTemplate(template: BikeComponentTemplate): BikeComponentSlot[] {
+  return template === "ebike"
+    ? [...EBIKE_FUNCTIONAL_SLOTS]
+    : [...STANDARD_FUNCTIONAL_SLOTS];
+}
+
+export function emptyComponentRow(slot: BikeComponentSlot): BikeComponent {
+  return { slot, brand: "", model: "", notes: "", origin: "stock" };
+}
+
+/** Empty build sheet for a discipline (all functional slots present). */
+export function defaultComponentsForDiscipline(
+  discipline?: Discipline | string | null,
+): BikeComponent[] {
+  return slotsForTemplate(resolveComponentTemplate(discipline)).map(emptyComponentRow);
+}
+
+/**
+ * Keep filled owner data; ensure every template slot is present for editing.
+ * Drops empty rows that are not in the active template (e.g. BB when switching to eBike).
+ */
+export function mergeComponentsWithTemplate(
+  existing: BikeComponent[] | undefined | null,
+  discipline?: Discipline | string | null,
+): BikeComponent[] {
+  const template = resolveComponentTemplate(discipline);
+  const slots = slotsForTemplate(template);
+  const bySlot = new Map<BikeComponentSlot, BikeComponent>();
+  for (const row of existing || []) {
+    const slot = normalizeBikeComponentSlot(row.slot);
+    if (!slot) continue;
+    bySlot.set(slot, {
+      slot,
+      brand: row.brand || "",
+      model: row.model || "",
+      notes: row.notes || "",
+      origin: row.origin === "aftermarket" ? "aftermarket" : "stock",
+    });
+  }
+  const merged = slots.map((slot) => bySlot.get(slot) || emptyComponentRow(slot));
+  // Keep filled extras outside the template (e.g. rear shock on a mountain e-bike).
+  for (const [slot, row] of bySlot) {
+    if (slots.includes(slot)) continue;
+    if (componentHasDetails(row)) merged.push(row);
+  }
+  return merged;
 }
 
 export function componentHasDetails(c: BikeComponent | undefined | null): boolean {
@@ -257,7 +565,6 @@ export function parseComponentsBlurb(blurb: string): BikeComponent[] {
       }
     }
     if (!slot && /group|campagnolo|shimano|sram|sora|ultegra|dura.?ace|105\b/i.test(part)) {
-      // Groupset blurbs map onto drivetrain anchors when no specific slot.
       slot = "rear_derailleur";
     }
     if (!slot) continue;
