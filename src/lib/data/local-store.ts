@@ -192,6 +192,32 @@ export function setSessionHandle(handle: string) {
   writeStore(store);
 }
 
+/**
+ * Move local garage/profile data when the canonical community handle changes
+ * (e.g. display-name slug shift, or aligning to the directory handle).
+ */
+export function migrateSessionHandle(from: string, to: string) {
+  const prev = String(from || "").trim();
+  const next = String(to || "").trim();
+  if (!prev || !next || prev === next) {
+    if (next && getSessionHandle() !== next) setSessionHandle(next);
+    return;
+  }
+  const store = readStore();
+  for (const item of store.extraItems) {
+    if (item.ownerHandle === prev) item.ownerHandle = next;
+  }
+  if (store.profilePatches[prev]) {
+    store.profilePatches[next] = {
+      ...store.profilePatches[prev],
+      ...store.profilePatches[next],
+    };
+    delete store.profilePatches[prev];
+  }
+  store.sessionHandle = next;
+  writeStore(store);
+}
+
 /** Mock/seed community data is permanently off. */
 export function isMockDataEnabled(): boolean {
   return false;
@@ -456,7 +482,7 @@ export function getAllItems(): GarageItem[] {
   return resolveOwnedItems([...mine, ...marketplace], store.itemPatches);
 }
 
-/** Photos for a garage item — marketplace signed URLs, seed `photo`, session uploads. */
+/** Photos for a garage item — local uploads first, then marketplace signed URLs. */
 export function getItemPhotoUrls(item: GarageItem): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -466,11 +492,7 @@ export function getItemPhotoUrls(item: GarageItem): string[] {
     out.push(url);
   }
 
-  const market = getMarketplaceItem(item.id);
-  if (market?.photoUrls?.length) {
-    for (const url of market.photoUrls) push(url);
-  }
-  push(item.photo);
+  // Prefer fresh local uploads — signed marketplace URLs can expire or 404.
   if (typeof window !== "undefined") {
     try {
       const raw = window.sessionStorage.getItem(`cf_i_photos_${item.id}`);
@@ -482,6 +504,11 @@ export function getItemPhotoUrls(item: GarageItem): string[] {
       /* ignore malformed session data */
     }
   }
+  const market = getMarketplaceItem(item.id);
+  if (market?.photoUrls?.length) {
+    for (const url of market.photoUrls) push(url);
+  }
+  push(item.photo);
   return out;
 }
 
@@ -776,18 +803,24 @@ export function listMembers(): Person[] {
   };
 
   const out: Person[] = [];
-  const seen = new Set<string>();
+  const seenHandles = new Set<string>();
+  const seenUserIds = new Set<string>();
 
   function push(person: Person | undefined) {
     const next = withSkills(person);
-    if (!next || seen.has(next.handle)) return;
+    if (!next || seenHandles.has(next.handle)) return;
     if (
       isHiddenMember({ name: next.name, handle: next.handle }) &&
       next.handle !== getSessionHandle()
     ) {
       return;
     }
-    seen.add(next.handle);
+    const userId = getDirectoryUserId(next.handle);
+    if (userId) {
+      if (seenUserIds.has(userId)) return;
+      seenUserIds.add(userId);
+    }
+    seenHandles.add(next.handle);
     out.push(next);
   }
 
@@ -798,11 +831,18 @@ export function listMembers(): Person[] {
 
   const me = getSessionHandle();
   if (me) {
-    push(
-      getMergedPerson(me) ??
-        getDirectoryPerson(me) ??
-        stubPersonFromHandle(me, readStore().profilePatches[me]),
-    );
+    // Prefer the directory row for this account so we don't show a second "You" card
+    // when the session slug briefly differs from the directory handle.
+    const dirUserId = getDirectoryUserId(me);
+    if (dirUserId && seenUserIds.has(dirUserId)) {
+      /* already listed */
+    } else {
+      push(
+        getMergedPerson(me) ??
+          getDirectoryPerson(me) ??
+          stubPersonFromHandle(me, readStore().profilePatches[me]),
+      );
+    }
   }
 
   return out;

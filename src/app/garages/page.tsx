@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar, PlaceholderPhoto } from "@/components/ui";
+import {
+  getDirectoryHandleForUserId,
+  getDirectoryUserId,
+} from "@/lib/community/directory-cache";
 import { normalizeItemCategory } from "@/lib/data/categories";
 import {
   getGarageItemsFor,
@@ -30,14 +35,39 @@ function garageStatLine(items: GarageItem[], forSale: number) {
   return forSale ? `${base} · ${forSale} for sale` : base;
 }
 
+function GarageCover({
+  photos,
+  label,
+}: {
+  photos: string[];
+  label: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const src = photos[index];
+  if (!src) {
+    return <PlaceholderPhoto silhouette label={label} className="h-[160px]" />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      key={src}
+      src={src}
+      alt=""
+      className="h-[160px] w-full object-cover"
+      onError={() => setIndex((i) => i + 1)}
+    />
+  );
+}
+
 export default function GaragesIndexPage() {
+  const { profile } = useAuth();
   const [rows, setRows] = useState<
     {
       person: ReturnType<typeof listMembers>[number];
       garage: ReturnType<typeof getGarage>;
       items: GarageItem[];
       forSale: number;
-      photo?: string;
+      photos: string[];
       isYou: boolean;
     }[]
   >([]);
@@ -47,19 +77,43 @@ export default function GaragesIndexPage() {
   useEffect(() => {
     const sync = () => {
       const handle = getSessionHandle();
-      setMe(handle);
+      const myDirHandle = profile
+        ? getDirectoryHandleForUserId(profile.id) || ""
+        : "";
+      const myUserId = profile?.id || (handle ? getDirectoryUserId(handle) : "");
+      setMe(myDirHandle || handle);
+
       const next = listMembers()
         .map((person) => {
           const garage = getGarage(person.handle);
-          const items = getGarageItemsFor(person.handle);
-          const photo = items.map((i) => getItemPhotoUrls(i)[0]).find(Boolean);
+          let items = getGarageItemsFor(person.handle);
+          // If this is the signed-in member, also fold in local items still
+          // keyed under a stale session handle until migrate finishes.
+          if (
+            handle &&
+            handle !== person.handle &&
+            (person.handle === myDirHandle ||
+              (myUserId && getDirectoryUserId(person.handle) === myUserId))
+          ) {
+            const extras = getGarageItemsFor(handle);
+            if (extras.length) {
+              const seen = new Set(items.map((i) => i.id));
+              items = [...items, ...extras.filter((i) => !seen.has(i.id))];
+            }
+          }
+          const photos = items.flatMap((i) => getItemPhotoUrls(i));
+          const isYou = Boolean(
+            (handle && person.handle === handle) ||
+              (myDirHandle && person.handle === myDirHandle) ||
+              (myUserId && getDirectoryUserId(person.handle) === myUserId),
+          );
           return {
             person,
             garage,
             items,
             forSale: items.filter((i) => i.status !== "Not for sale").length,
-            photo,
-            isYou: Boolean(handle) && person.handle === handle,
+            photos,
+            isYou,
           };
         })
         .filter((row) => row.items.length > 0 || row.isYou)
@@ -72,7 +126,7 @@ export default function GaragesIndexPage() {
     };
     sync();
     return subscribeStore(sync);
-  }, []);
+  }, [profile]);
 
   return (
     <div className="mx-auto max-w-[1280px] px-8 py-10 pb-16">
@@ -111,7 +165,7 @@ export default function GaragesIndexPage() {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-          {rows.map(({ person, garage, items, forSale, photo, isYou }) => (
+          {rows.map(({ person, garage, items, forSale, photos, isYou }) => (
             <Link
               key={person.handle}
               href={`/u/${person.handle}/garage`}
@@ -122,16 +176,7 @@ export default function GaragesIndexPage() {
                   You
                 </span>
               ) : null}
-              {photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo} alt="" className="h-[160px] w-full object-cover" />
-              ) : (
-                <PlaceholderPhoto
-                  silhouette
-                  label={garage?.name || "Garage"}
-                  className="h-[160px]"
-                />
-              )}
+              <GarageCover photos={photos} label={garage?.name || "Garage"} />
               <div className="flex flex-col gap-2 p-4">
                 <div className="flex items-center gap-2.5">
                   <Avatar
