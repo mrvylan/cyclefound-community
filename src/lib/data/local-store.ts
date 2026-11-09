@@ -798,6 +798,36 @@ export function postItem(input: {
   return item;
 }
 
+function personRichness(person: Person) {
+  return (
+    (person.bio ? 4 : 0) +
+    (person.avatarUrl ? 2 : 0) +
+    (person.loc ? 1 : 0) +
+    normalizeSkillLabels(person.skills).length * 2 +
+    getGarageItemsFor(person.handle).length
+  );
+}
+
+/** Prefer the fuller profile when the same account appears under two slug handles. */
+function preferRicherPerson(a: Person, b: Person) {
+  return personRichness(b) > personRichness(a) ? b : a;
+}
+
+/**
+ * Collapse dylan_s_* / dylan_simpson_* style duplicates into one person.
+ * Used by listMembers and any UI that maps the directory.
+ */
+export function dedupePeopleByAccount(people: Person[]): Person[] {
+  const byKey = new Map<string, Person>();
+  for (const person of people) {
+    const userId = getDirectoryUserId(person.handle);
+    const key = accountIdentityKey(person.handle, userId);
+    const existing = byKey.get(key);
+    byKey.set(key, existing ? preferRicherPerson(existing, person) : person);
+  }
+  return [...byKey.values()];
+}
+
 export function listMembers(opts?: { authUserId?: string }): Person[] {
   const withSkills = (person: Person | undefined) => {
     if (!person) return undefined;
@@ -833,14 +863,16 @@ export function listMembers(opts?: { authUserId?: string }): Person[] {
   const me = getSessionHandle();
   const authUserId = opts?.authUserId?.trim() || "";
   if (me) {
-    // Prefer the directory row for this account so we don't show a second "You" card
+    // Prefer the directory row for this account so we don't show a second card
     // when the session slug differs from the directory handle (dylan_s_* vs dylan_simpson_*).
-    const authKey = authUserId ? accountIdentityKey(me, authUserId) : "";
-    const meKey = accountIdentityKey(me, getDirectoryUserId(me));
+    const dirHandle = authUserId ? getDirectoryHandleForUserId(authUserId) : undefined;
+    const candidateKeys = [
+      accountIdentityKey(me, getDirectoryUserId(me)),
+      authUserId ? accountIdentityKey(me, authUserId) : "",
+      dirHandle ? accountIdentityKey(dirHandle, authUserId || getDirectoryUserId(dirHandle)) : "",
+    ].filter(Boolean);
     const alreadyListed =
-      (authKey && seenIds.has(authKey)) ||
-      seenIds.has(meKey) ||
-      (authUserId && Boolean(getDirectoryHandleForUserId(authUserId)));
+      candidateKeys.some((k) => seenIds.has(k)) || Boolean(dirHandle);
     if (!alreadyListed) {
       push(
         getMergedPerson(me) ??
@@ -850,7 +882,8 @@ export function listMembers(opts?: { authUserId?: string }): Person[] {
     }
   }
 
-  return out;
+  // Final pass — collapses any remaining slug-drift duplicates.
+  return dedupePeopleByAccount(out);
 }
 
 /** Verified experts — seed roster when mock is on, otherwise the signed-in member only if verified. */

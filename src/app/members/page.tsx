@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, Search } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { ContributionBadge } from "@/components/ContributionBadge";
 import { Avatar, FilterChip } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
+import { getDirectoryUserId } from "@/lib/community/directory-cache";
+import { accountIdentityKey } from "@/lib/community/handles";
 import {
   getGarageItemsFor,
   getMemberContribution,
@@ -35,7 +38,20 @@ function badgeOf(p: Person) {
   return b && b.toLowerCase() !== "member" ? b : "";
 }
 
+function garageItemCountFor(person: Person, sessionHandle: string, authUserId: string) {
+  const ids = new Set(getGarageItemsFor(person.handle).map((i) => i.id));
+  const key = accountIdentityKey(
+    person.handle,
+    getDirectoryUserId(person.handle) || authUserId || undefined,
+  );
+  if (sessionHandle && accountIdentityKey(sessionHandle, authUserId || undefined) === key) {
+    for (const item of getGarageItemsFor(sessionHandle)) ids.add(item.id);
+  }
+  return ids.size;
+}
+
 export default function MembersPage() {
+  const { profile } = useAuth();
   const [tag, setTag] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("helpful");
@@ -49,19 +65,23 @@ export default function MembersPage() {
 
   useEffect(() => {
     function sync() {
-      const list = listMembers();
+      const sessionHandle = getSessionHandle();
+      const authUserId = profile?.id || "";
+      const list = listMembers({ authUserId: authUserId || undefined });
       setMembers([...list]);
       setItemCounts(
-        Object.fromEntries(list.map((p) => [p.handle, getGarageItemsFor(p.handle).length])),
+        Object.fromEntries(
+          list.map((p) => [p.handle, garageItemCountFor(p, sessionHandle, authUserId)]),
+        ),
       );
       setContributions(
         Object.fromEntries(list.map((p) => [p.handle, getMemberContribution(p.handle)])),
       );
-      setSignedIn(Boolean(getSessionHandle()));
+      setSignedIn(Boolean(sessionHandle));
     }
     sync();
     return subscribeStore(sync);
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     const skill = new URLSearchParams(window.location.search).get("skill");
