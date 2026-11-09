@@ -418,7 +418,7 @@ export function SearchTrigger({ className = "" }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex size-[42px] shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-ink hover:bg-ground ${className}`}
+        className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-ink hover:bg-ground lg:size-[42px] ${className}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`Search Cycle Found (${shortcut})`}

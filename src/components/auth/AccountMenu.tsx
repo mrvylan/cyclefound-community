@@ -110,12 +110,17 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
 
   if (!ready) {
     // Static placeholder (no pulse) — avoids a flashing pill in the header while auth resolves.
-    return <div className="h-[42px] w-[7.5rem] rounded-[10px] bg-line-soft/60" aria-hidden />;
+    return (
+      <div
+        className="size-9 rounded-full bg-line-soft/60 lg:h-[42px] lg:w-[7.5rem] lg:rounded-[10px]"
+        aria-hidden
+      />
+    );
   }
 
   if (!profile) {
     return (
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
         <Link
           href={authHref("login", nextPath)}
           className="px-1 text-[14px] font-semibold text-ink no-underline hover:text-accent"
@@ -124,7 +129,7 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
         </Link>
         <Link
           href={authHref("join", nextPath)}
-          className="inline-flex h-[42px] items-center rounded-[10px] bg-accent px-4 text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white"
+          className="inline-flex h-10 items-center rounded-[10px] bg-accent px-3.5 text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white lg:h-[42px] lg:px-4"
         >
           Join
         </Link>
@@ -138,11 +143,14 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
   const avatarSrc = localAvatar || profile.avatarUrl || null;
   const close = () => setOpen(false);
 
+  const totalUnread = unreadMsgs + unreadNotifs;
+
   return (
     <div className="flex items-center gap-1.5">
+      {/* Desktop: messages + notifications as icon buttons. Mobile: in the account menu. */}
       <Link
         href="/messages"
-        className="relative inline-flex size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink no-underline hover:bg-ground"
+        className="relative hidden size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink no-underline hover:bg-ground lg:inline-flex"
         aria-label={
           unreadMsgs
             ? `Messages, ${unreadMsgs} unread`
@@ -158,7 +166,7 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
       </Link>
       <Link
         href="/notifications"
-        className="relative inline-flex size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink no-underline hover:bg-ground"
+        className="relative hidden size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink no-underline hover:bg-ground lg:inline-flex"
         aria-label={
           unreadNotifs ? `Notifications, ${unreadNotifs} unread` : "Notifications"
         }
@@ -172,7 +180,7 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
       <div ref={rootRef} className="relative">
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-[10px] py-1 pl-1 pr-2 text-left hover:bg-ground"
+          className="relative inline-flex items-center gap-1.5 rounded-[10px] p-0.5 text-left hover:bg-ground sm:gap-2 sm:py-1 sm:pl-1 sm:pr-2"
           aria-expanded={open}
           aria-haspopup="menu"
           aria-label={`Account menu, ${displayName}`}
@@ -181,14 +189,21 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
           <Avatar
             init={profile.initials}
             bg={profile.avatarColor}
-            size={40}
+            size={36}
             src={avatarSrc}
             label={displayName}
           />
-          <span className="hidden max-w-[7rem] truncate text-[14px] font-semibold text-ink sm:inline">
+          {/* Mobile unread dot when messages/notifs are collapsed into this menu */}
+          {totalUnread > 0 ? (
+            <span
+              className="absolute top-0.5 right-0.5 size-2 rounded-full bg-accent lg:hidden"
+              aria-hidden
+            />
+          ) : null}
+          <span className="hidden max-w-[7rem] truncate text-[14px] font-semibold text-ink lg:inline">
             {shortName}
           </span>
-          <ChevronDown className="size-4 text-muted" aria-hidden />
+          <ChevronDown className="hidden size-4 text-muted lg:inline" aria-hidden />
         </button>
 
         {open ? (
@@ -232,6 +247,19 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
               }
             >
               Messages
+            </MenuLink>
+            <MenuLink
+              href="/notifications"
+              onClick={close}
+              trailing={
+                unreadNotifs > 0 ? (
+                  <span className="font-mono text-[12px] tabular-nums text-muted">
+                    {unreadNotifs}
+                  </span>
+                ) : null
+              }
+            >
+              Notifications
             </MenuLink>
 
             <MenuDivider />

@@ -107,14 +107,23 @@ export function SiteHeader() {
 
   return (
     <header className="relative z-50 border-b border-line bg-white/90 text-ink backdrop-blur-[10px]">
-      <div className="mx-auto flex max-w-[1280px] items-center gap-x-5 px-8 py-3 lg:gap-x-7">
+      <div className="mx-auto flex max-w-[1280px] items-center gap-x-2 px-4 py-2.5 sm:gap-x-3 sm:px-6 sm:py-3 lg:gap-x-7 lg:px-8">
         <Link href="/" aria-label="Cycle Found home" className="shrink-0">
+          {/* Mobile: CF mark only — full wordmark from lg. */}
+          <Image
+            src="/community-logo-mark.png"
+            alt="Cycle Found"
+            width={76}
+            height={40}
+            className="h-9 w-auto lg:hidden"
+            priority
+          />
           <Image
             src="/community-logo.png"
             alt="Cycle Found — Ask, Share, Ride"
             width={313}
             height={45}
-            className="h-9 w-auto sm:h-11"
+            className="hidden h-11 w-auto lg:block"
             priority
           />
         </Link>
@@ -145,7 +154,7 @@ export function SiteHeader() {
           <div className="min-w-0 flex-1" />
         )}
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {!onAuth ? <SearchTrigger /> : null}
           {!onAuth && !hideHeaderAsk ? (
             <Link
@@ -158,7 +167,7 @@ export function SiteHeader() {
           {!onAuth ? (
             <button
               type="button"
-              className="inline-flex size-[42px] items-center justify-center rounded-[10px] border border-line bg-white text-ink lg:hidden"
+              className="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-ink lg:hidden"
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -178,7 +187,7 @@ export function SiteHeader() {
       {!onAuth && menuOpen ? (
         <div
           id="mobile-nav"
-          className="border-t border-line bg-white px-8 py-4 lg:hidden"
+          className="border-t border-line bg-white px-4 py-4 sm:px-6 lg:hidden"
         >
           <nav aria-label="Primary mobile" className="flex flex-col gap-1">
             {nav.map((item) => {
