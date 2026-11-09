@@ -8,7 +8,11 @@ import { ContributionBadge } from "@/components/ContributionBadge";
 import { Avatar, FilterChip } from "@/components/ui";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
-import { getDirectoryUserId } from "@/lib/community/directory-cache";
+import {
+  getDirectoryUserId,
+  hydrateCommunityDirectory,
+  isCommunityDirectoryReady,
+} from "@/lib/community/directory-cache";
 import { accountIdentityKey } from "@/lib/community/handles";
 import {
   getGarageItemsFor,
@@ -62,12 +66,20 @@ export default function MembersPage() {
     Record<string, MemberContribution>
   >({});
   const [signedIn, setSignedIn] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     function sync() {
+      if (!isCommunityDirectoryReady()) {
+        setReady(false);
+        return;
+      }
       const sessionHandle = getSessionHandle();
       const authUserId = profile?.id || "";
       const list = listMembers({ authUserId: authUserId || undefined });
+      if (cancelled) return;
       setMembers([...list]);
       setItemCounts(
         Object.fromEntries(
@@ -78,9 +90,24 @@ export default function MembersPage() {
         Object.fromEntries(list.map((p) => [p.handle, getMemberContribution(p.handle)])),
       );
       setSignedIn(Boolean(sessionHandle));
+      setReady(true);
     }
-    sync();
-    return subscribeStore(sync);
+
+    void (async () => {
+      if (!isCommunityDirectoryReady()) {
+        await hydrateCommunityDirectory();
+      }
+      if (!cancelled) sync();
+    })();
+
+    const unsub = subscribeStore(() => {
+      if (!cancelled) sync();
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [profile]);
 
   useEffect(() => {
@@ -242,13 +269,19 @@ export default function MembersPage() {
 
       <div className="mx-auto max-w-[1280px] px-8 py-8 pb-16">
         <p className="mb-5 mt-0 text-[15px] text-muted-2" aria-live="polite">
-          <strong className="text-ink">{filtered.length}</strong> member
-          {filtered.length === 1 ? "" : "s"}
-          {tag ? ` · ${tag}` : ""}
-          {query.trim() ? ` · “${query.trim()}”` : ""}
+          {ready ? (
+            <>
+              <strong className="text-ink">{filtered.length}</strong> member
+              {filtered.length === 1 ? "" : "s"}
+              {tag ? ` · ${tag}` : ""}
+              {query.trim() ? ` · “${query.trim()}”` : ""}
+            </>
+          ) : (
+            "Loading members…"
+          )}
         </p>
 
-        {filtered.length === 0 ? (
+        {!ready ? null : filtered.length === 0 ? (
           members.length > 0 ? (
             <div className="flex flex-col items-start gap-3 rounded-[14px] border border-dashed border-line bg-surface px-6 py-10">
               <h3 className="m-0 text-[17px] font-semibold text-ink">No members match</h3>

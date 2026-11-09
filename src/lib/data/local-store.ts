@@ -841,13 +841,13 @@ export function listMembers(opts?: { authUserId?: string }): Person[] {
   function push(person: Person | undefined) {
     const next = withSkills(person);
     if (!next || seenHandles.has(next.handle)) return;
+    const userId = getDirectoryUserId(next.handle);
     if (
-      isHiddenMember({ name: next.name, handle: next.handle }) &&
+      isHiddenMember({ name: next.name, handle: next.handle, userId }) &&
       next.handle !== getSessionHandle()
     ) {
       return;
     }
-    const userId = getDirectoryUserId(next.handle);
     const key = accountIdentityKey(next.handle, userId);
     if (seenIds.has(key)) return;
     seenIds.add(key);

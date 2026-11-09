@@ -7,6 +7,8 @@ import { Avatar, PlaceholderPhoto } from "@/components/ui";
 import {
   getDirectoryHandleForUserId,
   getDirectoryUserId,
+  hydrateCommunityDirectory,
+  isCommunityDirectoryReady,
 } from "@/lib/community/directory-cache";
 import { accountIdentityKey } from "@/lib/community/handles";
 import { normalizeItemCategory } from "@/lib/data/categories";
@@ -90,13 +92,21 @@ export default function GaragesIndexPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const sync = () => {
+      // Avoid empty → populated flash before the directory finishes loading.
+      if (!isCommunityDirectoryReady()) {
+        setReady(false);
+        return;
+      }
       const sessionHandle = getSessionHandle();
       const myDirHandle = profile
         ? getDirectoryHandleForUserId(profile.id) || ""
         : "";
       const myUserId = profile?.id || "";
       const canonicalMe = myDirHandle || sessionHandle;
+      if (cancelled) return;
       setMe(canonicalMe);
 
       const myKey = myUserId
@@ -174,11 +184,26 @@ export default function GaragesIndexPage() {
           if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
           return b.items.length - a.items.length;
         });
+      if (cancelled) return;
       setRows(next);
       setReady(true);
     };
-    sync();
-    return subscribeStore(sync);
+
+    void (async () => {
+      if (!isCommunityDirectoryReady()) {
+        await hydrateCommunityDirectory();
+      }
+      if (!cancelled) sync();
+    })();
+
+    const unsub = subscribeStore(() => {
+      if (!cancelled) sync();
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [profile]);
 
   return (

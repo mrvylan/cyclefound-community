@@ -144,10 +144,14 @@ export function communityDirectoryError() {
   return cache.error;
 }
 
+let hydrateInFlight: Promise<void> | null = null;
+
 /** Load Supabase profiles + active marketplace listings into the client cache. */
 export async function hydrateCommunityDirectory() {
   if (typeof window === "undefined") return;
+  if (hydrateInFlight) return hydrateInFlight;
 
+  hydrateInFlight = (async () => {
   try {
     const dirRes = await fetch("/api/community/directory", { cache: "no-store" });
     const dirPayload = (await dirRes.json().catch(() => ({}))) as {
@@ -289,5 +293,10 @@ export async function hydrateCommunityDirectory() {
     cache.ready = true;
     cache.error = err instanceof Error ? err.message : "Directory unavailable";
     notify();
+  } finally {
+    hydrateInFlight = null;
   }
+  })();
+
+  return hydrateInFlight;
 }
