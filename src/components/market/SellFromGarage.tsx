@@ -109,7 +109,7 @@ export function SellFromGarage({ open, onClose }: Props) {
                 className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
                 onClick={onClose}
               >
-                Add an item for sale
+                Add to garage for sale
               </Link>
             </div>
           ) : (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
+import { BrandAutocomplete, normalizeBrandLabel } from "./BrandAutocomplete";
 import { PhotoPicker } from "./PhotoPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
@@ -16,6 +17,11 @@ import { ITEM_CATEGORIES, type ItemCategory } from "@/lib/data/categories";
 import { getSessionHandle, postItem } from "@/lib/data/local-store";
 import type { ItemStatus } from "@/lib/data/seed";
 import {
+  DISCIPLINES,
+  type Discipline,
+  normalizeDiscipline,
+} from "@/lib/garage/disciplines";
+import {
   identifyGarageItemFromPhotos,
   type IdentifySuggestion,
 } from "@/lib/garage/identifyClient";
@@ -25,7 +31,11 @@ import {
   descriptionPriceMismatch,
   ITEM_DESCRIPTION_MAX,
 } from "@/lib/garage/itemFields";
-import { CONDITIONS, type FormCondition } from "@/lib/garage/mapAiCategory";
+import {
+  CONDITION_HELP,
+  CONDITIONS,
+  type FormCondition,
+} from "@/lib/garage/mapAiCategory";
 
 const STATUSES: ItemStatus[] = [
   "Not for sale",
@@ -53,9 +63,10 @@ export function ItemNewForm() {
   const [manufacturer, setManufacturer] = useState("");
   const [modelName, setModelName] = useState("");
   const [category, setCategory] = useState<ItemCategory>("Complete bikes");
+  const [discipline, setDiscipline] = useState<Discipline | "">("");
   const [year, setYear] = useState("");
   const [size, setSize] = useState("");
-  const [condition, setCondition] = useState<FormCondition>("Good");
+  const [condition, setCondition] = useState<FormCondition | "">("");
   const [status, setStatus] = useState<ItemStatus>(
     () => statusFromQuery(searchParams.get("status")) || "Not for sale",
   );
@@ -74,9 +85,12 @@ export function ItemNewForm() {
 
   const showPrice = status === "For sale" || status === "Open to offers";
   const showSize = category === "Complete bikes" || category === "Framesets";
+  const showDiscipline =
+    category === "Complete bikes" || category === "Framesets" || category === "Wheels";
   const sessionHandle = getSessionHandle();
   const sessionOk = Boolean(sessionHandle) || Boolean(user);
   const needsAuth = ready && configured && !sessionOk;
+  const canIdentify = photos.length > 0 && !identifying;
 
   function resetForm(nextStatus: ItemStatus = "Not for sale") {
     setPhotos([]);
@@ -84,9 +98,10 @@ export function ItemNewForm() {
     setManufacturer("");
     setModelName("");
     setCategory("Complete bikes");
+    setDiscipline("");
     setYear("");
     setSize("");
-    setCondition("Good");
+    setCondition("");
     setStatus(nextStatus);
     setAskingPrice("");
     setDescription("");
@@ -113,7 +128,9 @@ export function ItemNewForm() {
       else if (/groupset/i.test(draft.category)) setCategory("Components");
     }
     setYear(draft.year || "");
-    if (draft.condition) setCondition(draft.condition as FormCondition);
+    if (draft.condition && (CONDITIONS as readonly string[]).includes(draft.condition)) {
+      setCondition(draft.condition as FormCondition);
+    }
     if (draft.status) setStatus(draft.status as ItemStatus);
     setAskingPrice(draft.askingPrice || "");
     setDescription(draft.description || "");
@@ -133,7 +150,7 @@ export function ItemNewForm() {
 
   function applySuggestion(s: IdentifySuggestion) {
     if (s.title) setTitle(s.title);
-    if (s.manufacturer) setManufacturer(s.manufacturer);
+    if (s.manufacturer) setManufacturer(normalizeBrandLabel(s.manufacturer));
     if (s.model) setModelName(s.model);
     if (ITEM_CATEGORIES.includes(s.category as ItemCategory)) {
       setCategory(s.category as ItemCategory);
@@ -144,6 +161,10 @@ export function ItemNewForm() {
     if (s.condition && (CONDITIONS as readonly string[]).includes(s.condition)) {
       setCondition(s.condition as FormCondition);
     }
+    const inferred = normalizeDiscipline(
+      [s.category, s.title, s.manufacturer, s.model].filter(Boolean).join(" "),
+    );
+    if (inferred) setDiscipline((cur) => cur || inferred);
     const descBits = [s.description, s.components ? `Components: ${s.components}` : ""]
       .filter(Boolean)
       .join("\n\n");
@@ -169,7 +190,7 @@ export function ItemNewForm() {
     setIdentifyError("");
     setAiApplied(false);
     if (!photos.length) {
-      setIdentifyError("Add at least one photo first.");
+      setIdentifyError("Add a photo first.");
       return;
     }
     setIdentifying(true);
@@ -190,7 +211,7 @@ export function ItemNewForm() {
         title,
         category,
         year,
-        condition,
+        condition: condition || "Good",
         status,
         askingPrice,
         description,
@@ -201,19 +222,31 @@ export function ItemNewForm() {
       return;
     }
     if (!photos.length) {
-      setError("Add at least one photo so others can recognize the item.");
+      setError(
+        showPrice
+          ? "Add at least one photo before listing For sale or Open to offers."
+          : "Add at least one photo so others can recognize the item.",
+      );
       return;
     }
     if (!title.trim() && !manufacturer.trim() && !modelName.trim()) {
       setError("Add a title, or brand + model — AI can fill these from photos.");
       return;
     }
+    if (!condition) {
+      setError("Choose a condition.");
+      return;
+    }
     if (description.length > ITEM_DESCRIPTION_MAX) {
       setError(`Description must be ${ITEM_DESCRIPTION_MAX} characters or fewer.`);
       return;
     }
-    if (showPrice && status === "For sale" && !askingPrice.trim()) {
-      setError("Add an asking price, or switch to Open to offers.");
+    if (showPrice && !askingPrice.trim()) {
+      setError(
+        status === "For sale"
+          ? "Add an asking price to list For sale."
+          : "Add an asking price (or a starting ask) for Open to offers.",
+      );
       return;
     }
     const priceClash =
@@ -227,10 +260,11 @@ export function ItemNewForm() {
       return;
     }
     setError("");
+    const brand = normalizeBrandLabel(manufacturer);
     const composedTitle = composeItemTitle({
       title,
       year,
-      manufacturer,
+      manufacturer: brand,
       modelName,
     });
     const item = postItem({
@@ -238,6 +272,8 @@ export function ItemNewForm() {
       category,
       year: year.trim() || "—",
       size: showSize ? size.trim() : "",
+      discipline: showDiscipline && discipline ? discipline : "",
+      manufacturer: brand,
       condition,
       status,
       askingPrice: showPrice ? askingPrice : "",
@@ -258,12 +294,10 @@ export function ItemNewForm() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="eyebrow m-0">Your garage</p>
-          <h1 className="section-title m-0 text-[clamp(32px,6vw,48px)]">
-            Document an item
-          </h1>
+          <h1 className="section-title m-0 text-[clamp(32px,6vw,48px)]">Add to garage</h1>
           <p className="mt-2 m-0 max-w-[40rem] text-[15px] leading-[1.5] text-muted-2">
-            Add what you own to your garage — photos, identity, and history. Availability
-            is optional; this is not a marketplace listing.
+            Photos, identity, and history for what you own. Availability is optional — this is
+            not a marketplace listing wizard.
           </p>
         </div>
         {needsAuth ? (
@@ -277,7 +311,7 @@ export function ItemNewForm() {
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-10">
-        {/* 1 — Photos + AI assist (fills fields below; no separate “review” screen) */}
+        {/* 1 — Photos + AI assist */}
         <section className="flex flex-col gap-4">
           <div>
             <h2 className="section-title m-0 text-[20px]">Photos</h2>
@@ -291,14 +325,18 @@ export function ItemNewForm() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled={identifying || !photos.length}
+              disabled={!canIdentify}
+              title={!photos.length ? "Add a photo first" : undefined}
+              aria-disabled={!canIdentify}
               onClick={() => void runIdentify()}
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-accent-soft-border bg-accent-soft px-4 text-[14px] font-semibold text-accent-hover hover:bg-[#e4edd9] disabled:opacity-50"
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-accent-soft-border bg-accent-soft px-4 text-[14px] font-semibold text-accent-hover hover:bg-[#e4edd9] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Sparkles className="size-4" aria-hidden />
               {identifying ? "Reading photos…" : "Fill details from photos"}
             </button>
-            {aiApplied ? (
+            {!photos.length ? (
+              <p className="m-0 text-[13px] text-muted-2">Add a photo first</p>
+            ) : aiApplied ? (
               <p className="m-0 text-[13px] text-muted-2">
                 Suggested fields filled — edit anything below before saving.
               </p>
@@ -340,11 +378,10 @@ export function ItemNewForm() {
               <label htmlFor="item-brand" className={label}>
                 Brand <span className="font-normal text-muted">(optional)</span>
               </label>
-              <input
+              <BrandAutocomplete
                 id="item-brand"
                 value={manufacturer}
-                onChange={(e) => setManufacturer(e.target.value)}
-                placeholder="e.g. Colnago"
+                onChange={setManufacturer}
                 className={`${field} placeholder:text-meta`}
               />
             </div>
@@ -394,6 +431,48 @@ export function ItemNewForm() {
                 </div>
               </fieldset>
             </div>
+            {showDiscipline ? (
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <fieldset className="m-0 border-0 p-0">
+                  <legend className={label}>
+                    Discipline{" "}
+                    <span className="font-normal text-muted">(optional)</span>
+                  </legend>
+                  <p className="mt-1 mb-2 m-0 text-[13px] text-muted-2">
+                    Shown on Market and garage cards (Road, Mountain, …).
+                  </p>
+                  <div
+                    role="radiogroup"
+                    aria-label="Discipline"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {DISCIPLINES.map((d) => {
+                      const on = discipline === d;
+                      return (
+                        <label
+                          key={d}
+                          className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border px-3.5 text-[13px] font-medium ${
+                            on
+                              ? "border-ink bg-ink text-white"
+                              : "border-[#D4D3CD] bg-white text-ink hover:border-ink"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="discipline"
+                            value={d}
+                            checked={on}
+                            onChange={() => setDiscipline(d)}
+                            className="sr-only"
+                          />
+                          {d}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              </div>
+            ) : null}
             <div className="flex flex-col gap-2">
               <label htmlFor="item-year" className={label}>
                 Year <span className="font-normal text-muted">(optional)</span>
@@ -422,22 +501,33 @@ export function ItemNewForm() {
                 />
               </div>
             ) : null}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <label htmlFor="item-cond" className={label}>
                 Condition
               </label>
               <select
                 id="item-cond"
                 value={condition}
-                onChange={(e) => setCondition(e.target.value as FormCondition)}
+                required
+                onChange={(e) =>
+                  setCondition((e.target.value || "") as FormCondition | "")
+                }
                 className={selectField}
               >
+                <option value="">Select condition</option>
                 {CONDITIONS.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
                 ))}
               </select>
+              {condition ? (
+                <p className="m-0 text-[13px] text-muted-2">{CONDITION_HELP[condition]}</p>
+              ) : (
+                <p className="m-0 text-[13px] text-muted-2">
+                  Required — pick the level that best matches how you’d describe it to a buyer.
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -506,7 +596,7 @@ export function ItemNewForm() {
           </div>
         </section>
 
-        {/* 4 — Availability (always visible; default Not for sale) */}
+        {/* 4 — Availability */}
         <section className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface p-5">
           <div>
             <h2 className="m-0 text-[15px] font-bold">Availability</h2>
@@ -543,25 +633,29 @@ export function ItemNewForm() {
           {showPrice ? (
             <div className="flex max-w-xs flex-col gap-2">
               <label htmlFor="item-ask" className={label}>
-                Asking price
-                {status === "Open to offers" ? (
-                  <span className="font-normal text-muted"> (optional)</span>
-                ) : null}
+                Asking price <span className="font-normal text-muted">(required)</span>
               </label>
               <input
                 id="item-ask"
                 value={askingPrice}
                 onChange={(e) => setAskingPrice(e.target.value)}
                 placeholder="$3,000"
+                required
                 className={field}
               />
+              {!photos.length ? (
+                <p className="m-0 text-[13px] text-[#9B2C2C]">
+                  Add at least one photo to list {status}.
+                </p>
+              ) : null}
               {descriptionPriceMismatch(description, askingPrice) != null ? (
                 <p className="m-0 text-[13px] text-[#9B2C2C]">
                   Description quotes a different dollar amount — keep price only in Asking.
                 </p>
               ) : (
                 <p className="m-0 text-[12px] text-meta">
-                  Keep the price here, not in the description.
+                  Keep the price here, not in the description. Photo + asking price required
+                  for {status}.
                 </p>
               )}
             </div>

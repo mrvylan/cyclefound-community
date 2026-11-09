@@ -259,7 +259,7 @@ export function AccountPage() {
               href="/item/new"
               className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline"
             >
-              Add item
+              Add to garage
             </Link>
           </div>
         </div>

@@ -3,6 +3,16 @@ import { ITEM_CATEGORIES, type ItemCategory } from "@/lib/data/categories";
 const CONDITIONS = ["New", "Excellent", "Very good", "Good", "Fair", "Project"] as const;
 export type FormCondition = (typeof CONDITIONS)[number];
 
+/** Short guide for each condition — shown under the picker. */
+export const CONDITION_HELP: Record<FormCondition, string> = {
+  New: "Unused or like new — no wear, still packaged or barely ridden.",
+  Excellent: "Light use, fully functional, cosmetics near mint.",
+  "Very good": "Normal wear for age; rides well with no major issues.",
+  Good: "Honest wear; may need minor attention or cosmetic cleanup.",
+  Fair: "Visible wear or known issues; still usable with caveats.",
+  Project: "Needs work, parts, or restoration before regular use.",
+};
+
 /** Map AI / marketplace labels onto Community garage categories. */
 export function mapAiToGarageCategory(input: {
   subjectKind?: string;

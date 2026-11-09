@@ -241,7 +241,7 @@ export default function GaragePage({
                       href="/item/new"
                       className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-accent px-[18px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
                     >
-                      Add an item
+                      Add to garage
                     </Link>
                   </>
                 ) : (
@@ -421,7 +421,7 @@ export default function GaragePage({
                   : `${firstName} hasn’t added any items that match these filters.`
             }
             actionLabel={
-              isOwnGarage && availability !== "Archived" ? "Add an item" : undefined
+              isOwnGarage && availability !== "Archived" ? "Add to garage" : undefined
             }
             actionHref={
               isOwnGarage && availability !== "Archived" ? "/item/new" : undefined

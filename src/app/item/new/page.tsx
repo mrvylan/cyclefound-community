@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { ItemNewFormHost } from "@/components/forms/ItemNewFormHost";
 
-export const metadata = { title: "Document an item · Garage" };
+export const metadata = { title: "Add to garage" };
 
 export default function ItemNewPage() {
   return (

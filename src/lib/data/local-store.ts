@@ -93,6 +93,8 @@ export type GarageItemPatch = Partial<
     | "cat"
     | "year"
     | "size"
+    | "discipline"
+    | "manufacturer"
     | "cond"
     | "mkt"
     | "ask"
@@ -545,6 +547,8 @@ export function updateGarageItem(
     category: string;
     year: string;
     size?: string;
+    discipline?: string;
+    manufacturer?: string;
     condition: string;
     status: ItemStatus;
     askingPrice: string;
@@ -558,12 +562,16 @@ export function updateGarageItem(
   const existing = getItemLocal(id);
   if (!existing) return undefined;
   const catShort = normalizeItemCategory(input.category);
+  const discipline = input.discipline?.trim() || undefined;
+  const manufacturer = input.manufacturer?.trim() || undefined;
   mergeItemPatch(id, {
     name: input.title.trim(),
     catShort,
     cat: catShort.toUpperCase(),
     year: input.year.trim() || "—",
     size: input.size?.trim() || undefined,
+    discipline,
+    manufacturer,
     cond: input.condition,
     status: input.status,
     ask: normalizeAskInput(input.askingPrice) || "—",
@@ -714,6 +722,8 @@ export function postItem(input: {
   category: string;
   year: string;
   size?: string;
+  discipline?: string;
+  manufacturer?: string;
   condition: string;
   status: ItemStatus;
   askingPrice: string;
@@ -727,6 +737,8 @@ export function postItem(input: {
   const id = `${slugify(input.title) || "item"}-${Date.now().toString(36)}`;
   const catShort = normalizeItemCategory(input.category);
   const size = input.size?.trim();
+  const discipline = input.discipline?.trim();
+  const manufacturer = input.manufacturer?.trim();
   const item: GarageItem = {
     id,
     ownerHandle: store.sessionHandle,
@@ -734,6 +746,8 @@ export function postItem(input: {
     cat: catShort.toUpperCase(),
     year: input.year.trim() || "—",
     ...(size ? { size } : {}),
+    ...(discipline ? { discipline } : {}),
+    ...(manufacturer ? { manufacturer } : {}),
     name: input.title.trim(),
     cond: input.condition,
     mkt: input.ownerEstValue.trim() || "—",

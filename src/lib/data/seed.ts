@@ -54,6 +54,8 @@ export type GarageItem = {
   size?: string;
   /** Ride discipline when known (Road, Mountain, Hybrid / Comfort, …). */
   discipline?: string;
+  /** Catalog brand label when known (links to expertise Brands). */
+  manufacturer?: string;
   name: string;
   cond: string;
   mkt: string;

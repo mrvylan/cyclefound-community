@@ -238,7 +238,7 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
 
             {/* Actions */}
             <MenuLink href="/item/new" onClick={close}>
-              + Add garage item
+              Add to garage
             </MenuLink>
 
             <MenuDivider />

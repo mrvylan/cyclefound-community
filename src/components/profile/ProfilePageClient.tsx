@@ -448,8 +448,8 @@ export function ProfilePageClient({ handle }: { handle: string }) {
             (ownedItems.length === 0 ? (
               <EmptyState
                 title="No items yet — add your first bike"
-                description="Document what you own so others can ask about it."
-                actionLabel="Add an item"
+                description="Add what you own to your garage so others can ask about it."
+                actionLabel="Add to garage"
                 actionHref="/item/new"
               />
             ) : (
