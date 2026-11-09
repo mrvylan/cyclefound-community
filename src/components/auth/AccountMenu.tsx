@@ -245,10 +245,10 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
 
             {/* Settings */}
             <MenuLink href="/settings/profile" onClick={close}>
-              Edit profile
+              Public profile
             </MenuLink>
             <MenuLink href="/account" onClick={close}>
-              Settings
+              Account settings
             </MenuLink>
 
             <MenuDivider />

@@ -70,3 +70,30 @@ export function usStateLabel(code: string) {
   return BY_CODE.get(String(code || "").toUpperCase() as (typeof US_STATES)[number]["code"])
     ?.name || String(code || "");
 }
+
+/** Public location line: "San Jose, CA". City alone if no state. */
+export function formatPublicLocation(city: string, stateCode?: string) {
+  const c = city.trim().replace(/,+\s*$/, "");
+  const st = normalizeUsStateCode(stateCode || "");
+  if (!c) return st;
+  // Strip a trailing ", CA" / ", California" so we don't double-format.
+  const stripped = c.replace(
+    /,\s*([A-Za-z]{2}|[A-Za-z .]+)$/,
+    (match, maybeState: string) => (normalizeUsStateCode(maybeState) ? "" : match),
+  );
+  const cityOnly = stripped.trim() || c;
+  return st ? `${cityOnly}, ${st}` : cityOnly;
+}
+
+/** Split a stored loc ("San Jose, CA" / "Oakland · CA") into city + state code. */
+export function parsePublicLocation(loc: string): { city: string; stateCode: string } {
+  const raw = String(loc || "").trim();
+  if (!raw) return { city: "", stateCode: "" };
+  const primary = raw.split("·")[0]?.trim() ?? raw;
+  const comma = primary.match(/^(.+?),\s*([A-Za-z]{2}|[A-Za-z .]+)$/);
+  if (comma) {
+    const code = normalizeUsStateCode(comma[2]);
+    if (code) return { city: comma[1].trim(), stateCode: code };
+  }
+  return { city: primary, stateCode: "" };
+}

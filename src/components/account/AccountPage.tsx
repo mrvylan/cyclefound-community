@@ -8,13 +8,11 @@ import { handleFromAuthProfile } from "@/lib/demo-session";
 import {
   getGarageItemsFor,
   getSessionHandle,
-  saveProfilePatch,
 } from "@/lib/data/local-store";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { deleteMyAccount } from "@/lib/profile/deleteAccountApi";
 import { profileService } from "@/lib/profile/profileService";
-import { normalizeUsStateCode, US_STATES } from "@/lib/usStates";
 
 const field =
   "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent";
@@ -26,9 +24,6 @@ export function AccountPage() {
   const { ready, configured, user, profile, signOut, refresh } = useAuth();
 
   const [fullName, setFullName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [city, setCity] = useState("");
-  const [stateCode, setStateCode] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [sellerType, setSellerType] = useState("individual");
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(
@@ -54,17 +49,11 @@ export function AccountPage() {
         const remote = await profileService.getMyProfile();
         if (cancelled) return;
         setFullName(remote?.fullName || profile?.fullName || "");
-        setDisplayName(
-          remote?.displayName || profile?.displayName || profile?.fullName?.split(/\s+/)[0] || "",
-        );
-        setCity(remote?.city || "");
-        setStateCode(normalizeUsStateCode(remote?.state) || "");
         setZipCode(remote?.zipCode || "");
         setSellerType(remote?.sellerType || "individual");
       } catch {
         if (cancelled) return;
         setFullName(profile?.fullName || "");
-        setDisplayName(profile?.displayName || "");
       }
     })();
 
@@ -78,25 +67,17 @@ export function AccountPage() {
   async function onSave(event: React.FormEvent) {
     event.preventDefault();
     setBanner(null);
-    const name = displayName.trim();
     const legal = fullName.trim();
     if (!legal) {
       setBanner({ type: "error", message: "Full name is required." });
-      return;
-    }
-    if (!name) {
-      setBanner({ type: "error", message: "Display name is required." });
       return;
     }
 
     setSaving(true);
     try {
       await profileService.ensureMyProfile().catch(() => null);
-      const remote = await profileService.updateMyProfile({
+      await profileService.updateMyProfile({
         fullName: legal,
-        displayName: name,
-        city: city.trim(),
-        state: normalizeUsStateCode(stateCode) || "",
         zipCode: zipCode.trim(),
         sellerType,
       });
@@ -105,21 +86,15 @@ export function AccountPage() {
       await supabase.auth.updateUser({
         data: {
           full_name: legal,
-          display_name: name,
         },
       });
       await refresh();
 
-      saveProfilePatch(handle, {
-        name,
-        loc: [remote?.city, usStateShort(remote?.state || "")].filter(Boolean).join(", "),
-      });
-
-      setBanner({ type: "success", message: "Profile saved." });
+      setBanner({ type: "success", message: "Settings saved." });
     } catch (err) {
       setBanner({
         type: "error",
-        message: err instanceof Error ? err.message : "Could not save profile.",
+        message: err instanceof Error ? err.message : "Could not save settings.",
       });
     } finally {
       setSaving(false);
@@ -183,7 +158,7 @@ export function AccountPage() {
   if (!configured || !hasSupabaseConfig()) {
     return (
       <div className="mx-auto max-w-[720px] px-8 py-16">
-        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Your account</h1>
+        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Account settings</h1>
         <p className="mt-4 text-[16px] text-muted-2">
           Supabase is not configured. Add credentials to use account settings.
         </p>
@@ -220,9 +195,10 @@ export function AccountPage() {
     <div className="mx-auto flex max-w-[720px] flex-col gap-8 px-8 py-10 pb-20">
       <div>
         <p className="eyebrow m-0">Account</p>
-        <h1 className="section-title m-0 mt-2 text-[clamp(36px,5vw,56px)]">Your account</h1>
+        <h1 className="section-title m-0 mt-2 text-[clamp(36px,5vw,56px)]">Account settings</h1>
         <p className="mt-3 text-[16px] text-muted-2">
-          Manage your garage and the details others see. Your email stays private.
+          Private account details — email, legal name, ZIP, and account type. Your email stays
+          private.
         </p>
       </div>
 
@@ -289,16 +265,25 @@ export function AccountPage() {
         </div>
       </section>
 
-      <section>
-        <h2 className="section-title m-0 text-[20px]">Member profile</h2>
-        <p className="mt-1 text-[14px] text-muted-2">
-          Display name is what others see — not your email.
+      <section className="rounded-[14px] border border-line bg-white p-5">
+        <h2 className="section-title m-0 text-[20px]">Public profile</h2>
+        <p className="mt-1 mb-0 text-[14px] text-muted-2">
+          Display name, location, photo, bio, and expertise are edited on your public profile —
+          so they don’t drift from a second form here.
         </p>
-        <p className="mt-2 text-[14px]">
-          <Link href="/settings/profile" className="font-semibold">
-            Edit community profile
-          </Link>
-          <span className="text-muted"> — photo, cover, bio, and expertise tags.</span>
+        <Link
+          href="/settings/profile"
+          className="mt-4 inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline hover:bg-ground"
+        >
+          Edit public profile
+        </Link>
+      </section>
+
+      <section>
+        <h2 className="section-title m-0 text-[20px]">Private details</h2>
+        <p className="mt-1 text-[14px] text-muted-2">
+          Full name and ZIP stay off your public profile. Used for account records and shipping
+          context.
         </p>
 
         <form onSubmit={onSave} className="mt-5 flex flex-col gap-4" noValidate>
@@ -314,57 +299,9 @@ export function AccountPage() {
               required
               className={field}
             />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="acct-display-name" className={labelClass}>
-              Public display name
-            </label>
-            <input
-              id="acct-display-name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              autoComplete="nickname"
-              required
-              className={field}
-            />
             <p className="m-0 text-[13px] text-muted">
-              Shown on your profile and listings. Keep it friendly and recognizable.
+              Legal / account name — not shown as your public display name.
             </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="acct-city" className={labelClass}>
-                City
-              </label>
-              <input
-                id="acct-city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                autoComplete="address-level2"
-                className={field}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="acct-state" className={labelClass}>
-                State
-              </label>
-              <select
-                id="acct-state"
-                value={stateCode}
-                onChange={(e) => setStateCode(e.target.value)}
-                autoComplete="address-level1"
-                className={selectField}
-              >
-                <option value="">Select state</option>
-                {US_STATES.map((s) => (
-                  <option key={s.code} value={s.code}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -378,6 +315,10 @@ export function AccountPage() {
               autoComplete="postal-code"
               className={field}
             />
+            <p className="m-0 text-[13px] text-muted">
+              Private. Helps with local matching and shipping estimates — not shown on your
+              profile.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -391,8 +332,12 @@ export function AccountPage() {
               className={selectField}
             >
               <option value="individual">Individual</option>
-              <option value="business">Business</option>
+              <option value="business">Business / shop</option>
             </select>
+            <p className="m-0 text-[13px] text-muted">
+              Individual is for personal garages and casual selling. Business / shop shows a
+              shop badge on your profile and raises listing limits when Market tools roll out.
+            </p>
           </div>
 
           <button
@@ -400,7 +345,7 @@ export function AccountPage() {
             disabled={saving}
             className="inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save profile"}
+            {saving ? "Saving…" : "Save settings"}
           </button>
         </form>
       </section>
@@ -465,8 +410,4 @@ export function AccountPage() {
       </section>
     </div>
   );
-}
-
-function usStateShort(code: string) {
-  return normalizeUsStateCode(code) || code;
 }

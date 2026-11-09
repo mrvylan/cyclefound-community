@@ -34,6 +34,12 @@ import {
 import { profileService } from "@/lib/profile/profileService";
 import { colorForId, initialsFromName } from "@/lib/auth/user";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
+import {
+  formatPublicLocation,
+  normalizeUsStateCode,
+  parsePublicLocation,
+  US_STATES,
+} from "@/lib/usStates";
 
 export function ProfileEditForm() {
   const router = useRouter();
@@ -49,6 +55,7 @@ export function ProfileEditForm() {
   const [coverUrl, setCoverUrl] = useState("");
   const [coverPositionY, setCoverPositionY] = useState(50);
   const [city, setCity] = useState("");
+  const [stateCode, setStateCode] = useState("");
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [wantedText, setWantedText] = useState("");
@@ -69,7 +76,9 @@ export function ProfileEditForm() {
           ? person.publicHandle
           : "",
       );
-      setCity(person.loc.split("·")[0]?.trim() ?? person.loc);
+      const parsed = parsePublicLocation(person.loc);
+      setCity(parsed.city);
+      setStateCode(parsed.stateCode);
       setBio(person.bio);
       setSkills(normalizeSkillLabels(person.skills));
       setWantedText(getWantedLines(h).join("\n"));
@@ -115,7 +124,15 @@ export function ProfileEditForm() {
         if (cancelled || !remote) return;
         if (remote.displayName) setDisplayName((cur) => cur || remote.displayName);
         if (remote.avatarUrl) setAvatarUrl((cur) => cur || remote.avatarUrl);
-        if (remote.city) setCity((cur) => cur || remote.city);
+        if (remote.city) {
+          const parsed = parsePublicLocation(
+            formatPublicLocation(remote.city, remote.state),
+          );
+          setCity((cur) => cur || parsed.city);
+          setStateCode((cur) => cur || parsed.stateCode || normalizeUsStateCode(remote.state));
+        } else if (remote.state) {
+          setStateCode((cur) => cur || normalizeUsStateCode(remote.state));
+        }
       } catch {
         // Local / demo profile still works without profiles row.
       }
@@ -228,11 +245,15 @@ export function ProfileEditForm() {
       return;
     }
 
+    const cityOnly = city.trim();
+    const st = normalizeUsStateCode(stateCode);
+    const loc = formatPublicLocation(cityOnly, st);
+
     setSaving(true);
     try {
       saveProfilePatch(handle, {
         name,
-        loc: city.trim(),
+        loc,
         bio: bio.trim(),
         skills: normalizeSkillLabels(skills),
         wantedLines: wantedText
@@ -262,7 +283,8 @@ export function ProfileEditForm() {
         try {
           await profileService.updateMyProfile({
             displayName: name,
-            city: city.trim() || undefined,
+            city: cityOnly || undefined,
+            state: st || "",
             avatarUrl: avatarUrl && !avatarUrl.startsWith("data:") ? avatarUrl : undefined,
           });
         } catch {
@@ -282,6 +304,8 @@ export function ProfileEditForm() {
 
   const field =
     "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] outline-none focus:border-accent";
+  const selectField =
+    "cf-select h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white pl-3.5 text-[16px] text-ink outline-none focus:border-accent";
 
   const previewInit = initialsFromName(displayName || profile?.displayName || "CF");
   const previewBg = user ? colorForId(user.id) : getMergedPerson(handle)?.bg || "#527D31";
@@ -289,8 +313,16 @@ export function ProfileEditForm() {
   return (
     <div className="mx-auto flex max-w-[640px] flex-col gap-5 px-8 py-10 pb-16">
       <div className="flex flex-col gap-2">
-        <p className="eyebrow m-0">Account</p>
-        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Edit profile</h1>
+        <p className="eyebrow m-0">Public</p>
+        <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Public profile</h1>
+        <p className="m-0 text-[15px] text-muted-2">
+          What members see — display name, location, photos, bio, and expertise. Private
+          account details live under{" "}
+          <Link href="/account" className="font-semibold">
+            Account settings
+          </Link>
+          .
+        </p>
         <SessionPicker />
       </div>
 
@@ -494,18 +526,47 @@ export function ProfileEditForm() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="p-city" className="text-[14px] font-semibold">
-            Location (city)
-          </label>
-          <input
-            id="p-city"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="Oakland, CA"
-            className={field}
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="p-city" className="text-[14px] font-semibold">
+              City
+            </label>
+            <input
+              id="p-city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="San Jose"
+              autoComplete="address-level2"
+              className={field}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="p-state" className="text-[14px] font-semibold">
+              State
+            </label>
+            <select
+              id="p-state"
+              value={stateCode}
+              onChange={(e) => setStateCode(e.target.value)}
+              autoComplete="address-level1"
+              className={selectField}
+            >
+              <option value="">Select state</option>
+              {US_STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+        <p className="-mt-2 m-0 text-[13px] text-muted">
+          Shown as{" "}
+          <span className="font-mono text-ink">
+            {formatPublicLocation(city, stateCode) || "City, ST"}
+          </span>{" "}
+          on your profile. Enter city once — state is separate.
+        </p>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="p-bio" className="text-[14px] font-semibold">
@@ -525,7 +586,7 @@ export function ProfileEditForm() {
           onChange={setSkills}
           bio={bio}
           role={displayName}
-          city={city}
+          city={formatPublicLocation(city, stateCode)}
           garageHints={getGarageItemsFor(handle).map((i) =>
             [i.catShort, i.name].filter(Boolean).join(" · "),
           )}
@@ -559,7 +620,7 @@ export function ProfileEditForm() {
             disabled={saving || uploading}
             className="inline-flex h-12 items-center rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save profile"}
+            {saving ? "Saving…" : "Save public profile"}
           </button>
           <Link
             href={handle ? `/u/${handle}` : "/"}

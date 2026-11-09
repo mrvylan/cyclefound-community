@@ -10,12 +10,17 @@ import { BIKE_BRANDS } from "./brands";
 
 export type SkillGroup = "Expertise" | "Systems" | "Brands";
 
+/** Sub-headers inside the Expertise catalog wall. */
+export type ExpertiseSection = "Skills" | "Eras" | "Materials" | "Bike types";
+
 export type SkillDef = {
   /** Stable id for AI / APIs */
   id: string;
   /** Canonical label stored on the profile */
   label: string;
   group: SkillGroup;
+  /** Expertise catalog section (ignored for Systems / Brands). */
+  section?: ExpertiseSection;
   /** Alternate spellings / legacy free-form tags that map here */
   aliases?: string[];
 };
@@ -26,238 +31,338 @@ export const SKILL_GROUPS: SkillGroup[] = [
   "Brands",
 ];
 
+export const EXPERTISE_SECTIONS: ExpertiseSection[] = [
+  "Skills",
+  "Eras",
+  "Materials",
+  "Bike types",
+];
+
 /** Max skills a member can pin on their public profile. */
 export const MAX_PROFILE_SKILLS = 8;
 
 const CORE_SKILLS: SkillDef[] = [
-  // Expertise — crafts, practices, and eras you help with (not marques; those are Brands)
+  // Expertise · Skills — crafts and practices
   {
     id: "vintage-restoration",
     label: "Vintage restoration",
     group: "Expertise",
+    section: "Skills",
     aliases: ["restoration", "resto", "vintage resto"],
   },
   {
     id: "frame-building",
     label: "Frame building",
     group: "Expertise",
+    section: "Skills",
     aliases: ["framebuilder", "frame builder", "custom frames"],
   },
   {
     id: "brazing",
     label: "Brazing",
     group: "Expertise",
+    section: "Skills",
     aliases: ["fillet brazing", "lugged construction", "silver brazing"],
   },
   {
     id: "tig-welding",
     label: "TIG welding",
     group: "Expertise",
+    section: "Skills",
     aliases: ["welding", "tig"],
   },
   {
     id: "frame-alignment",
     label: "Frame alignment",
     group: "Expertise",
+    section: "Skills",
     aliases: ["cold setting", "alignment", "dropout alignment"],
   },
   {
     id: "geometry",
     label: "Geometry",
     group: "Expertise",
+    section: "Skills",
     aliases: ["frame geometry", "fit geometry"],
   },
   {
     id: "wheelbuilding",
     label: "Wheelbuilding",
     group: "Expertise",
+    section: "Skills",
     aliases: ["wheels", "wheel building", "wheelbuilder", "relacing"],
   },
   {
     id: "paint-finish",
     label: "Paint & finish",
     group: "Expertise",
+    section: "Skills",
     aliases: ["paint", "paint and finish", "respray"],
   },
   {
     id: "decals",
     label: "Decals",
     group: "Expertise",
+    section: "Skills",
     aliases: ["decal reproduction", "transfers", "waterslide"],
   },
   {
     id: "chrome-plating",
     label: "Chrome & plating",
     group: "Expertise",
+    section: "Skills",
     aliases: ["chrome", "plating", "rechrome"],
   },
   {
     id: "powder-coat",
     label: "Powder coat",
     group: "Expertise",
+    section: "Skills",
     aliases: ["powder coating"],
   },
   {
     id: "valuation",
     label: "Valuation",
     group: "Expertise",
+    section: "Skills",
     aliases: ["appraisal", "market value"],
   },
   {
     id: "authentication",
     label: "Authentication",
     group: "Expertise",
+    section: "Skills",
     aliases: ["authenticity", "dating frames", "serial numbers", "fake spotting"],
   },
   {
     id: "bike-fit",
     label: "Bike fit",
     group: "Expertise",
+    section: "Skills",
     aliases: ["fitting", "fit", "cleat fit"],
   },
   {
     id: "rare-parts",
     label: "Rare parts",
     group: "Expertise",
+    section: "Skills",
     aliases: ["rare / vintage parts", "parts hunting", "NOS"],
   },
   {
     id: "tool-lending",
     label: "Tool lending",
     group: "Expertise",
+    section: "Skills",
     aliases: ["tools", "tool loan"],
   },
   {
     id: "general-repair",
     label: "Repair & maintenance",
     group: "Expertise",
+    section: "Skills",
     aliases: ["repair", "maintenance", "tune-up", "mechanic"],
   },
   {
     id: "race-mechanic",
     label: "Race mechanic",
     group: "Expertise",
+    section: "Skills",
     aliases: ["team mechanic", "pit"],
   },
   {
     id: "complete-builds",
     label: "Complete builds",
     group: "Expertise",
+    section: "Skills",
     aliases: ["bike builds", "build-up", "assembly"],
   },
   {
     id: "facing-tapping",
     label: "Facing & tapping",
     group: "Expertise",
+    section: "Skills",
     aliases: ["facing", "tapping", "bb facing", "head tube facing"],
   },
   {
     id: "seized-parts",
     label: "Seized parts",
     group: "Expertise",
+    section: "Skills",
     aliases: ["seized seatpost", "stuck parts", "frozen bolts"],
   },
   {
     id: "italian-steel",
     label: "Italian steel",
     group: "Expertise",
+    section: "Skills",
     aliases: ["italian frames", "lugged italian"],
   },
   {
     id: "french-constructeur",
     label: "French constructeur",
     group: "Expertise",
+    section: "Skills",
     aliases: ["constructeur", "randonneuring frames", "french frames"],
   },
   {
     id: "british-frames",
     label: "British frames",
     group: "Expertise",
+    section: "Skills",
     aliases: ["uk frames", "reynolds frames"],
   },
   {
     id: "japanese-keirin",
     label: "Japanese / NJS",
     group: "Expertise",
+    section: "Skills",
     aliases: ["keirin", "njs", "japanese track"],
-  },
-  {
-    id: "titanium-work",
-    label: "Titanium",
-    group: "Expertise",
-    aliases: ["ti frames", "titanium frames"],
-  },
-  {
-    id: "carbon-repair",
-    label: "Carbon repair",
-    group: "Expertise",
-    aliases: ["carbon", "composite repair"],
-  },
-  {
-    id: "touring-bikepacking",
-    label: "Touring & bikepacking",
-    group: "Expertise",
-    aliases: ["touring", "bikepacking", "loaded touring"],
-  },
-  {
-    id: "track-fixed",
-    label: "Track & fixed",
-    group: "Expertise",
-    aliases: ["fixed gear", "track bike", "fixie"],
-  },
-  {
-    id: "cargo-utility",
-    label: "Cargo & utility",
-    group: "Expertise",
-    aliases: ["cargo bikes", "utility", "family bikes"],
-  },
-  {
-    id: "e-bike-systems",
-    label: "E-bike systems",
-    group: "Expertise",
-    aliases: ["ebike", "e-bike", "mid-drive", "hub motor"],
   },
   {
     id: "lighting-dynamos",
     label: "Lighting & dynamos",
     group: "Expertise",
+    section: "Skills",
     aliases: ["dynamo", "generator hub", "bike lights"],
   },
   {
     id: "leather-saddle",
     label: "Leather saddles",
     group: "Expertise",
+    section: "Skills",
     aliases: ["brooks care", "saddle care", "leather"],
   },
   {
     id: "tubulars",
     label: "Tubulars",
     group: "Expertise",
+    section: "Skills",
     aliases: ["tubular gluing", "sew-ups", "glue"],
   },
   {
     id: "packing-shipping",
     label: "Packing & shipping",
     group: "Expertise",
+    section: "Skills",
     aliases: ["bike packing for travel", "case packing", "shipping bikes"],
   },
   {
     id: "documentation",
     label: "Garage documentation",
     group: "Expertise",
+    section: "Skills",
     aliases: ["build logs", "documentation", "provenance records"],
   },
   {
     id: "teaching",
     label: "Teaching & mentoring",
     group: "Expertise",
+    section: "Skills",
     aliases: ["mentoring", "workshops", "teaching"],
   },
   {
     id: "collecting",
     label: "Collecting",
     group: "Expertise",
+    section: "Skills",
     aliases: ["collector", "archive", "collection"],
+  },
+
+  // Expertise · Materials
+  {
+    id: "titanium-work",
+    label: "Titanium",
+    group: "Expertise",
+    section: "Materials",
+    aliases: ["ti frames", "titanium frames"],
+  },
+  {
+    id: "carbon-repair",
+    label: "Carbon repair",
+    group: "Expertise",
+    section: "Materials",
+    aliases: ["carbon", "composite repair"],
+  },
+  {
+    id: "vintage-steel",
+    label: "Vintage steel",
+    group: "Expertise",
+    section: "Materials",
+    aliases: ["vintage", "classic", "steel"],
+  },
+
+  // Expertise · Bike types
+  {
+    id: "touring-bikepacking",
+    label: "Touring & bikepacking",
+    group: "Expertise",
+    section: "Bike types",
+    aliases: ["touring", "bikepacking", "loaded touring"],
+  },
+  {
+    id: "track-fixed",
+    label: "Track & fixed",
+    group: "Expertise",
+    section: "Bike types",
+    aliases: ["fixed gear", "track bike", "fixie"],
+  },
+  {
+    id: "cargo-utility",
+    label: "Cargo & utility",
+    group: "Expertise",
+    section: "Bike types",
+    aliases: ["cargo bikes", "utility", "family bikes"],
+  },
+  {
+    id: "modern-road",
+    label: "Modern road",
+    group: "Expertise",
+    section: "Bike types",
+    aliases: ["modern", "contemporary"],
+  },
+  {
+    id: "retro-modern",
+    label: "Retro-modern",
+    group: "Expertise",
+    section: "Bike types",
+    aliases: ["retro"],
+  },
+
+  // Expertise · Eras
+  {
+    id: "pre-war",
+    label: "Pre-war",
+    group: "Expertise",
+    section: "Eras",
+    aliases: ["prewar", "1930s", "1940s"],
+  },
+  {
+    id: "1950s-60s",
+    label: "1950s–60s",
+    group: "Expertise",
+    section: "Eras",
+    aliases: ["50s", "60s", "1950s", "1960s"],
+  },
+  {
+    id: "1970s-80s",
+    label: "1970s–80s",
+    group: "Expertise",
+    section: "Eras",
+    aliases: ["70s", "80s", "1970s", "1980s"],
+  },
+  {
+    id: "1990s",
+    label: "1990s",
+    group: "Expertise",
+    section: "Eras",
+    aliases: ["90s", "1990s"],
+  },
+  {
+    id: "early-mtb",
+    label: "Early MTB",
+    group: "Expertise",
+    section: "Eras",
+    aliases: ["clunker", "klunker", "80s mtb"],
   },
 
   // Systems — what you know how to work on
@@ -344,55 +449,11 @@ const CORE_SKILLS: SkillDef[] = [
     group: "Systems",
     aliases: ["1x", "single ring"],
   },
-
-  // Eras folded into Expertise for beta (one list; free tags handle the rest)
   {
-    id: "pre-war",
-    label: "Pre-war",
-    group: "Expertise",
-    aliases: ["prewar", "1930s", "1940s"],
-  },
-  {
-    id: "1950s-60s",
-    label: "1950s–60s",
-    group: "Expertise",
-    aliases: ["50s", "60s", "1950s", "1960s"],
-  },
-  {
-    id: "1970s-80s",
-    label: "1970s–80s",
-    group: "Expertise",
-    aliases: ["70s", "80s", "1970s", "1980s"],
-  },
-  {
-    id: "1990s",
-    label: "1990s",
-    group: "Expertise",
-    aliases: ["90s", "1990s"],
-  },
-  {
-    id: "vintage-steel",
-    label: "Vintage steel",
-    group: "Expertise",
-    aliases: ["vintage", "classic", "steel"],
-  },
-  {
-    id: "early-mtb",
-    label: "Early MTB",
-    group: "Expertise",
-    aliases: ["clunker", "klunker", "80s mtb"],
-  },
-  {
-    id: "modern-road",
-    label: "Modern road",
-    group: "Expertise",
-    aliases: ["modern", "contemporary"],
-  },
-  {
-    id: "retro-modern",
-    label: "Retro-modern",
-    group: "Expertise",
-    aliases: ["retro"],
+    id: "e-bike-systems",
+    label: "E-bike systems",
+    group: "Systems",
+    aliases: ["ebike", "e-bike", "mid-drive", "hub motor"],
   },
 ];
 
@@ -404,6 +465,10 @@ const BRAND_SKILLS: SkillDef[] = BIKE_BRANDS.map((brand) => ({
 }));
 
 export const SKILL_TAXONOMY: SkillDef[] = [...CORE_SKILLS, ...BRAND_SKILLS];
+
+export function skillsInExpertiseSection(section: ExpertiseSection): SkillDef[] {
+  return SKILL_TAXONOMY.filter((s) => s.group === "Expertise" && s.section === section);
+}
 
 const byLabel = new Map(
   SKILL_TAXONOMY.map((s) => [s.label.toLowerCase(), s] as const),

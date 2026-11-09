@@ -5,11 +5,14 @@ import { Eye, Sparkles, X } from "lucide-react";
 import { chipClass } from "@/components/ui";
 import { suggestSkillsFromProfile } from "@/lib/skills/suggestClient";
 import {
+  EXPERTISE_SECTIONS,
   MAX_PROFILE_SKILLS,
   SKILL_GROUPS,
   SKILL_TAXONOMY,
   normalizeSkillLabels,
   skillsInGroup,
+  type ExpertiseSection,
+  type SkillDef,
   type SkillGroup,
 } from "@/lib/skills/taxonomy";
 
@@ -25,6 +28,30 @@ type Props = {
   compact?: boolean;
   max?: number;
 };
+
+function SkillChip({
+  skill,
+  on,
+  full,
+  onToggle,
+}: {
+  skill: SkillDef;
+  on: boolean;
+  full: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={full}
+      onClick={onToggle}
+      className={`${chipClass(on)} disabled:opacity-40`}
+      aria-pressed={on}
+    >
+      {skill.label}
+    </button>
+  );
+}
 
 export function SkillsEditor({
   value,
@@ -106,6 +133,38 @@ export function SkillsEditor({
     return base;
   })();
 
+  const showExpertiseSections =
+    !q && (openGroup === "Expertise" || openGroup === "all");
+
+  const expertiseBySection = useMemo(() => {
+    const map = new Map<ExpertiseSection, SkillDef[]>();
+    for (const section of EXPERTISE_SECTIONS) map.set(section, []);
+    for (const skill of filtered) {
+      if (skill.group !== "Expertise") continue;
+      const section = skill.section ?? "Skills";
+      map.get(section)?.push(skill);
+    }
+    return map;
+  }, [filtered]);
+
+  const nonExpertiseFiltered = showExpertiseSections
+    ? filtered.filter((s) => s.group !== "Expertise")
+    : filtered;
+
+  function renderChip(s: SkillDef) {
+    const on = selected.includes(s.label);
+    const full = !on && selected.length >= max;
+    return (
+      <SkillChip
+        key={s.id}
+        skill={s}
+        on={on}
+        full={full}
+        onToggle={() => (on ? remove(s.label) : add(s.label))}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-[14px] border border-line bg-ground/80 px-4 py-3.5">
@@ -152,6 +211,7 @@ export function SkillsEditor({
                     {def ? (
                       <div className="font-mono text-[11px] tracking-[0.08em] uppercase text-meta">
                         {def.group}
+                        {def.section ? ` · ${def.section}` : ""}
                       </div>
                     ) : null}
                   </div>
@@ -169,7 +229,7 @@ export function SkillsEditor({
           </ul>
         ) : (
           <p className="m-0 mt-2.5 rounded-[12px] border border-dashed border-line bg-surface px-3.5 py-4 text-[14px] text-muted-2">
-            No expertise tags yet. Add from the catalog or let AI suggest from your bio.
+            No expertise tags yet. Search the catalog or let AI suggest from your bio.
           </p>
         )}
       </div>
@@ -227,7 +287,7 @@ export function SkillsEditor({
 
       <div className="flex flex-col gap-2.5">
         <label htmlFor="skill-catalog-search" className="text-[14px] font-semibold">
-          Browse catalog
+          Search catalog
         </label>
         <input
           id="skill-catalog-search"
@@ -246,8 +306,9 @@ export function SkillsEditor({
               setQuery("");
             }
           }}
-          placeholder="Search, then click a tag — or Enter if one exact match"
+          placeholder="Search first — e.g. wheelbuilding, titanium, Bosch"
           className="h-11 rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[15px] outline-none focus:border-accent"
+          autoComplete="off"
         />
         <p className="m-0 text-[12px] text-meta">
           Only curated catalog tags can be added. Brands is a full marque list — search by name
@@ -288,34 +349,47 @@ export function SkillsEditor({
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Skill catalog">
-          {filtered.map((s) => {
-            const on = selected.includes(s.label);
-            const full = !on && selected.length >= max;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                disabled={full}
-                onClick={() => (on ? remove(s.label) : add(s.label))}
-                className={`${chipClass(on)} disabled:opacity-40`}
-                aria-pressed={on}
-              >
-                {s.label}
-              </button>
-            );
-          })}
-          {brandsNeedQuery ? (
-            <p className="m-0 w-full text-[13px] text-muted-2">
-              {skillsInGroup("Brands").length}+ brands in the catalog
-              {openGroup === "all" ? " (hidden until you search)" : ""} — type a name to filter
-              (e.g. Colnago, Campagnolo, Fox).
-            </p>
-          ) : null}
-          {!brandsNeedQuery && !filtered.length ? (
-            <p className="m-0 text-[13px] text-muted-2">No catalog matches for that search.</p>
-          ) : null}
-        </div>
+
+        {showExpertiseSections ? (
+          <div className="flex flex-col gap-4" role="group" aria-label="Expertise catalog">
+            {EXPERTISE_SECTIONS.map((section) => {
+              const items = expertiseBySection.get(section) ?? [];
+              if (!items.length) return null;
+              return (
+                <div key={section}>
+                  <p className="mb-2 mt-0 font-mono text-[11px] font-medium tracking-[0.12em] text-meta uppercase">
+                    {section}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">{items.map(renderChip)}</div>
+                </div>
+              );
+            })}
+            {openGroup === "all" && nonExpertiseFiltered.length ? (
+              <div>
+                <p className="mb-2 mt-0 font-mono text-[11px] font-medium tracking-[0.12em] text-meta uppercase">
+                  Systems
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {nonExpertiseFiltered.map(renderChip)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Skill catalog">
+            {filtered.map(renderChip)}
+            {brandsNeedQuery ? (
+              <p className="m-0 w-full text-[13px] text-muted-2">
+                {skillsInGroup("Brands").length}+ brands in the catalog
+                {openGroup === "all" ? " (hidden until you search)" : ""} — type a name to filter
+                (e.g. Colnago, Campagnolo, Fox).
+              </p>
+            ) : null}
+            {!brandsNeedQuery && !filtered.length ? (
+              <p className="m-0 text-[13px] text-muted-2">No catalog matches for that search.</p>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );
