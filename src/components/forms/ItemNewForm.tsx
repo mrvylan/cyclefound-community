@@ -5,8 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { BrandAutocomplete, normalizeBrandLabel } from "./BrandAutocomplete";
+import {
+  BikeComponentsEditor,
+  bikeComponentsForSave,
+} from "./BikeComponentsEditor";
 import { PhotoPicker } from "./PhotoPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
+import type { BikeComponent } from "@/lib/garage/bike-components";
+import {
+  normalizeBikeComponents,
+  parseComponentsBlurb,
+} from "@/lib/garage/bike-components";
 import {
   clearItemDraft,
   readItemDraft,
@@ -74,6 +83,7 @@ export function ItemNewForm() {
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [provenance, setProvenance] = useState("");
+  const [bikeComponents, setBikeComponents] = useState<BikeComponent[]>([]);
   const [error, setError] = useState("");
 
   const [identifying, setIdentifying] = useState(false);
@@ -85,6 +95,7 @@ export function ItemNewForm() {
 
   const showPrice = status === "For sale" || status === "Open to offers";
   const showSize = category === "Complete bikes" || category === "Framesets";
+  const showComponents = category === "Complete bikes" || category === "Framesets";
   const showDiscipline =
     category === "Complete bikes" || category === "Framesets" || category === "Wheels";
   const sessionHandle = getSessionHandle();
@@ -107,6 +118,7 @@ export function ItemNewForm() {
     setDescription("");
     setNotes("");
     setProvenance("");
+    setBikeComponents([]);
     setError("");
     setIdentifyError("");
     setAiApplied(false);
@@ -165,10 +177,7 @@ export function ItemNewForm() {
       [s.category, s.title, s.manufacturer, s.model].filter(Boolean).join(" "),
     );
     if (inferred) setDiscipline((cur) => cur || inferred);
-    const descBits = [s.description, s.components ? `Components: ${s.components}` : ""]
-      .filter(Boolean)
-      .join("\n\n");
-    const nextDesc = clampItemDescription(descBits);
+    const nextDesc = clampItemDescription(s.description || "");
     if (nextDesc) {
       setDescription((cur) => {
         if (
@@ -182,6 +191,13 @@ export function ItemNewForm() {
         }
         return cur;
       });
+    }
+    const fromList = normalizeBikeComponents(s.componentList);
+    const fromBlurb =
+      fromList.length === 0 && s.components ? parseComponentsBlurb(s.components) : [];
+    const nextComponents = fromList.length ? fromList : fromBlurb;
+    if (nextComponents.length) {
+      setBikeComponents((cur) => (cur.length ? cur : nextComponents));
     }
     setAiApplied(true);
   }
@@ -282,6 +298,7 @@ export function ItemNewForm() {
       notes: notes.trim(),
       provenance: provenance.trim(),
       photoDataUrls: photos,
+      bikeComponents: showComponents ? bikeComponentsForSave(bikeComponents) : [],
     });
     const handle = getSessionHandle() || sessionHandle;
     resetForm(statusFromQuery(searchParams.get("status")) || "Not for sale");
@@ -531,6 +548,12 @@ export function ItemNewForm() {
             </div>
           </div>
         </section>
+
+        {showComponents ? (
+          <section className="flex flex-col gap-4">
+            <BikeComponentsEditor value={bikeComponents} onChange={setBikeComponents} />
+          </section>
+        ) : null}
 
         {/* 3 — Public description + private notes */}
         <section className="flex flex-col gap-4">

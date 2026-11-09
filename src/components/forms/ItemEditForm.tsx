@@ -5,8 +5,17 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { BrandAutocomplete, normalizeBrandLabel } from "./BrandAutocomplete";
+import {
+  BikeComponentsEditor,
+  bikeComponentsForSave,
+} from "./BikeComponentsEditor";
 import { PhotoPicker } from "./PhotoPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
+import type { BikeComponent } from "@/lib/garage/bike-components";
+import {
+  normalizeBikeComponents,
+  parseComponentsBlurb,
+} from "@/lib/garage/bike-components";
 import { ITEM_CATEGORIES, type ItemCategory, normalizeItemCategory } from "@/lib/data/categories";
 import {
   canManageGarageItem,
@@ -64,6 +73,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [provenance, setProvenance] = useState("");
+  const [bikeComponents, setBikeComponents] = useState<BikeComponent[]>([]);
   const [error, setError] = useState("");
   const [identifying, setIdentifying] = useState(false);
   const [identifyError, setIdentifyError] = useState("");
@@ -71,6 +81,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
 
   const showPrice = status === "For sale" || status === "Open to offers";
   const showSize = category === "Complete bikes" || category === "Framesets";
+  const showComponents = category === "Complete bikes" || category === "Framesets";
   const showDiscipline =
     category === "Complete bikes" || category === "Framesets" || category === "Wheels";
   const sessionHandle = getSessionHandle();
@@ -114,6 +125,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       setStatus(nextStatus);
       setAskingPrice(item.ask === "—" ? "" : item.ask);
       setDescription(item.description || "");
+      setBikeComponents(item.bikeComponents || []);
       setPhotos(getItemPhotoUrls(item));
       const meta = getItemPrivateMeta(itemId);
       setNotes(meta.notes);
@@ -160,11 +172,17 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
         [s.category, s.title, s.manufacturer, s.model].filter(Boolean).join(" "),
       );
       if (inferred) setDiscipline((cur) => cur || inferred);
-      const descBits = [s.description, s.components ? `Components: ${s.components}` : ""]
-        .filter(Boolean)
-        .join("\n\n");
-      const nextDesc = clampItemDescription(descBits);
+      const nextDesc = clampItemDescription(s.description || "");
       if (nextDesc) setDescription((cur) => cur || nextDesc);
+      const fromList = normalizeBikeComponents(s.componentList);
+      const fromBlurb =
+        fromList.length === 0 && s.components
+          ? parseComponentsBlurb(s.components)
+          : [];
+      const nextComponents = fromList.length ? fromList : fromBlurb;
+      if (nextComponents.length) {
+        setBikeComponents((cur) => (cur.length ? cur : nextComponents));
+      }
       setAiApplied(true);
     } catch (err) {
       setIdentifyError(err instanceof Error ? err.message : "Identify failed.");
@@ -226,6 +244,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       notes,
       provenance,
       photoDataUrls: photos,
+      bikeComponents: showComponents ? bikeComponentsForSave(bikeComponents) : [],
     });
     const handle = updated?.ownerHandle || sessionHandle;
     router.push(handle ? `/u/${handle}/garage` : `/i/${itemId}`);
@@ -459,6 +478,12 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
             )}
           </div>
         </section>
+
+        {showComponents ? (
+          <section className="flex flex-col gap-4">
+            <BikeComponentsEditor value={bikeComponents} onChange={setBikeComponents} />
+          </section>
+        ) : null}
 
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">

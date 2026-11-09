@@ -1,3 +1,5 @@
+import type { BikeComponent } from "@/lib/garage/bike-components";
+
 export type IdentifySuggestion = {
   subjectKind: "bike" | "part";
   manufacturer: string;
@@ -9,7 +11,10 @@ export type IdentifySuggestion = {
   yearConfidence: string;
   frameMaterial: string;
   condition: string;
+  /** Freeform component blurb (legacy / summary). */
   components: string;
+  /** Structured build sheet when the subject is a bike. */
+  componentList: BikeComponent[];
   description: string;
   confidence: string;
   evidence: string;

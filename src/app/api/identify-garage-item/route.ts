@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ITEM_CATEGORIES } from "@/lib/data/categories";
 import {
+  BIKE_COMPONENT_SLOTS,
+  normalizeBikeComponents,
+  parseComponentsBlurb,
+} from "@/lib/garage/bike-components";
+import {
   buildSuggestedTitle,
   mapAiCondition,
   mapAiToGarageCategory,
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
   }
 
   const categories = ITEM_CATEGORIES.join(", ");
+  const slotList = BIKE_COMPONENT_SLOTS.join(", ");
   const system = `You identify used bicycles OR bicycle parts from photos for Cycle Found Community garage documentation.
 Return JSON only with this shape:
 {
@@ -84,6 +90,7 @@ Return JSON only with this shape:
     "frameMaterial": string,
     "condition": "Like New"|"Excellent"|"Good"|"Fair"|"Needs Work"|"",
     "components": string,
+    "componentList": [{"slot": string, "brand": string, "model": string, "notes": string}],
     "description": string,
     "confidence": "Low"|"Medium"|"High",
     "evidence": string,
@@ -99,6 +106,8 @@ Rules:
   Map accordingly: complete bicycle → "Complete bikes"; bare frame/frameset → "Framesets"; wheelsets → "Wheels"; drivetrain/cockpit/brakes/saddles/etc. → "Components"; lights/computers/bags/bottles/locks/pumps → "Accessories"; shop tools → "Tools"; anything else → "Other".
 - Do NOT invent precise years. Use "Unknown" or a range and low yearConfidence unless a year is clearly printed.
 - description: 1–3 sentences for the public garage listing (visible condition, notable features). No prices or invented ownership history. Under 400 characters.
+- components: short freeform summary of visible parts (optional).
+- componentList: for complete bikes, list only parts you can reasonably see or infer. slot MUST be one of: ${slotList}. Omit slots you cannot support. Prefer brand+model when legible; otherwise leave brand empty and put what you see in model/notes. Never invent specific models.
 - These are suggestions for the owner to confirm — never claim certainty.`;
 
   const model =
@@ -165,6 +174,10 @@ Rules:
   const year = sanitizeString(s.year) || "Unknown";
   const description = sanitizeString(s.description, 500);
   const components = sanitizeString(s.components, 400);
+  let componentList = normalizeBikeComponents(s.componentList);
+  if (!componentList.length && components) {
+    componentList = parseComponentsBlurb(components);
+  }
   const evidence = sanitizeString(s.evidence, 500);
   const guidance = sanitizeString(s.guidance, 400);
   const confidence = sanitizeString(s.confidence) || "Low";
@@ -214,6 +227,7 @@ Rules:
       frameMaterial: sanitizeString(s.frameMaterial),
       condition,
       components,
+      componentList,
       description,
       confidence,
       evidence,

@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
 import { ItemDescription } from "@/components/garage/ItemDescription";
+import { ItemSpecsCard } from "@/components/garage/ItemSpecsCard";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
 import {
   Avatar,
@@ -176,20 +177,13 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </div>
           </div>
 
-          <section className="rounded-2xl border border-line bg-surface p-6">
-            <h2 className="section-title mb-4 mt-0 text-[20px]">Specs</h2>
-            <dl className="m-0 divide-y divide-line-soft">
-              {specs.map((s) => (
-                <div
-                  key={s.k}
-                  className="grid grid-cols-[minmax(7rem,9.5rem)_minmax(0,1fr)] gap-x-5 py-2.5 text-[14px]"
-                >
-                  <dt className="text-muted">{s.k}</dt>
-                  <dd className="m-0 min-w-0 font-medium text-ink">{s.v}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
+          <ItemSpecsCard
+            specs={specs}
+            bikeComponents={item.bikeComponents}
+            showComponentsTab={
+              item.catShort === "Complete bikes" || item.catShort === "Framesets"
+            }
+          />
         </div>
 
         <aside className="flex min-w-0 flex-[1_1_400px] flex-col gap-[18px]">

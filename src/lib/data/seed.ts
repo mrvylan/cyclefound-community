@@ -1,3 +1,4 @@
+import type { BikeComponent } from "@/lib/garage/bike-components";
 import { seedGarageCover } from "./seed-photos";
 
 export type ItemStatus = "For sale" | "Open to offers" | "Trade only" | "Not for sale";
@@ -66,6 +67,8 @@ export type GarageItem = {
   photo?: string;
   archived?: boolean;
   description?: string;
+  /** Structured build sheet — complete bikes / framesets. */
+  bikeComponents?: BikeComponent[];
 };
 
 export type WantedRequest = {

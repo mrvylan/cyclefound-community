@@ -104,6 +104,7 @@ export type GarageItemPatch = Partial<
     | "photo"
     | "archived"
     | "description"
+    | "bikeComponents"
   >
 > & {
   /** Permanently remove from garage views (seed + user items). */
@@ -586,6 +587,7 @@ export function updateGarageItem(
     notes: string;
     provenance: string;
     photoDataUrls: string[];
+    bikeComponents?: GarageItem["bikeComponents"];
   },
 ): GarageItem | undefined {
   const existing = getItemLocal(id);
@@ -606,6 +608,7 @@ export function updateGarageItem(
     ask: normalizeAskInput(input.askingPrice) || "—",
     mkt: input.ownerEstValue.trim() || existing.mkt,
     description: input.description.trim(),
+    bikeComponents: input.bikeComponents?.length ? input.bikeComponents : undefined,
     archived: false,
   });
   if (input.photoDataUrls.length) {
@@ -761,6 +764,7 @@ export function postItem(input: {
   notes: string;
   provenance: string;
   photoDataUrls: string[];
+  bikeComponents?: GarageItem["bikeComponents"];
 }): GarageItem {
   const store = readStore();
   const id = `${slugify(input.title) || "item"}-${Date.now().toString(36)}`;
@@ -768,6 +772,9 @@ export function postItem(input: {
   const size = input.size?.trim();
   const discipline = input.discipline?.trim();
   const manufacturer = input.manufacturer?.trim();
+  const bikeComponents = input.bikeComponents?.length
+    ? input.bikeComponents
+    : undefined;
   const item: GarageItem = {
     id,
     ownerHandle: store.sessionHandle,
@@ -777,6 +784,7 @@ export function postItem(input: {
     ...(size ? { size } : {}),
     ...(discipline ? { discipline } : {}),
     ...(manufacturer ? { manufacturer } : {}),
+    ...(bikeComponents ? { bikeComponents } : {}),
     name: input.title.trim(),
     cond: input.condition,
     mkt: input.ownerEstValue.trim() || "—",
