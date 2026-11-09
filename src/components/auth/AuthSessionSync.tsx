@@ -14,6 +14,7 @@ import {
 } from "@/lib/data/local-store";
 
 function canonicalHandle(userId: string, displayName: string) {
+  // Directory handle wins once hydrated — keeps slug drift from creating a second "You" card.
   return (
     getDirectoryHandleForUserId(userId) ||
     communityHandleFromProfile(userId, displayName)

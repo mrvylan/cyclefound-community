@@ -8,6 +8,7 @@ import {
   getDirectoryHandleForUserId,
   getDirectoryUserId,
 } from "@/lib/community/directory-cache";
+import { accountIdentityKey } from "@/lib/community/handles";
 import { normalizeItemCategory } from "@/lib/data/categories";
 import {
   getGarageItemsFor,
@@ -16,7 +17,7 @@ import {
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { cityFromLoc, getGarage, type GarageItem } from "@/lib/data/seed";
+import { cityFromLoc, getGarage, type GarageItem, type Person } from "@/lib/data/seed";
 
 function garageStatLine(items: GarageItem[], forSale: number) {
   const bikeish = items.filter((i) => {
@@ -59,63 +60,115 @@ function GarageCover({
   );
 }
 
+type GarageRow = {
+  key: string;
+  person: Person;
+  garage: ReturnType<typeof getGarage>;
+  items: GarageItem[];
+  forSale: number;
+  photos: string[];
+  isYou: boolean;
+};
+
+function mergeItems(...lists: GarageItem[][]) {
+  const out: GarageItem[] = [];
+  const seen = new Set<string>();
+  for (const list of lists) {
+    for (const item of list) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      out.push(item);
+    }
+  }
+  return out;
+}
+
 export default function GaragesIndexPage() {
   const { profile } = useAuth();
-  const [rows, setRows] = useState<
-    {
-      person: ReturnType<typeof listMembers>[number];
-      garage: ReturnType<typeof getGarage>;
-      items: GarageItem[];
-      forSale: number;
-      photos: string[];
-      isYou: boolean;
-    }[]
-  >([]);
+  const [rows, setRows] = useState<GarageRow[]>([]);
   const [me, setMe] = useState("");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      const handle = getSessionHandle();
+      const sessionHandle = getSessionHandle();
       const myDirHandle = profile
         ? getDirectoryHandleForUserId(profile.id) || ""
         : "";
-      const myUserId = profile?.id || (handle ? getDirectoryUserId(handle) : "");
-      setMe(myDirHandle || handle);
+      const myUserId = profile?.id || "";
+      const canonicalMe = myDirHandle || sessionHandle;
+      setMe(canonicalMe);
 
-      const next = listMembers()
-        .map((person) => {
-          const garage = getGarage(person.handle);
-          let items = getGarageItemsFor(person.handle);
-          // If this is the signed-in member, also fold in local items still
-          // keyed under a stale session handle until migrate finishes.
-          if (
-            handle &&
-            handle !== person.handle &&
-            (person.handle === myDirHandle ||
-              (myUserId && getDirectoryUserId(person.handle) === myUserId))
-          ) {
-            const extras = getGarageItemsFor(handle);
-            if (extras.length) {
-              const seen = new Set(items.map((i) => i.id));
-              items = [...items, ...extras.filter((i) => !seen.has(i.id))];
-            }
+      const myKey = myUserId
+        ? accountIdentityKey(canonicalMe || "me", myUserId)
+        : canonicalMe
+          ? accountIdentityKey(canonicalMe)
+          : "";
+
+      const byKey = new Map<string, GarageRow>();
+
+      for (const person of listMembers({ authUserId: myUserId || undefined })) {
+        const userId = getDirectoryUserId(person.handle);
+        const key = accountIdentityKey(person.handle, userId || undefined);
+        const existing = byKey.get(key);
+        const items = mergeItems(
+          existing?.items || [],
+          getGarageItemsFor(person.handle),
+        );
+        const isYou =
+          Boolean(myKey && key === myKey) ||
+          Boolean(canonicalMe && person.handle === canonicalMe) ||
+          Boolean(sessionHandle && person.handle === sessionHandle);
+        // Prefer the directory-backed person when merging a session stub.
+        const preferredPerson = userId || !existing ? person : existing.person;
+
+        byKey.set(key, {
+          key,
+          person: preferredPerson,
+          garage:
+            getGarage(preferredPerson.handle) ||
+            getGarage(person.handle) ||
+            existing?.garage,
+          items,
+          forSale: items.filter((i) => i.status !== "Not for sale").length,
+          photos: items.flatMap((i) => getItemPhotoUrls(i)),
+          isYou: Boolean(existing?.isYou || isYou),
+        });
+      }
+
+      // Fold leftover local items still keyed under a stale session slug.
+      if (sessionHandle && myKey) {
+        const extras = getGarageItemsFor(sessionHandle);
+        if (extras.length) {
+          const row = byKey.get(myKey);
+          if (row) {
+            const items = mergeItems(row.items, extras);
+            byKey.set(myKey, {
+              ...row,
+              items,
+              forSale: items.filter((i) => i.status !== "Not for sale").length,
+              photos: items.flatMap((i) => getItemPhotoUrls(i)),
+              isYou: true,
+            });
           }
-          const photos = items.flatMap((i) => getItemPhotoUrls(i));
-          const isYou = Boolean(
-            (handle && person.handle === handle) ||
-              (myDirHandle && person.handle === myDirHandle) ||
-              (myUserId && getDirectoryUserId(person.handle) === myUserId),
-          );
-          return {
-            person,
-            garage,
+        }
+      }
+      if (canonicalMe && canonicalMe !== sessionHandle && myKey) {
+        const extras = getGarageItemsFor(canonicalMe);
+        const row = byKey.get(myKey);
+        if (row && extras.length) {
+          const items = mergeItems(row.items, extras);
+          byKey.set(myKey, {
+            ...row,
             items,
             forSale: items.filter((i) => i.status !== "Not for sale").length,
-            photos,
-            isYou,
-          };
-        })
+            photos: items.flatMap((i) => getItemPhotoUrls(i)),
+            isYou: true,
+          });
+        }
+      }
+
+      const next = [...byKey.values()]
         .filter((row) => row.items.length > 0 || row.isYou)
         .sort((a, b) => {
           if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
@@ -165,9 +218,9 @@ export default function GaragesIndexPage() {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-          {rows.map(({ person, garage, items, forSale, photos, isYou }) => (
+          {rows.map(({ key, person, garage, items, forSale, photos, isYou }) => (
             <Link
-              key={person.handle}
+              key={key}
               href={`/u/${person.handle}/garage`}
               className="relative flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface text-ink no-underline hover:border-[#D4D3CD]"
             >

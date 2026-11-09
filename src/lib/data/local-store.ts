@@ -20,10 +20,12 @@ import {
   isValidMemberHandle,
   normalizeClaimedHandle,
 } from "./handles";
+import { accountIdentityKey } from "@/lib/community/handles";
 import { normalizeAskInput } from "@/lib/garage/itemFields";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 import {
   getAllMarketplaceItems,
+  getDirectoryHandleForUserId,
   getDirectoryMembers,
   getDirectoryPerson,
   getDirectoryUserId,
@@ -796,7 +798,7 @@ export function postItem(input: {
   return item;
 }
 
-export function listMembers(): Person[] {
+export function listMembers(opts?: { authUserId?: string }): Person[] {
   const withSkills = (person: Person | undefined) => {
     if (!person) return undefined;
     return { ...person, skills: normalizeSkillLabels(person.skills) };
@@ -804,7 +806,7 @@ export function listMembers(): Person[] {
 
   const out: Person[] = [];
   const seenHandles = new Set<string>();
-  const seenUserIds = new Set<string>();
+  const seenIds = new Set<string>();
 
   function push(person: Person | undefined) {
     const next = withSkills(person);
@@ -816,10 +818,9 @@ export function listMembers(): Person[] {
       return;
     }
     const userId = getDirectoryUserId(next.handle);
-    if (userId) {
-      if (seenUserIds.has(userId)) return;
-      seenUserIds.add(userId);
-    }
+    const key = accountIdentityKey(next.handle, userId);
+    if (seenIds.has(key)) return;
+    seenIds.add(key);
     seenHandles.add(next.handle);
     out.push(next);
   }
@@ -830,13 +831,17 @@ export function listMembers(): Person[] {
   }
 
   const me = getSessionHandle();
+  const authUserId = opts?.authUserId?.trim() || "";
   if (me) {
     // Prefer the directory row for this account so we don't show a second "You" card
-    // when the session slug briefly differs from the directory handle.
-    const dirUserId = getDirectoryUserId(me);
-    if (dirUserId && seenUserIds.has(dirUserId)) {
-      /* already listed */
-    } else {
+    // when the session slug differs from the directory handle (dylan_s_* vs dylan_simpson_*).
+    const authKey = authUserId ? accountIdentityKey(me, authUserId) : "";
+    const meKey = accountIdentityKey(me, getDirectoryUserId(me));
+    const alreadyListed =
+      (authKey && seenIds.has(authKey)) ||
+      seenIds.has(meKey) ||
+      (authUserId && Boolean(getDirectoryHandleForUserId(authUserId)));
+    if (!alreadyListed) {
       push(
         getMergedPerson(me) ??
           getDirectoryPerson(me) ??
