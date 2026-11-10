@@ -178,8 +178,10 @@ export default function GaragesIndexPage() {
         }
       }
 
+      // Only list garages that still have at least one item. An empty garage
+      // (including your own after deleting the last bike) leaves this index.
       const next = [...byKey.values()]
-        .filter((row) => row.items.length > 0 || row.isYou)
+        .filter((row) => row.items.filter((i) => !i.archived).length > 0)
         .sort((a, b) => {
           if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
           return b.items.length - a.items.length;
