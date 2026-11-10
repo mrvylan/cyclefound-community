@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import {
   BIKE_COMPONENT_GROUPS,
   BIKE_COMPONENT_LABELS,
@@ -315,7 +315,11 @@ export function BikeComponentsEditor({
                   aria-expanded={open}
                   aria-controls={panelId}
                   onClick={() => toggleGroup(group.id)}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-ground/80"
+                  className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                    open
+                      ? "bg-ground/70"
+                      : "bg-surface hover:bg-ground/50"
+                  }`}
                 >
                   <span
                     className={`flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold tabular-nums ${
@@ -336,14 +340,10 @@ export function BikeComponentsEditor({
                     </span>
                     <span className="block font-mono text-[12px] tabular-nums text-meta">
                       {filledInGroup}/{group.rows.length} filled
+                      <span className="text-muted"> · {open ? "Expanded" : "Collapsed"}</span>
                     </span>
                   </span>
-                  <ChevronDown
-                    className={`size-5 shrink-0 text-muted transition-transform duration-200 ${
-                      open ? "rotate-180" : ""
-                    }`}
-                    aria-hidden
-                  />
+                  <ExpandToggle open={open} />
                 </button>
               </h3>
 
@@ -408,6 +408,35 @@ export function BikeComponentsEditor({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Labeled expand/collapse control — chevron alone is too easy to miss. */
+function ExpandToggle({
+  open,
+  expandLabel = "Expand",
+  collapseLabel = "Collapse",
+}: {
+  open: boolean;
+  expandLabel?: string;
+  collapseLabel?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-[8px] border px-2.5 text-[12px] font-semibold ${
+        open
+          ? "border-ink bg-ink text-white"
+          : "border-line bg-white text-ink"
+      }`}
+      aria-hidden
+    >
+      {open ? collapseLabel : expandLabel}
+      {open ? (
+        <ChevronUp className="size-3.5" strokeWidth={2.25} />
+      ) : (
+        <ChevronDown className="size-3.5" strokeWidth={2.25} />
+      )}
+    </span>
   );
 }
 
@@ -549,12 +578,7 @@ function ComponentAccordionRow({
             {summary}
           </span>
         </span>
-        <ChevronDown
-          className={`size-4 shrink-0 text-muted transition-transform duration-200 ${
-            open ? "rotate-180" : ""
-          }`}
-          aria-hidden
-        />
+        <ExpandToggle open={open} expandLabel="Edit" collapseLabel="Close" />
       </button>
 
       <div
