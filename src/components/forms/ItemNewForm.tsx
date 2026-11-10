@@ -224,7 +224,10 @@ export function ItemNewForm() {
               ),
             ]
           : base;
-        return mergeComponentsWithTemplate(merged, discipline || null);
+        return mergeComponentsWithTemplate(merged, {
+          discipline: discipline || null,
+          category,
+        });
       });
     }
     setAiApplied(true);
@@ -637,6 +640,7 @@ export function ItemNewForm() {
               value={bikeComponents}
               onChange={setBikeComponents}
               discipline={discipline}
+              category={category}
             />
           </section>
         ) : null}

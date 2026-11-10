@@ -211,7 +211,10 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
                 ),
               ]
             : nextComponents;
-          return mergeComponentsWithTemplate(merged, discipline || null);
+          return mergeComponentsWithTemplate(merged, {
+            discipline: discipline || null,
+            category,
+          });
         });
       }
       setAiApplied(true);
@@ -566,6 +569,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
               value={bikeComponents}
               onChange={setBikeComponents}
               discipline={discipline}
+              category={category}
             />
           </section>
         ) : null}

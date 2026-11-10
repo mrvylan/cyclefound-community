@@ -77,7 +77,7 @@ export type BikeComponent = {
   origin?: BikeComponentOrigin;
 };
 
-export type BikeComponentTemplate = "standard" | "ebike";
+export type BikeComponentTemplate = "standard" | "ebike" | "frameset";
 
 export const BIKE_COMPONENT_ORIGIN_LABELS: Record<BikeComponentOrigin, string> = {
   stock: "Stock",
@@ -182,6 +182,18 @@ export const BIKE_COMPONENT_GROUPS: { id: string; label: string; slots: BikeComp
       ],
     },
   ];
+
+/**
+ * Frameset sheet — frame + fork package (plus usual smalls).
+ * Not a rideable bike: no cockpit, drivetrain, brakes, or wheels.
+ */
+export const FRAMESET_SLOTS: readonly BikeComponentSlot[] = [
+  "frame",
+  "fork",
+  "headset",
+  "thru_axles",
+  "derailleur_hanger",
+] as const;
 
 /** Required parts for a functional acoustic bike (Road ✓ + pedals). */
 export const STANDARD_FUNCTIONAL_SLOTS: readonly BikeComponentSlot[] = [
@@ -378,10 +390,24 @@ export function normalizeBikeComponentSlot(
   return SLOT_ALIASES[key] || null;
 }
 
+export type ComponentTemplateInput = {
+  category?: string | null;
+  discipline?: Discipline | string | null;
+};
+
 export function resolveComponentTemplate(
-  discipline?: Discipline | string | null,
+  input?: Discipline | string | null | ComponentTemplateInput,
 ): BikeComponentTemplate {
-  const d = String(discipline || "")
+  const opts: ComponentTemplateInput =
+    input && typeof input === "object"
+      ? input
+      : { discipline: input as Discipline | string | null | undefined };
+  const cat = String(opts.category || "")
+    .trim()
+    .toLowerCase();
+  if (cat === "framesets" || cat === "frameset") return "frameset";
+
+  const d = String(opts.discipline || "")
     .trim()
     .toLowerCase();
   if (d === "e-bike" || d === "ebike" || /e\s*bike|electric/.test(d)) return "ebike";
@@ -389,20 +415,23 @@ export function resolveComponentTemplate(
 }
 
 export function slotsForTemplate(template: BikeComponentTemplate): BikeComponentSlot[] {
-  return template === "ebike"
-    ? [...EBIKE_FUNCTIONAL_SLOTS]
-    : [...STANDARD_FUNCTIONAL_SLOTS];
+  if (template === "frameset") return [...FRAMESET_SLOTS];
+  if (template === "ebike") return [...EBIKE_FUNCTIONAL_SLOTS];
+  return [...STANDARD_FUNCTIONAL_SLOTS];
 }
 
 export function emptyComponentRow(slot: BikeComponentSlot): BikeComponent {
   return { slot, brand: "", model: "", notes: "", origin: "stock" };
 }
 
-/** Empty build sheet for a discipline (all functional slots present). */
+/** Empty build sheet for category + discipline. */
 export function defaultComponentsForDiscipline(
   discipline?: Discipline | string | null,
+  category?: string | null,
 ): BikeComponent[] {
-  return slotsForTemplate(resolveComponentTemplate(discipline)).map(emptyComponentRow);
+  return slotsForTemplate(
+    resolveComponentTemplate({ discipline, category }),
+  ).map(emptyComponentRow);
 }
 
 /**
@@ -411,9 +440,14 @@ export function defaultComponentsForDiscipline(
  */
 export function mergeComponentsWithTemplate(
   existing: BikeComponent[] | undefined | null,
-  discipline?: Discipline | string | null,
+  disciplineOrInput?: Discipline | string | null | ComponentTemplateInput,
+  category?: string | null,
 ): BikeComponent[] {
-  const template = resolveComponentTemplate(discipline);
+  const input: ComponentTemplateInput =
+    disciplineOrInput && typeof disciplineOrInput === "object"
+      ? disciplineOrInput
+      : { discipline: disciplineOrInput as Discipline | string | null | undefined, category };
+  const template = resolveComponentTemplate(input);
   const slots = slotsForTemplate(template);
   const bySlot = new Map<BikeComponentSlot, BikeComponent>();
   for (const row of existing || []) {

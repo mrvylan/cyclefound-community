@@ -23,8 +23,10 @@ import type { Discipline } from "@/lib/garage/disciplines";
 type Props = {
   value: BikeComponent[];
   onChange: (next: BikeComponent[]) => void;
-  /** Drive template: standard functional bike vs e-bike electrical list. */
+  /** Drive e-bike vs acoustic functional list. */
   discipline?: Discipline | "";
+  /** Framesets use a short frame+fork sheet; complete bikes use the full list. */
+  category?: string;
 };
 
 type RowRef = { row: BikeComponent; index: number };
@@ -33,8 +35,16 @@ const field =
   "h-11 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3 text-[15px] text-ink outline-none transition-[border-color,box-shadow] focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
 
 /** Editable build sheet — accordion UX for complete bikes / framesets. */
-export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props) {
-  const template = resolveComponentTemplate(discipline || null);
+export function BikeComponentsEditor({
+  value,
+  onChange,
+  discipline = "",
+  category = "Complete bikes",
+}: Props) {
+  const template = resolveComponentTemplate({
+    discipline: discipline || null,
+    category,
+  });
   const templateSlots = useMemo(() => slotsForTemplate(template), [template]);
   const templateSlotSet = useMemo(() => new Set(templateSlots), [templateSlots]);
   const lastTemplateRef = useRef(template);
@@ -58,7 +68,7 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
     }
   }, [value]);
 
-  // Seed the functional list on open, and remesh when switching to/from e-bike.
+  // Seed the list on open; remesh when switching complete bike / frameset / e-bike.
   useEffect(() => {
     const templateChanged = lastTemplateRef.current !== template;
     lastTemplateRef.current = template;
@@ -66,10 +76,15 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
       (slot) => !value.some((r) => r.slot === slot),
     );
     if (!value.length || templateChanged || missingTemplateSlot) {
-      onChange(mergeComponentsWithTemplate(value, discipline || null));
+      onChange(
+        mergeComponentsWithTemplate(value, {
+          discipline: discipline || null,
+          category,
+        }),
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- remesh on template / incomplete list only
-  }, [template, discipline, templateSlots]);
+  }, [template, discipline, category, templateSlots]);
 
   const groups = useMemo(() => {
     const mapped = BIKE_COMPONENT_GROUPS.map((g) => ({
@@ -203,9 +218,11 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
         <div className="min-w-0 flex-1">
           <h2 className="section-title m-0 text-[20px]">Components</h2>
           <p className="mt-1 m-0 max-w-[40rem] text-[14px] leading-relaxed text-muted-2">
-            {template === "ebike"
-              ? "E-bike build sheet — open a section, fill what you know, skip the rest."
-              : "Open a section and fill brand and model as you go. Blank is fine for unknowns."}
+            {template === "frameset"
+              ? "Frameset sheet — frame, fork, and the usual smalls. Add optional parts if your frameset includes more."
+              : template === "ebike"
+                ? "E-bike build sheet — open a section, fill what you know, skip the rest."
+                : "Open a section and fill brand and model as you go. Blank is fine for unknowns."}
           </p>
         </div>
         <span
@@ -215,7 +232,11 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
               : "border border-line bg-ground text-muted-2"
           }`}
         >
-          {template === "ebike" ? "E-bike list" : "Functional bike"}
+          {template === "frameset"
+            ? "Frameset list"
+            : template === "ebike"
+              ? "E-bike list"
+              : "Functional bike"}
         </span>
       </div>
 
