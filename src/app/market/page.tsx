@@ -316,27 +316,29 @@ export default function MarketPage() {
   return (
     <>
       <section className="border-b border-line">
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-4 px-8 pb-8 pt-12">
-          <div className="min-w-0 flex-1">
-            <h1 className="section-title m-0 text-[clamp(36px,6vw,64px)]">
-              Parts and bikes from real garages
-            </h1>
-            <p className="mt-4 m-0 max-w-[640px] text-[18px] leading-[1.55] text-muted-2">
-              Listings come from member garages. Every item is tied to a person and the rest of what
-              they own.
-            </p>
+        <div className="mx-auto max-w-[1280px] px-5 pb-8 pt-10 sm:px-8 sm:pt-12">
+          <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <h1 className="section-title m-0 text-[clamp(32px,8vw,64px)] text-balance">
+                Parts and bikes from real garages
+              </h1>
+              <p className="mt-3 m-0 max-w-[640px] text-[16px] leading-[1.55] text-muted-2 sm:mt-4 sm:text-[18px]">
+                Listings come from member garages. Every item is tied to a person and the rest of
+                what they own.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSellOpen(true)}
+              className="inline-flex h-11 w-full shrink-0 items-center justify-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white hover:bg-accent-hover sm:w-auto"
+            >
+              Sell from your garage
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setSellOpen(true)}
-            className="inline-flex h-11 shrink-0 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white hover:bg-accent-hover"
-          >
-            Sell from your garage
-          </button>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1280px] px-8 py-8 pb-16">
+      <div className="mx-auto max-w-[1280px] px-5 py-8 pb-16 sm:px-8">
         {listings.length === 0 ? (
           <EmptyState
             title="Nothing for sale yet"

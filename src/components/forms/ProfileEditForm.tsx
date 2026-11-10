@@ -152,16 +152,33 @@ export function ProfileEditForm() {
       let nextUrl = prepared.dataUrl;
 
       if (user) {
-        try {
-          nextUrl = await uploadAvatarToStorage(user.id, prepared.blob);
-        } catch (err) {
-          // Keep local data URL so the photo still works on community.
-          setHint(
-            err instanceof Error
-              ? err.message
-              : "Photo saved on this device. Cloud avatar storage isn’t available yet.",
-          );
-          nextUrl = prepared.dataUrl;
+        // Prefer server upload so the public directory (and other devices) get the photo.
+        const body = new FormData();
+        body.append(
+          "file",
+          new File([prepared.blob], "avatar.jpg", { type: "image/jpeg" }),
+        );
+        const res = await fetch("/api/profile/avatar", { method: "POST", body });
+        const payload = (await res.json().catch(() => ({}))) as {
+          url?: string;
+          error?: string;
+          warning?: string;
+        };
+        if (!res.ok || !payload.url) {
+          try {
+            nextUrl = await uploadAvatarToStorage(user.id, prepared.blob);
+          } catch (err) {
+            setHint(
+              payload.error ||
+                (err instanceof Error
+                  ? err.message
+                  : "Photo saved on this device only. Other phones won’t see it until cloud upload works."),
+            );
+            nextUrl = prepared.dataUrl;
+          }
+        } else {
+          nextUrl = payload.url;
+          if (payload.warning) setHint(payload.warning);
         }
       }
 
