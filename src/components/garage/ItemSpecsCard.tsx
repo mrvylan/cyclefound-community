@@ -33,8 +33,7 @@ export function ItemSpecsCard({
     [bikeComponents],
   );
   const canShowComponents = showComponentsTab || filled.length > 0;
-  // Prefer Components when parts exist — on mobile Overview alone looked like Specs was empty of build detail.
-  const [tab, setTab] = useState<Tab>(() => (filled.length ? "components" : "overview"));
+  const [tab, setTab] = useState<Tab>("overview");
   const [selected, setSelected] = useState<BikeComponent | null>(null);
 
   const activeTab = canShowComponents ? tab : "overview";
