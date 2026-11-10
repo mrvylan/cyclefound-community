@@ -17,6 +17,7 @@ import {
   StatusChip,
 } from "@/components/ui";
 import {
+  getMarketplaceItem,
   hydrateCommunityDirectory,
   isCommunityDirectoryReady,
 } from "@/lib/community/directory-cache";
@@ -29,9 +30,11 @@ import {
   getItemPhotoUrls,
   getItemPrivateMeta,
   getSessionHandle,
+  isMarketplaceListingItem,
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { CLASSIC_ORIGIN } from "@/lib/legal";
 import {
   formatAskPrice,
   itemDisplayTitle,
@@ -83,6 +86,17 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       (canManageGarageItem(item, sessionHandle, profile?.id) ||
         canManageGarageItem(item, authHandle, profile?.id)),
   );
+  const marketplace = item ? isMarketplaceListingItem(item) : false;
+  const listingId = item
+    ? getMarketplaceItem(item.id)?.listingId ||
+      (item as { listingId?: string }).listingId ||
+      item.id
+    : "";
+  const editHref = marketplace
+    ? `${CLASSIC_ORIGIN}/sell.html?id=${encodeURIComponent(listingId)}`
+    : item
+      ? `/item/${item.id}/edit`
+      : "#";
 
   if (!ready || ((!item || !owner) && !directoryReady)) {
     return (
@@ -288,7 +302,10 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    href={`/item/${item.id}/edit`}
+                    href={editHref}
+                    {...(marketplace
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
                     className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center gap-2 rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
                   >
                     <Pencil className="size-4" aria-hidden />

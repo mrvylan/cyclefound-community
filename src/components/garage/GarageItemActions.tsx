@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Archive, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import {
   getCommunityGarageItem,
+  getMarketplaceItem,
   hydrateCommunityDirectory,
   removeCommunityGarageItem,
   removeMarketplaceItem,
@@ -22,6 +23,7 @@ import {
   setRemoteGarageArchived,
 } from "@/lib/garage/garageRemote";
 import { RemoveListingDialog } from "@/components/garage/RemoveListingDialog";
+import { CLASSIC_ORIGIN } from "@/lib/legal";
 
 type Props = {
   item: GarageItem;
@@ -43,6 +45,13 @@ export function GarageItemActions({ item, compact }: Props) {
 
   const marketplace = isMarketplaceListingItem(item);
   const communityGarage = Boolean(getCommunityGarageItem(item.id));
+  const listingId =
+    getMarketplaceItem(item.id)?.listingId ||
+    (item as { listingId?: string }).listingId ||
+    item.id;
+  const editHref = marketplace
+    ? `${CLASSIC_ORIGIN}/sell.html?id=${encodeURIComponent(listingId)}`
+    : `/item/${item.id}/edit`;
 
   useEffect(() => {
     if (!open) return;
@@ -192,17 +201,18 @@ export function GarageItemActions({ item, compact }: Props) {
             role="menu"
             className="absolute right-0 z-30 mt-1.5 w-[13rem] overflow-hidden rounded-[10px] border border-line bg-white py-1 shadow-[0_10px_28px_rgba(16,23,27,0.14)]"
           >
-            {!marketplace ? (
-              <Link
-                role="menuitem"
-                href={`/item/${item.id}/edit`}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
-                onClick={() => setOpen(false)}
-              >
-                <Pencil className="size-3.5 text-muted" aria-hidden />
-                Edit
-              </Link>
-            ) : null}
+            <Link
+              role="menuitem"
+              href={editHref}
+              {...(marketplace
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
+              className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
+              onClick={() => setOpen(false)}
+            >
+              <Pencil className="size-3.5 text-muted" aria-hidden />
+              Edit
+            </Link>
 
             {!marketplace ? (
               item.archived ? (
