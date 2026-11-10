@@ -72,9 +72,11 @@ export function itemDisplayTitle(
   const y = itemYearLabel(year);
   if (y) {
     const yearToken = new RegExp(`(?:^|\\s)${y}(?:\\s|$)`);
-    // Strip trailing "1996 - Mountain" / "— 1996" style leftovers.
+    // Strip trailing "Name 1996" / "Name — 1996 …" only. Do not use an
+    // optional leading separator — that matched year-at-start and wiped the
+    // whole title (e.g. "1996 Klein Attitude Comp" → "").
     base = base
-      .replace(new RegExp(`(?:\\s*[-–—:/]?\\s*)${y}\\b.*$`), "")
+      .replace(new RegExp(`(?:\\s*[-–—:/]+\\s*|\\s+)${y}\\b.*$`), "")
       .replace(new RegExp(`^${y}\\b[\\s\-–—:]*`), "")
       .replace(/\s+/g, " ")
       .trim();
