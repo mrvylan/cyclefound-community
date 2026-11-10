@@ -80,8 +80,8 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const authHandle = profile ? handleFromAuthProfile(profile) : "";
   const isOwner = Boolean(
     item &&
-      (canManageGarageItem(item, sessionHandle) ||
-        canManageGarageItem(item, authHandle)),
+      (canManageGarageItem(item, sessionHandle, profile?.id) ||
+        canManageGarageItem(item, authHandle, profile?.id)),
   );
 
   if (!ready || ((!item || !owner) && !directoryReady)) {

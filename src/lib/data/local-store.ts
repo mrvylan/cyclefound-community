@@ -687,8 +687,26 @@ export function deleteGarageItem(id: string) {
   }
 }
 
-export function canManageGarageItem(item: GarageItem, sessionHandle: string | null | undefined) {
-  return Boolean(sessionHandle && sessionHandle === item.ownerHandle);
+export function canManageGarageItem(
+  item: GarageItem,
+  sessionHandle: string | null | undefined,
+  userId?: string | null,
+) {
+  if (sessionHandle && sessionHandle === item.ownerHandle) return true;
+  const uid = String(userId || "").trim();
+  if (!uid) return false;
+  const market = getMarketplaceItem(item.id);
+  if (market && market.sellerId === uid) return true;
+  const garage = getCommunityGarageItem(item.id);
+  if (garage && garage.ownerId === uid) return true;
+  return false;
+}
+
+/** True when this row is a classic marketplace listing (not a Community garage_bikes row). */
+export function isMarketplaceListingItem(item: GarageItem) {
+  if (getMarketplaceItem(item.id)) return true;
+  if (getCommunityGarageItem(item.id)) return false;
+  return item.links === "Marketplace" || Boolean((item as { listingId?: string }).listingId);
 }
 
 function slugify(text: string) {

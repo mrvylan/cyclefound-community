@@ -167,6 +167,12 @@ export function removeCommunityGarageItem(id: string) {
   notify();
 }
 
+/** Drop a marketplace listing from the client cache (after pause/delete). */
+export function removeMarketplaceItem(id: string) {
+  cache.items = cache.items.filter((i) => i.id !== id && i.listingId !== id);
+  notify();
+}
+
 export function isCommunityDirectoryReady() {
   return cache.ready;
 }
@@ -178,9 +184,13 @@ export function communityDirectoryError() {
 let hydrateInFlight: Promise<void> | null = null;
 
 /** Load Supabase profiles + active marketplace listings into the client cache. */
-export async function hydrateCommunityDirectory() {
+export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
   if (typeof window === "undefined") return;
-  if (hydrateInFlight) return hydrateInFlight;
+  if (hydrateInFlight) {
+    if (!opts?.force) return hydrateInFlight;
+    // Wait out the in-flight load, then fetch again so Market reflects pauses.
+    await hydrateInFlight.catch(() => undefined);
+  }
 
   hydrateInFlight = (async () => {
   try {

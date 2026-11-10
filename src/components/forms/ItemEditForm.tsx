@@ -66,7 +66,7 @@ const STATUSES: ItemStatus[] = [
 export function ItemEditForm({ itemId }: { itemId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { ready: authReady } = useAuth();
+  const { ready: authReady, profile } = useAuth();
   const [ready, setReady] = useState(false);
   const [missing, setMissing] = useState(false);
   const [forbidden, setForbidden] = useState(false);
@@ -112,7 +112,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
         return;
       }
       const me = getSessionHandle();
-      if (!canManageGarageItem(item, me)) {
+      if (!canManageGarageItem(item, me, profile?.id)) {
         setForbidden(true);
         setReady(true);
         return;
@@ -179,7 +179,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       cancelled = true;
       unsub();
     };
-  }, [itemId, searchParams]);
+  }, [itemId, searchParams, profile?.id]);
 
   const field =
     "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
