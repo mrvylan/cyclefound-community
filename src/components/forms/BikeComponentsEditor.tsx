@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import {
-  Check,
-  ChevronDown,
-  Circle,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Check, ChevronDown, Plus, Trash2 } from "lucide-react";
 import {
   BIKE_COMPONENT_GROUPS,
   BIKE_COMPONENT_LABELS,
@@ -340,7 +334,11 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
                 className={open ? "border-t border-line-soft bg-ground/40" : undefined}
               >
                 {open ? (
-                  <ul className="m-0 flex list-none flex-col p-0">
+                  <ul
+                    className="m-0 flex list-none flex-col p-0"
+                    role="radiogroup"
+                    aria-label={`${group.label} components`}
+                  >
                     {group.rows.map(({ row, index }, ri) => (
                       <ComponentAccordionRow
                         key={row.slot}
@@ -463,19 +461,29 @@ function ComponentAccordionRow({
   }, [open]);
 
   return (
-    <li className={!isLast ? "border-b border-line-soft" : undefined}>
+    <li
+      className={`${!isLast ? "border-b border-line-soft" : ""} ${
+        open ? "bg-white ring-1 ring-inset ring-ink/10" : ""
+      }`}
+    >
       <button
         type="button"
         id={headerId}
+        role="radio"
+        aria-checked={open}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={onToggle}
-        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
-          open ? "bg-white" : "hover:bg-white/70"
+        className={`flex w-full items-center gap-3 border-l-[3px] px-4 py-3 text-left transition-colors ${
+          open
+            ? "border-l-accent bg-white"
+            : "border-l-transparent hover:bg-white/80"
         }`}
       >
         <span className="flex size-7 shrink-0 items-center justify-center" aria-hidden>
-          {filled ? (
+          {open ? (
+            <span className="flex size-5 items-center justify-center rounded-full border-[5px] border-ink bg-white" />
+          ) : filled ? (
             <span
               className={`flex size-5 items-center justify-center rounded-full ${
                 origin === "aftermarket" && trackAftermarket
@@ -486,15 +494,21 @@ function ComponentAccordionRow({
               <Check className="size-3" strokeWidth={2.5} />
             </span>
           ) : (
-            <Circle className="size-5 text-[#D4D3CD]" strokeWidth={1.5} />
+            <span className="size-5 rounded-full border-2 border-[#D4D3CD] bg-white" />
           )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="text-[14px] font-semibold text-ink">
+            <span
+              className={`text-[14px] font-semibold ${open ? "text-ink" : "text-ink"}`}
+            >
               {BIKE_COMPONENT_LABELS[row.slot]}
             </span>
-            {trackAftermarket && filled ? (
+            {open ? (
+              <span className="rounded-full bg-ink px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] text-white uppercase">
+                Editing
+              </span>
+            ) : trackAftermarket && filled ? (
               <span
                 className={`rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] uppercase ${
                   origin === "aftermarket"
@@ -527,10 +541,10 @@ function ComponentAccordionRow({
         role="region"
         aria-labelledby={headerId}
         hidden={!open}
-        className={open ? "bg-white px-4 pb-4 pt-1" : undefined}
+        className={open ? "border-t border-line-soft bg-white px-4 pb-4 pt-3" : undefined}
       >
         {open ? (
-          <div className="rounded-[12px] border border-line bg-ground/30 p-3.5">
+          <div className="rounded-[12px] border border-line bg-ground/40 p-3.5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label
@@ -574,38 +588,82 @@ function ComponentAccordionRow({
             </div>
 
             {trackAftermarket ? (
-              <div
-                className="mt-3 inline-flex rounded-[10px] border border-line bg-white p-0.5"
-                role="group"
-                aria-label={`${BIKE_COMPONENT_LABELS[row.slot]} origin`}
-              >
-                {(
-                  [
-                    { id: "stock", label: "Stock" },
-                    { id: "aftermarket", label: "Aftermarket" },
-                  ] as const
-                ).map((opt) => {
-                  const on = origin === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() =>
-                        onUpdate(index, { origin: opt.id as BikeComponentOrigin })
-                      }
-                      className={`min-h-9 rounded-[8px] px-3.5 text-[13px] font-semibold transition-colors ${
-                        on
-                          ? opt.id === "aftermarket"
-                            ? "bg-accent-soft text-accent-hover"
-                            : "bg-ink text-white"
-                          : "bg-transparent text-muted-2 hover:text-ink"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <fieldset className="mt-3 m-0 border-0 p-0">
+                <legend className="mb-1.5 text-[12px] font-semibold text-muted">
+                  Origin
+                </legend>
+                <div
+                  role="radiogroup"
+                  aria-label={`${BIKE_COMPONENT_LABELS[row.slot]} origin`}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  {(
+                    [
+                      { id: "stock", label: "Stock", hint: "As the bike shipped" },
+                      {
+                        id: "aftermarket",
+                        label: "Aftermarket",
+                        hint: "Added or replaced later",
+                      },
+                    ] as const
+                  ).map((opt) => {
+                    const on = origin === opt.id;
+                    return (
+                      <label
+                        key={opt.id}
+                        className={`flex cursor-pointer flex-col gap-0.5 rounded-[10px] border px-3 py-2.5 transition-colors ${
+                          on
+                            ? opt.id === "aftermarket"
+                              ? "border-accent bg-accent-soft"
+                              : "border-ink bg-ink text-white"
+                            : "border-line bg-white text-ink hover:border-ink"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            className="sr-only"
+                            name={`comp-origin-${row.slot}`}
+                            value={opt.id}
+                            checked={on}
+                            onChange={() =>
+                              onUpdate(index, {
+                                origin: opt.id as BikeComponentOrigin,
+                              })
+                            }
+                          />
+                          <span
+                            className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                              on
+                                ? opt.id === "aftermarket"
+                                  ? "border-accent bg-accent"
+                                  : "border-white bg-white"
+                                : "border-[#D4D3CD] bg-white"
+                            }`}
+                            aria-hidden
+                          >
+                            {on ? (
+                              <span
+                                className={`size-1.5 rounded-full ${
+                                  opt.id === "aftermarket" ? "bg-white" : "bg-ink"
+                                }`}
+                              />
+                            ) : null}
+                          </span>
+                          <span className="text-[13px] font-semibold">{opt.label}</span>
+                        </span>
+                        <span
+                          className={`pl-6 text-[12px] ${
+                            on && opt.id === "stock" ? "text-white/75" : "text-muted-2"
+                          }`}
+                        >
+                          {opt.hint}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
             ) : null}
 
             <div className="mt-3 flex flex-col gap-1.5">

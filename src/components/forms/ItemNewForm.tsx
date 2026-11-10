@@ -45,6 +45,7 @@ import {
 import {
   CONDITION_HELP,
   CONDITIONS,
+  mapAiCondition,
   type FormCondition,
 } from "@/lib/garage/mapAiCategory";
 
@@ -91,6 +92,9 @@ export function ItemNewForm() {
   const [identifying, setIdentifying] = useState(false);
   const [identifyError, setIdentifyError] = useState("");
   const [aiApplied, setAiApplied] = useState(false);
+  /** Soft AI hints — never auto-applied; owner confirms. */
+  const [aiDisciplineHint, setAiDisciplineHint] = useState<Discipline | "">("");
+  const [aiConditionHint, setAiConditionHint] = useState<FormCondition | "">("");
   /** Last description written by AI — re-identify replaces unless the owner edited it. */
   const lastAiDescriptionRef = useRef("");
   const descriptionTouchedRef = useRef(false);
@@ -124,6 +128,8 @@ export function ItemNewForm() {
     setError("");
     setIdentifyError("");
     setAiApplied(false);
+    setAiDisciplineHint("");
+    setAiConditionHint("");
     lastAiDescriptionRef.current = "";
     descriptionTouchedRef.current = false;
   }
@@ -172,13 +178,21 @@ export function ItemNewForm() {
     if (s.year && s.year !== "Unknown") {
       setYear(s.year.replace(/[^\d]/g, "").slice(0, 4) || s.year);
     }
-    if (s.condition && (CONDITIONS as readonly string[]).includes(s.condition)) {
-      setCondition(s.condition as FormCondition);
-    }
+    // Never auto-select discipline or condition — offer confirmable hints only.
+    const mappedCondition =
+      mapAiCondition(s.condition) ||
+      ((CONDITIONS as readonly string[]).includes(s.condition)
+        ? (s.condition as FormCondition)
+        : "");
+    if (mappedCondition) setAiConditionHint(mappedCondition);
+    else setAiConditionHint("");
     const inferred = normalizeDiscipline(
-      [s.category, s.title, s.manufacturer, s.model].filter(Boolean).join(" "),
+      [s.description, s.title, s.manufacturer, s.model, s.category]
+        .filter(Boolean)
+        .join(" "),
     );
-    if (inferred) setDiscipline((cur) => cur || inferred);
+    if (inferred && inferred !== "Other") setAiDisciplineHint(inferred);
+    else setAiDisciplineHint("");
     const nextDesc = clampItemDescription(s.description || "");
     if (nextDesc) {
       setDescription((cur) => {
@@ -470,34 +484,61 @@ export function ItemNewForm() {
                     <span className="font-normal text-muted">(optional)</span>
                   </legend>
                   <p className="mt-1 mb-2 m-0 text-[13px] text-muted-2">
-                    Shown on Market and garage cards (Road, Mountain, …).
+                    Choose how this bike rides — nothing is selected until you pick one.
+                    Tap again to clear.
                   </p>
+                  {aiDisciplineHint && discipline !== aiDisciplineHint ? (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[12px] border border-accent-soft-border bg-accent-soft px-3 py-2.5">
+                      <p className="m-0 flex-1 text-[13px] text-ink">
+                        Photos suggest <strong>{aiDisciplineHint}</strong> — confirm if that
+                        looks right.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDiscipline(aiDisciplineHint);
+                          setAiDisciplineHint("");
+                        }}
+                        className="inline-flex h-9 items-center rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-hover"
+                      >
+                        Use {aiDisciplineHint}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiDisciplineHint("")}
+                        className="inline-flex h-9 items-center rounded-[8px] px-2 text-[13px] font-semibold text-muted-2 hover:text-ink"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : null}
                   <div
-                    role="radiogroup"
+                    role="group"
                     aria-label="Discipline"
                     className="flex flex-wrap gap-2"
                   >
                     {DISCIPLINES.map((d) => {
                       const on = discipline === d;
                       return (
-                        <label
+                        <button
                           key={d}
-                          className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border px-3.5 text-[13px] font-medium ${
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            setDiscipline((cur) => {
+                              const next = cur === d ? "" : d;
+                              if (next === aiDisciplineHint) setAiDisciplineHint("");
+                              return next;
+                            })
+                          }
+                          className={`inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13px] font-medium ${
                             on
                               ? "border-ink bg-ink text-white"
                               : "border-[#D4D3CD] bg-white text-ink hover:border-ink"
                           }`}
                         >
-                          <input
-                            type="radio"
-                            name="discipline"
-                            value={d}
-                            checked={on}
-                            onChange={() => setDiscipline(d)}
-                            className="sr-only"
-                          />
                           {d}
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
@@ -536,13 +577,40 @@ export function ItemNewForm() {
               <label htmlFor="item-cond" className={label}>
                 Condition
               </label>
+              {aiConditionHint && !condition ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-[12px] border border-accent-soft-border bg-accent-soft px-3 py-2.5">
+                  <p className="m-0 flex-1 text-[13px] text-ink">
+                    Photos suggest <strong>{aiConditionHint}</strong> — confirm if that
+                    matches what you see.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCondition(aiConditionHint);
+                      setAiConditionHint("");
+                    }}
+                    className="inline-flex h-9 items-center rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-hover"
+                  >
+                    Use {aiConditionHint}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiConditionHint("")}
+                    className="inline-flex h-9 items-center rounded-[8px] px-2 text-[13px] font-semibold text-muted-2 hover:text-ink"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ) : null}
               <select
                 id="item-cond"
                 value={condition}
                 required
-                onChange={(e) =>
-                  setCondition((e.target.value || "") as FormCondition | "")
-                }
+                onChange={(e) => {
+                  const next = (e.target.value || "") as FormCondition | "";
+                  setCondition(next);
+                  if (next) setAiConditionHint("");
+                }}
                 className={selectField}
               >
                 <option value="">Select condition</option>
