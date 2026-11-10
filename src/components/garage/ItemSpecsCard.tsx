@@ -33,20 +33,21 @@ export function ItemSpecsCard({
     [bikeComponents],
   );
   const canShowComponents = showComponentsTab || filled.length > 0;
-  const [tab, setTab] = useState<Tab>("overview");
+  // Prefer Components when parts exist — on mobile Overview alone looked like Specs was empty of build detail.
+  const [tab, setTab] = useState<Tab>(() => (filled.length ? "components" : "overview"));
   const [selected, setSelected] = useState<BikeComponent | null>(null);
 
   const activeTab = canShowComponents ? tab : "overview";
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <h2 className="section-title m-0 text-[20px]">Specs</h2>
         {canShowComponents ? (
           <div
             role="tablist"
             aria-label="Specs sections"
-            className="inline-flex rounded-[10px] border border-line bg-ground p-0.5"
+            className="grid w-full grid-cols-2 gap-0.5 rounded-[10px] border border-line bg-ground p-0.5 sm:inline-flex sm:w-auto"
           >
             {(
               [
@@ -62,7 +63,7 @@ export function ItemSpecsCard({
                   role="tab"
                   aria-selected={on}
                   onClick={() => setTab(t.id)}
-                  className={`min-h-9 rounded-[8px] px-3.5 text-[13px] font-semibold ${
+                  className={`inline-flex min-h-11 items-center justify-center rounded-[8px] px-3.5 text-[13px] font-semibold sm:min-h-9 ${
                     on
                       ? "bg-white text-ink shadow-sm"
                       : "bg-transparent text-muted-2 hover:text-ink"

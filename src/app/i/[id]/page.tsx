@@ -147,52 +147,43 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         <span>{titleShort}</span>
       </nav>
 
-      <div className="flex flex-wrap items-start gap-8">
-        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-6">
-          <div className="flex flex-col gap-2.5">
-            {itemPhotos.length ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={itemPhotos[photo] ?? itemPhotos[0]}
-                alt=""
-                className="aspect-[4/3] max-h-[520px] min-h-[280px] w-full rounded-[18px] object-cover"
-              />
-            ) : (
-              <PlaceholderPhoto
-                label={`Photo ${photo + 1} of ${labels.length} · ${labels[photo] ?? "Item"}`}
-                className="aspect-[4/3] max-h-[520px] min-h-[280px] rounded-[18px]"
-              />
-            )}
-            <div className="grid grid-cols-6 gap-2.5">
-              {(itemPhotos.length ? itemPhotos : labels).map((labelOrSrc, i) => (
-                <button
-                  key={typeof labelOrSrc === "string" ? labelOrSrc.slice(0, 24) + i : i}
-                  type="button"
-                  aria-label={`Show photo ${i + 1}`}
-                  onClick={() => setPhoto(i)}
-                  className={`h-[72px] overflow-hidden rounded-[10px] p-0 ${
-                    photo === i ? "border-[3px] border-accent" : "border border-line"
-                  } ${itemPhotos.length ? "" : "ph"}`}
-                >
-                  {itemPhotos.length ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={itemPhotos[i]} alt="" className="size-full object-cover" />
-                  ) : null}
-                </button>
-              ))}
-            </div>
+      {/* Mobile: photos → title/actions → specs. Desktop: photos+specs | sidebar. */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
+        <div className="flex min-w-0 flex-col gap-2.5">
+          {itemPhotos.length ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={itemPhotos[photo] ?? itemPhotos[0]}
+              alt=""
+              className="aspect-[4/3] max-h-[520px] min-h-[280px] w-full rounded-[18px] object-cover"
+            />
+          ) : (
+            <PlaceholderPhoto
+              label={`Photo ${photo + 1} of ${labels.length} · ${labels[photo] ?? "Item"}`}
+              className="aspect-[4/3] max-h-[520px] min-h-[280px] rounded-[18px]"
+            />
+          )}
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-2.5">
+            {(itemPhotos.length ? itemPhotos : labels).map((labelOrSrc, i) => (
+              <button
+                key={typeof labelOrSrc === "string" ? labelOrSrc.slice(0, 24) + i : i}
+                type="button"
+                aria-label={`Show photo ${i + 1}`}
+                onClick={() => setPhoto(i)}
+                className={`h-14 overflow-hidden rounded-[10px] p-0 sm:h-[72px] ${
+                  photo === i ? "border-[3px] border-accent" : "border border-line"
+                } ${itemPhotos.length ? "" : "ph"}`}
+              >
+                {itemPhotos.length ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={itemPhotos[i]} alt="" className="size-full object-cover" />
+                ) : null}
+              </button>
+            ))}
           </div>
-
-          <ItemSpecsCard
-            specs={specs}
-            bikeComponents={item.bikeComponents}
-            showComponentsTab={
-              item.catShort === "Complete bikes" || item.catShort === "Framesets"
-            }
-          />
         </div>
 
-        <aside className="flex min-w-0 flex-[1_1_400px] flex-col gap-[18px]">
+        <aside className="flex min-w-0 flex-col gap-[18px] lg:row-span-2">
           <div className="flex flex-wrap items-center gap-2">
             <StatusChip status={item.status} />
             {item.archived ? (
@@ -508,6 +499,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </>
           )}
         </aside>
+
+        <ItemSpecsCard
+          specs={specs}
+          bikeComponents={item.bikeComponents}
+          showComponentsTab={
+            item.catShort === "Complete bikes" || item.catShort === "Framesets"
+          }
+        />
       </div>
 
       {showRichDetail ? (
