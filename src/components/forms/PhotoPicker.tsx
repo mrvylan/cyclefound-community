@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { GripVertical, ImagePlus, X } from "lucide-react";
+import { blobToDataUrl, compressImageFile } from "@/lib/profile/image";
 
 type Props = {
   photos: string[];
@@ -12,17 +13,22 @@ type Props = {
 
 async function filesToDataUrls(files: FileList | File[]): Promise<string[]> {
   const list = Array.from(files);
-  const urls = await Promise.all(
-    list.map(
-      (file) =>
-        new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(file);
-        }),
-    ),
-  );
+  const urls: string[] = [];
+  for (const file of list) {
+    try {
+      const blob = await compressImageFile(file, { maxEdge: 1600, quality: 0.82 });
+      urls.push(await blobToDataUrl(blob));
+    } catch {
+      // Fall back to the raw file so a single bad compress doesn't block the rest.
+      const raw = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      urls.push(raw);
+    }
+  }
   return urls;
 }
 

@@ -55,15 +55,20 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [sessionHandle, setSessionHandle] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     setReady(true);
     setSessionHandle(getSessionHandle());
-    if (!isCommunityDirectoryReady()) {
-      void hydrateCommunityDirectory();
-    }
-    return subscribeStore(() => {
+    const unsub = subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
     });
+    void hydrateCommunityDirectory().then(() => {
+      if (!cancelled) setTick((t) => t + 1);
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, []);
 
   void tick;

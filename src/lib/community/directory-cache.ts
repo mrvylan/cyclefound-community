@@ -7,6 +7,7 @@ import { communityHandleFromProfile } from "@/lib/community/handles";
 import { initialsFromName, colorForId } from "@/lib/auth/user";
 import { isItemCategory, normalizeItemCategory } from "@/lib/data/categories";
 import { inferDiscipline, normalizeDiscipline } from "@/lib/garage/disciplines";
+import type { RemoteGarageItem } from "@/lib/garage/garageMap";
 
 export type DirectoryMember = {
   userId: string;
@@ -32,6 +33,8 @@ type Cache = {
   /** userId → member */
   byUserId: Map<string, DirectoryMember>;
   items: MarketplaceGarageItem[];
+  /** Community garage_bikes rows (Supabase). */
+  garageItems: RemoteGarageItem[];
 };
 
 const cache: Cache = {
@@ -41,6 +44,7 @@ const cache: Cache = {
   byHandle: new Map(),
   byUserId: new Map(),
   items: [],
+  garageItems: [],
 };
 
 function notify() {
@@ -134,6 +138,33 @@ export function getAllMarketplaceItems(): MarketplaceGarageItem[] {
 
 export function getMarketplaceItem(id: string): MarketplaceGarageItem | undefined {
   return cache.items.find((i) => i.id === id || i.listingId === id);
+}
+
+export function getCommunityGarageItemsForHandle(handle: string): RemoteGarageItem[] {
+  const userId = cache.byHandle.get(handle)?.userId;
+  if (!userId) return cache.garageItems.filter((i) => i.ownerHandle === handle);
+  return cache.garageItems.filter((i) => i.ownerId === userId || i.ownerHandle === handle);
+}
+
+export function getAllCommunityGarageItems(): RemoteGarageItem[] {
+  return cache.garageItems;
+}
+
+export function getCommunityGarageItem(id: string): RemoteGarageItem | undefined {
+  return cache.garageItems.find((i) => i.id === id);
+}
+
+/** Merge a freshly saved garage item into the client cache (create/update). */
+export function upsertCommunityGarageItem(item: RemoteGarageItem) {
+  const next = cache.garageItems.filter((i) => i.id !== item.id);
+  next.unshift(item);
+  cache.garageItems = next;
+  notify();
+}
+
+export function removeCommunityGarageItem(id: string) {
+  cache.garageItems = cache.garageItems.filter((i) => i.id !== id);
+  notify();
 }
 
 export function isCommunityDirectoryReady() {
@@ -276,8 +307,28 @@ export async function hydrateCommunityDirectory() {
       items.push(item);
     }
 
+    cache.items = items;
+    notify();
+
+    const garageRes = await fetch("/api/community/garage", { cache: "no-store" });
+    const garagePayload = (await garageRes.json().catch(() => ({}))) as {
+      items?: RemoteGarageItem[];
+      error?: string;
+    };
+    if (!garageRes.ok) {
+      throw new Error(garagePayload.error || `Garage failed (${garageRes.status})`);
+    }
+    const garageItems = (garagePayload.items || []).map((row) => {
+      const member = byUserId.get(row.ownerId);
+      return member ? { ...row, ownerHandle: member.handle } : row;
+    });
+    cache.garageItems = garageItems;
+
     const counts = new Map<string, number>();
     for (const item of items) {
+      counts.set(item.ownerHandle, (counts.get(item.ownerHandle) || 0) + 1);
+    }
+    for (const item of garageItems) {
       counts.set(item.ownerHandle, (counts.get(item.ownerHandle) || 0) + 1);
     }
     for (const m of members) {
@@ -287,7 +338,6 @@ export async function hydrateCommunityDirectory() {
     cache.members = members;
     cache.byHandle = new Map(members.map((m) => [m.handle, m]));
     cache.byUserId = new Map(members.map((m) => [m.userId, m]));
-    cache.items = items;
     notify();
   } catch (err) {
     cache.ready = true;

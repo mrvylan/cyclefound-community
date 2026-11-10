@@ -25,8 +25,10 @@ import {
 } from "@/lib/auth/drafts";
 import { authHref } from "@/lib/auth/redirects";
 import { ITEM_CATEGORIES, type ItemCategory } from "@/lib/data/categories";
-import { getSessionHandle, postItem } from "@/lib/data/local-store";
+import { upsertCommunityGarageItem } from "@/lib/community/directory-cache";
+import { getSessionHandle } from "@/lib/data/local-store";
 import type { ItemStatus } from "@/lib/data/seed";
+import { createRemoteGarageItem } from "@/lib/garage/garageRemote";
 import {
   DISCIPLINES,
   type Discipline,
@@ -88,6 +90,7 @@ export function ItemNewForm() {
   const [provenance, setProvenance] = useState("");
   const [bikeComponents, setBikeComponents] = useState<BikeComponent[]>([]);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [identifying, setIdentifying] = useState(false);
   const [identifyError, setIdentifyError] = useState("");
@@ -251,7 +254,7 @@ export function ItemNewForm() {
     }
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (needsAuth) {
       saveItemDraft({
@@ -307,6 +310,7 @@ export function ItemNewForm() {
       return;
     }
     setError("");
+    setSaving(true);
     const brand = normalizeBrandLabel(manufacturer);
     const composedTitle = composeItemTitle({
       title,
@@ -314,27 +318,32 @@ export function ItemNewForm() {
       manufacturer: brand,
       modelName,
     });
-    const item = postItem({
-      title: composedTitle,
-      category,
-      year: year.trim() || "—",
-      size: showSize ? size.trim() : "",
-      discipline: showDiscipline && discipline ? discipline : "",
-      manufacturer: brand,
-      condition,
-      status,
-      askingPrice: showPrice ? askingPrice : "",
-      ownerEstValue: "",
-      description: clampItemDescription(description),
-      notes: notes.trim(),
-      provenance: provenance.trim(),
-      photoDataUrls: photos,
-      bikeComponents: showComponents ? bikeComponentsForSave(bikeComponents) : [],
-    });
-    const handle = getSessionHandle() || sessionHandle;
-    resetForm(statusFromQuery(searchParams.get("status")) || "Not for sale");
-    // Garage home — not a marketplace listing review page.
-    router.push(handle ? `/u/${handle}/garage?added=${item.id}` : `/i/${item.id}`);
+    try {
+      const item = await createRemoteGarageItem({
+        title: composedTitle,
+        category,
+        year: year.trim() || "—",
+        size: showSize ? size.trim() : "",
+        discipline: showDiscipline && discipline ? discipline : "",
+        manufacturer: brand,
+        condition,
+        status,
+        askingPrice: showPrice ? askingPrice : "",
+        description: clampItemDescription(description),
+        notes: notes.trim(),
+        provenance: provenance.trim(),
+        photos,
+        bikeComponents: showComponents ? bikeComponentsForSave(bikeComponents) : [],
+      });
+      upsertCommunityGarageItem(item);
+      const handle = getSessionHandle() || sessionHandle || item.ownerHandle;
+      resetForm(statusFromQuery(searchParams.get("status")) || "Not for sale");
+      router.push(handle ? `/u/${handle}/garage?added=${item.id}` : `/i/${item.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save to your garage.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -784,9 +793,14 @@ export function ItemNewForm() {
         <div className="flex flex-wrap items-center gap-3 border-t border-line-soft pt-5">
           <button
             type="submit"
-            className="inline-flex h-12 min-w-[180px] items-center justify-center rounded-[10px] bg-accent px-6 text-[16px] font-semibold text-white hover:bg-accent-hover"
+            disabled={saving}
+            className="inline-flex h-12 min-w-[180px] items-center justify-center rounded-[10px] bg-accent px-6 text-[16px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
-            {needsAuth ? "Join & add to garage" : "Add to garage"}
+            {needsAuth
+              ? "Join & add to garage"
+              : saving
+                ? "Saving to your account…"
+                : "Add to garage"}
           </button>
           <Link
             href={sessionHandle ? `/u/${sessionHandle}/garage` : "/"}

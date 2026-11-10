@@ -61,13 +61,18 @@ export default function GaragePage({
     if (added) setJustAddedId(added);
     setReady(true);
     setSessionHandle(getSessionHandle());
-    if (!isCommunityDirectoryReady()) {
-      void hydrateCommunityDirectory();
-    }
-    return subscribeStore(() => {
+    let cancelled = false;
+    const unsub = subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
     });
+    void hydrateCommunityDirectory().then(() => {
+      if (!cancelled) setTick((t) => t + 1);
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, []);
   void tick;
 

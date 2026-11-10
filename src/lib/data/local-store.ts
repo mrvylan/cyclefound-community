@@ -21,10 +21,18 @@ import {
   normalizeClaimedHandle,
 } from "./handles";
 import { accountIdentityKey } from "@/lib/community/handles";
+import {
+  clearItemPhotos,
+  readItemPhotos,
+  writeItemPhotos,
+} from "@/lib/garage/item-photos";
 import { normalizeAskInput } from "@/lib/garage/itemFields";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 import {
+  getAllCommunityGarageItems,
   getAllMarketplaceItems,
+  getCommunityGarageItem,
+  getCommunityGarageItemsForHandle,
   getDirectoryHandleForUserId,
   getDirectoryMembers,
   getDirectoryPerson,
@@ -468,7 +476,9 @@ function resolveOwnedItems(raw: GarageItem[], patches: Record<string, GarageItem
 export function getGarageItemsFor(handle: string): GarageItem[] {
   const store = readStore();
   const marketplace = getMarketplaceItemsForHandle(handle);
+  const remoteGarage = getCommunityGarageItemsForHandle(handle);
   const raw = [
+    ...remoteGarage,
     ...store.extraItems.filter((i) => i.ownerHandle === handle),
     ...marketplace,
   ];
@@ -478,11 +488,15 @@ export function getGarageItemsFor(handle: string): GarageItem[] {
 export function getAllItems(): GarageItem[] {
   const store = readStore();
   const marketplace = getAllMarketplaceItems();
+  const remoteGarage = getAllCommunityGarageItems();
   const me = store.sessionHandle;
   const mine = me
     ? store.extraItems.filter((i) => i.ownerHandle === me)
     : [];
-  return resolveOwnedItems([...mine, ...marketplace], store.itemPatches);
+  return resolveOwnedItems(
+    [...remoteGarage, ...mine, ...marketplace],
+    store.itemPatches,
+  );
 }
 
 /** Photos for a garage item — local uploads first, then marketplace signed URLs. */
@@ -495,17 +509,11 @@ export function getItemPhotoUrls(item: GarageItem): string[] {
     out.push(url);
   }
 
-  // Prefer fresh local uploads — signed marketplace URLs can expire or 404.
-  if (typeof window !== "undefined") {
-    try {
-      const raw = window.sessionStorage.getItem(`cf_i_photos_${item.id}`);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) {
-        for (const p of parsed) if (typeof p === "string") push(p);
-      }
-    } catch {
-      /* ignore malformed session data */
-    }
+  // Prefer local uploads (localStorage + session cache) — signed remote URLs can expire.
+  for (const p of readItemPhotos(item.id)) push(p);
+  const remote = getCommunityGarageItem(item.id);
+  if (remote?.photoUrls?.length) {
+    for (const url of remote.photoUrls) push(url);
   }
   const market = getMarketplaceItem(item.id);
   if (market?.photoUrls?.length) {
@@ -516,7 +524,11 @@ export function getItemPhotoUrls(item: GarageItem): string[] {
 }
 
 export function getItemLocal(id: string): GarageItem | undefined {
-  return getAllItems().find((i) => i.id === id) || getMarketplaceItem(id);
+  return (
+    getAllItems().find((i) => i.id === id) ||
+    getCommunityGarageItem(id) ||
+    getMarketplaceItem(id)
+  );
 }
 
 function mergeItemPatch(id: string, patch: GarageItemPatch) {
@@ -540,6 +552,13 @@ export function getItemPrivateMeta(id: string): {
   notes: string;
   provenance: string;
 } {
+  const remote = getCommunityGarageItem(id);
+  if (remote) {
+    return {
+      notes: remote.notes || "",
+      provenance: remote.provenance || "",
+    };
+  }
   if (typeof window === "undefined") return { notes: "", provenance: "" };
   try {
     const raw = sessionStorage.getItem(`cf_i_meta_${id}`);
@@ -612,9 +631,14 @@ export function updateGarageItem(
     archived: false,
   });
   if (input.photoDataUrls.length) {
-    sessionStorage.setItem(`cf_i_photos_${id}`, JSON.stringify(input.photoDataUrls));
+    const cover = writeItemPhotos(id, input.photoDataUrls);
+    mergeItemPatch(id, { photo: cover });
   } else {
-    sessionStorage.removeItem(`cf_i_photos_${id}`);
+    // Editor cleared all photos. Local keys only — marketplace covers still come from the listings API.
+    clearItemPhotos(id);
+    if (!getMarketplaceItem(id)) {
+      mergeItemPatch(id, { photo: undefined });
+    }
   }
   writeItemPrivateMeta(id, {
     notes: input.notes,
@@ -642,8 +666,8 @@ export function deleteGarageItem(id: string) {
     Boolean(getMarketplaceItem(id));
   if (!known) return;
   mergeItemPatch(id, { deleted: true });
+  clearItemPhotos(id);
   try {
-    sessionStorage.removeItem(`cf_i_photos_${id}`);
     sessionStorage.removeItem(`cf_i_meta_${id}`);
   } catch {
     /* ignore */
@@ -795,7 +819,7 @@ export function postItem(input: {
     description: input.description.trim(),
   };
   if (input.photoDataUrls.length) {
-    sessionStorage.setItem(`cf_i_photos_${id}`, JSON.stringify(input.photoDataUrls));
+    item.photo = writeItemPhotos(id, input.photoDataUrls);
   }
   writeItemPrivateMeta(id, {
     notes: input.notes,

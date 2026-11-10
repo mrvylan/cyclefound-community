@@ -20,6 +20,10 @@ import {
 } from "@/lib/garage/bike-components";
 import { ITEM_CATEGORIES, type ItemCategory, normalizeItemCategory } from "@/lib/data/categories";
 import {
+  getCommunityGarageItem,
+  upsertCommunityGarageItem,
+} from "@/lib/community/directory-cache";
+import {
   canManageGarageItem,
   getItemLocal,
   getItemPhotoUrls,
@@ -29,6 +33,10 @@ import {
   updateGarageItem,
 } from "@/lib/data/local-store";
 import type { ItemStatus } from "@/lib/data/seed";
+import { updateRemoteGarageItem } from "@/lib/garage/garageRemote";
+import { readCfPayload } from "@/lib/garage/garageMap";
+import { isListingUuid } from "@/lib/messaging";
+import { createClient } from "@/lib/supabase/client";
 import {
   DISCIPLINES,
   type Discipline,
@@ -78,6 +86,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
   const [provenance, setProvenance] = useState("");
   const [bikeComponents, setBikeComponents] = useState<BikeComponent[]>([]);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [identifying, setIdentifying] = useState(false);
   const [identifyError, setIdentifyError] = useState("");
   const [aiApplied, setAiApplied] = useState(false);
@@ -94,7 +103,8 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
   const canIdentify = photos.length > 0 && !identifying;
 
   useEffect(() => {
-    function load() {
+    let cancelled = false;
+    async function load() {
       const item = getItemLocal(itemId);
       if (!item) {
         setMissing(true);
@@ -133,15 +143,42 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       setDescription(item.description || "");
       setBikeComponents(item.bikeComponents || []);
       setPhotos(getItemPhotoUrls(item));
+      const remote = getCommunityGarageItem(itemId);
       const meta = getItemPrivateMeta(itemId);
-      setNotes(meta.notes);
-      setProvenance(meta.provenance);
+      let notesValue = remote?.notes || meta.notes;
+      let provenanceValue = remote?.provenance || meta.provenance;
+      if (isListingUuid(itemId)) {
+        try {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("garage_bikes")
+            .select("notes, ai_identification")
+            .eq("id", itemId)
+            .maybeSingle();
+          if (data) {
+            const cf = readCfPayload(data as Record<string, unknown>);
+            notesValue = String(data.notes || notesValue || "");
+            provenanceValue = String(cf?.provenance || provenanceValue || "");
+          }
+        } catch {
+          /* keep cached meta */
+        }
+      }
+      if (cancelled) return;
+      setNotes(notesValue);
+      setProvenance(provenanceValue);
       setMissing(false);
       setForbidden(false);
       setReady(true);
     }
-    load();
-    return subscribeStore(load);
+    void load();
+    const unsub = subscribeStore(() => {
+      void load();
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [itemId, searchParams]);
 
   const field =
@@ -225,7 +262,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
     }
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
       setError("Give the item a title.");
@@ -262,8 +299,9 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       return;
     }
     setError("");
+    setSaving(true);
     const brand = normalizeBrandLabel(manufacturer);
-    const updated = updateGarageItem(itemId, {
+    const payload = {
       title: composeItemTitle({ title, year, manufacturer: brand }),
       category,
       year: year.trim() || "—",
@@ -273,15 +311,35 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       condition,
       status,
       askingPrice: showPrice ? askingPrice : "",
-      ownerEstValue: "",
       description: clampItemDescription(description),
       notes,
       provenance,
-      photoDataUrls: photos,
+      photos,
       bikeComponents: showComponents ? bikeComponentsForSave(bikeComponents) : [],
-    });
-    const handle = updated?.ownerHandle || sessionHandle;
-    router.push(handle ? `/u/${handle}/garage` : `/i/${itemId}`);
+    };
+    try {
+      if (isListingUuid(itemId)) {
+        const updated = await updateRemoteGarageItem(itemId, payload);
+        upsertCommunityGarageItem(updated);
+        router.push(
+          updated.ownerHandle
+            ? `/u/${updated.ownerHandle}/garage`
+            : `/i/${itemId}`,
+        );
+        return;
+      }
+      const updated = updateGarageItem(itemId, {
+        ...payload,
+        ownerEstValue: "",
+        photoDataUrls: photos,
+      });
+      const handle = updated?.ownerHandle || sessionHandle;
+      router.push(handle ? `/u/${handle}/garage` : `/i/${itemId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save changes.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!ready || !authReady) {
@@ -685,9 +743,10 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
         <div className="flex flex-wrap items-center gap-3 border-t border-line-soft pt-5">
           <button
             type="submit"
-            className="inline-flex h-12 min-w-[160px] items-center justify-center rounded-[10px] bg-accent px-6 text-[16px] font-semibold text-white hover:bg-accent-hover"
+            disabled={saving}
+            className="inline-flex h-12 min-w-[160px] items-center justify-center rounded-[10px] bg-accent px-6 text-[16px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
-            Save changes
+            {saving ? "Saving…" : "Save changes"}
           </button>
           <Link
             href={sessionHandle ? `/u/${sessionHandle}/garage` : `/i/${itemId}`}

@@ -3,12 +3,22 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Archive, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import {
+  removeCommunityGarageItem,
+  upsertCommunityGarageItem,
+  getCommunityGarageItem,
+} from "@/lib/community/directory-cache";
 import type { GarageItem } from "@/lib/data/seed";
 import {
   archiveGarageItem,
   deleteGarageItem,
   unarchiveGarageItem,
 } from "@/lib/data/local-store";
+import {
+  deleteRemoteGarageItem,
+  setRemoteGarageArchived,
+} from "@/lib/garage/garageRemote";
+import { isListingUuid } from "@/lib/messaging";
 
 type Props = {
   item: GarageItem;
@@ -53,6 +63,41 @@ export function GarageItemActions({ item, compact }: Props) {
     e.stopPropagation();
   }
 
+  const remote = isListingUuid(item.id);
+
+  async function onArchive() {
+    if (remote) {
+      await setRemoteGarageArchived(item.id, true);
+      const cached = getCommunityGarageItem(item.id);
+      if (cached) upsertCommunityGarageItem({ ...cached, archived: true });
+    } else {
+      archiveGarageItem(item.id);
+    }
+    setOpen(false);
+  }
+
+  async function onRestore() {
+    if (remote) {
+      await setRemoteGarageArchived(item.id, false);
+      const cached = getCommunityGarageItem(item.id);
+      if (cached) upsertCommunityGarageItem({ ...cached, archived: false });
+    } else {
+      unarchiveGarageItem(item.id);
+    }
+    setOpen(false);
+  }
+
+  async function onDelete() {
+    if (remote) {
+      await deleteRemoteGarageItem(item.id);
+      removeCommunityGarageItem(item.id);
+    } else {
+      deleteGarageItem(item.id);
+    }
+    setOpen(false);
+    setConfirmDelete(false);
+  }
+
   return (
     <div ref={rootRef} className="relative" onClick={stop} onKeyDown={stop}>
       <button
@@ -95,8 +140,7 @@ export function GarageItemActions({ item, compact }: Props) {
               role="menuitem"
               className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-ink hover:bg-ground"
               onClick={() => {
-                unarchiveGarageItem(item.id);
-                setOpen(false);
+                void onRestore();
               }}
             >
               <RotateCcw className="size-3.5 text-muted" aria-hidden />
@@ -108,8 +152,7 @@ export function GarageItemActions({ item, compact }: Props) {
               role="menuitem"
               className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-ink hover:bg-ground"
               onClick={() => {
-                archiveGarageItem(item.id);
-                setOpen(false);
+                void onArchive();
               }}
             >
               <Archive className="size-3.5 text-muted" aria-hidden />
@@ -139,9 +182,7 @@ export function GarageItemActions({ item, compact }: Props) {
                   type="button"
                   className="inline-flex h-8 flex-1 items-center justify-center rounded-[8px] bg-[#9B2C2C] text-[12px] font-semibold text-white"
                   onClick={() => {
-                    deleteGarageItem(item.id);
-                    setOpen(false);
-                    setConfirmDelete(false);
+                    void onDelete();
                   }}
                 >
                   Delete

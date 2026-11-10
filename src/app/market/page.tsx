@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ItemCard } from "@/components/ItemCard";
 import { SellFromGarage } from "@/components/market/SellFromGarage";
 import { ITEM_CATEGORIES } from "@/lib/data/categories";
+import { hydrateCommunityDirectory } from "@/lib/community/directory-cache";
 import {
   getAllItems,
   getSessionHandle,
@@ -119,6 +120,7 @@ export default function MarketPage() {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const load = () => {
       setSessionHandle(getSessionHandle());
       setListings(
@@ -128,7 +130,15 @@ export default function MarketPage() {
       );
     };
     load();
-    return subscribeStore(load);
+    const unsub = subscribeStore(load);
+    // Don't rely on a race with CommunityDataSync — await listings + photos here.
+    void hydrateCommunityDirectory().then(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, []);
 
   useEffect(() => {
