@@ -6,10 +6,10 @@ import { Star } from "lucide-react";
 import { Feature } from "@/components/Feature";
 import { Avatar, PlaceholderPhoto, StatusChip } from "@/components/ui";
 import {
-  getAllItems,
   getAllQuestions,
   getExpertsLocal,
   getItemPhotoUrls,
+  getPublicMarketItems,
   getSessionHandle,
   isMockDataEnabled,
   listMembers,
@@ -200,7 +200,7 @@ export function HomeRecentlyListed() {
   useEffect(() => {
     const sync = () =>
       setListed(
-        getAllItems()
+        getPublicMarketItems()
           .filter((i) => i.status !== "Not for sale")
           .reverse()
           .slice(0, 4),

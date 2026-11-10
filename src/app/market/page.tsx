@@ -8,7 +8,7 @@ import { SellFromGarage } from "@/components/market/SellFromGarage";
 import { ITEM_CATEGORIES } from "@/lib/data/categories";
 import { hydrateCommunityDirectory } from "@/lib/community/directory-cache";
 import {
-  getAllItems,
+  getPublicMarketItems,
   getSessionHandle,
   resolvePerson,
   subscribeStore,
@@ -124,7 +124,7 @@ export default function MarketPage() {
     const load = () => {
       setSessionHandle(getSessionHandle());
       setListings(
-        getAllItems()
+        getPublicMarketItems()
           .filter((i) => MARKET.includes(i.status))
           .reverse(),
       );

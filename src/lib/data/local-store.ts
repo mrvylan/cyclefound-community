@@ -499,6 +499,19 @@ export function getAllItems(): GarageItem[] {
   );
 }
 
+/**
+ * Public Market / shared surfaces — Supabase-backed rows only.
+ * Browser-local extraItems stay on the owner's garage until they are saved remotely;
+ * mixing them here made desktop (logged in) show a different Klein than phones.
+ */
+export function getPublicMarketItems(): GarageItem[] {
+  const store = readStore();
+  return resolveOwnedItems(
+    [...getAllCommunityGarageItems(), ...getAllMarketplaceItems()],
+    store.itemPatches,
+  );
+}
+
 /** Photos for a garage item — local uploads first, then marketplace signed URLs. */
 export function getItemPhotoUrls(item: GarageItem): string[] {
   const out: string[] = [];
