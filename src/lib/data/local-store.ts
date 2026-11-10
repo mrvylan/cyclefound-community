@@ -702,7 +702,7 @@ export function canManageGarageItem(
   return false;
 }
 
-/** True when this row is a classic marketplace listing (not a Community garage_bikes row). */
+/** True when this row is a Market bike_listings row (not a Community garage_bikes row). */
 export function isMarketplaceListingItem(item: GarageItem) {
   if (getMarketplaceItem(item.id)) return true;
   if (getCommunityGarageItem(item.id)) return false;

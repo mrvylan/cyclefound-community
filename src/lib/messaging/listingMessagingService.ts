@@ -197,7 +197,7 @@ export const listingMessagingService = {
       },
       subject: {
         title: listing.title || "Untitled listing",
-        href: `https://classic.cyclefound.com/listing.html?id=${encodeURIComponent(listing.id || thread.listing_id)}`,
+        href: `/i/${encodeURIComponent(listing.id || thread.listing_id)}`,
         priceLabel,
         coverUrl: await signedUrl(supabase, listing.cover_storage_path),
         meta: [listing.manufacturer_name, listing.model_name].filter(Boolean).join(" "),

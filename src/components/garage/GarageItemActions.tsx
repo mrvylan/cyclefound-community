@@ -23,7 +23,6 @@ import {
   setRemoteGarageArchived,
 } from "@/lib/garage/garageRemote";
 import { RemoveListingDialog } from "@/components/garage/RemoveListingDialog";
-import { CLASSIC_ORIGIN } from "@/lib/legal";
 
 type Props = {
   item: GarageItem;
@@ -34,6 +33,7 @@ type Props = {
 /**
  * Own-garage overflow menu: Edit / Archive (or Restore) / Delete.
  * Marketplace removals open a typed confirmation dialog (not a one-tap menu).
+ * All manage actions stay in Community — no Classic redirects.
  */
 export function GarageItemActions({ item, compact }: Props) {
   const [open, setOpen] = useState(false);
@@ -49,9 +49,7 @@ export function GarageItemActions({ item, compact }: Props) {
     getMarketplaceItem(item.id)?.listingId ||
     (item as { listingId?: string }).listingId ||
     item.id;
-  const editHref = marketplace
-    ? `${CLASSIC_ORIGIN}/sell.html?id=${encodeURIComponent(listingId)}`
-    : `/item/${item.id}/edit`;
+  const editHref = `/item/${item.id}/edit`;
 
   useEffect(() => {
     if (!open) return;
@@ -212,34 +210,19 @@ export function GarageItemActions({ item, compact }: Props) {
             role="menu"
             className="absolute right-0 z-30 mt-1.5 w-[13rem] overflow-hidden rounded-[10px] border border-line bg-white py-1 shadow-[0_10px_28px_rgba(16,23,27,0.14)]"
           >
-            {marketplace ? (
-              <a
-                role="menuitem"
-                href={editHref}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
-                onClick={(e) => {
-                  // Do not preventDefault — that was canceling navigation.
-                  stopBubble(e);
-                  setOpen(false);
-                }}
-              >
-                <Pencil className="size-3.5 text-muted" aria-hidden />
-                Edit
-              </a>
-            ) : (
-              <Link
-                role="menuitem"
-                href={editHref}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
-                onClick={(e) => {
-                  stopBubble(e);
-                  setOpen(false);
-                }}
-              >
-                <Pencil className="size-3.5 text-muted" aria-hidden />
-                Edit
-              </Link>
-            )}
+            <Link
+              role="menuitem"
+              href={editHref}
+              className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
+              onClick={(e) => {
+                // Do not preventDefault — that was canceling navigation.
+                stopBubble(e);
+                setOpen(false);
+              }}
+            >
+              <Pencil className="size-3.5 text-muted" aria-hidden />
+              Edit
+            </Link>
 
             {!marketplace ? (
               item.archived ? (

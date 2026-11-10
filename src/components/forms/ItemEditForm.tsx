@@ -21,6 +21,8 @@ import {
 import { ITEM_CATEGORIES, type ItemCategory, normalizeItemCategory } from "@/lib/data/categories";
 import {
   getCommunityGarageItem,
+  getMarketplaceItem,
+  hydrateCommunityDirectory,
   upsertCommunityGarageItem,
 } from "@/lib/community/directory-cache";
 import {
@@ -29,12 +31,14 @@ import {
   getItemPhotoUrls,
   getItemPrivateMeta,
   getSessionHandle,
+  isMarketplaceListingItem,
   subscribeStore,
   updateGarageItem,
 } from "@/lib/data/local-store";
 import type { ItemStatus } from "@/lib/data/seed";
 import { updateRemoteGarageItem } from "@/lib/garage/garageRemote";
 import { readCfPayload } from "@/lib/garage/garageMap";
+import { updateRemoteMarketplaceListing } from "@/lib/marketplace/listingRemote";
 import { isListingUuid } from "@/lib/messaging";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -318,7 +322,28 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       bikeComponents: showComponents ? bikeComponentsForSave(bikeComponents) : [],
     };
     try {
-      if (isListingUuid(itemId)) {
+      const existing = getItemLocal(itemId);
+      const marketplace =
+        Boolean(getMarketplaceItem(itemId)) ||
+        (existing ? isMarketplaceListingItem(existing) : false);
+      const communityGarage = Boolean(getCommunityGarageItem(itemId));
+
+      if (marketplace) {
+        const listingId =
+          getMarketplaceItem(itemId)?.listingId ||
+          (existing as { listingId?: string } | undefined)?.listingId ||
+          itemId;
+        await updateRemoteMarketplaceListing(listingId, payload);
+        await hydrateCommunityDirectory({ force: true }).catch(() => undefined);
+        const handle =
+          getMarketplaceItem(listingId)?.ownerHandle ||
+          existing?.ownerHandle ||
+          sessionHandle;
+        router.push(handle ? `/u/${handle}/garage` : `/i/${listingId}`);
+        return;
+      }
+
+      if (communityGarage || isListingUuid(itemId)) {
         const updated = await updateRemoteGarageItem(itemId, payload);
         upsertCommunityGarageItem(updated);
         router.push(
@@ -328,6 +353,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
         );
         return;
       }
+
       const updated = updateGarageItem(itemId, {
         ...payload,
         ownerEstValue: "",
@@ -379,10 +405,14 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
   return (
     <div className="mx-auto max-w-[920px] px-5 py-8 pb-8 sm:px-8">
       <div className="mb-8">
-        <p className="eyebrow m-0">Your garage</p>
+        <p className="eyebrow m-0">
+          {getMarketplaceItem(itemId) ? "Your Market listing" : "Your garage"}
+        </p>
         <h1 className="section-title m-0 text-[clamp(32px,6vw,48px)]">Edit item</h1>
         <p className="mt-2 m-0 max-w-[40rem] text-[15px] leading-[1.5] text-muted-2">
-          Update photos, details, or availability. Changes stay in your garage.
+          {getMarketplaceItem(itemId)
+            ? "Update details or availability. Saving writes directly to your Market listing."
+            : "Update photos, details, or availability. Changes stay in your garage."}
         </p>
       </div>
 

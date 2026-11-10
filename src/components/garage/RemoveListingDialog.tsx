@@ -89,9 +89,9 @@ export function RemoveListingDialog({
 
         {mode === "marketplace" ? (
           <ul className="m-0 mb-4 list-disc space-y-1.5 pl-5 text-[14px] leading-[1.5] text-muted-2">
-            <li>This pauses the classic marketplace listing.</li>
+            <li>This pauses the Market listing in the database.</li>
             <li>It will leave Community Market for everyone.</li>
-            <li>Photos and listing data stay in your seller account so you can resume later on Classic.</li>
+            <li>Photos and listing data stay saved so you can edit and re-list from Community later.</li>
             <li>This cannot be undone from this screen.</li>
           </ul>
         ) : (

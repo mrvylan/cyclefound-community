@@ -260,7 +260,6 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
       const member = byUserId.get(sellerId);
       if (!member) continue;
       const listingId = String(row.id);
-      const classicUrl = `https://classic.cyclefound.com/listing.html?id=${encodeURIComponent(listingId)}`;
       const photoUrls = (row.photoUrls || []).filter(Boolean);
       const year = String(row.approximate_year || "—");
       const rawTitle =
@@ -286,6 +285,7 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
         : asDiscipline
           ? "Complete bikes"
           : normalizeItemCategory(catLabel || "Complete bikes");
+      const communityHref = `/i/${encodeURIComponent(listingId)}`;
       const item: MarketplaceGarageItem = {
         id: listingId,
         listingId,
@@ -297,6 +297,9 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
         size: row.frame_size_label ? String(row.frame_size_label) : undefined,
         discipline: asDiscipline || undefined,
         name: title,
+        manufacturer: row.manufacturer_name
+          ? String(row.manufacturer_name)
+          : undefined,
         cond: String(row.condition || "—"),
         mkt: ask,
         ask,
@@ -307,8 +310,9 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
         photoUrls,
         description:
           String(row.description || "").trim() ||
-          `Listed on Cycle Found marketplace. ${classicUrl}`,
-        classicUrl,
+          "Listed on Cycle Found Market.",
+        // Kept for type compat; Community item page is the canonical URL.
+        classicUrl: communityHref,
       };
       if (!item.discipline) {
         const inferred = inferDiscipline(item);
