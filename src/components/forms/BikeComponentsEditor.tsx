@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  Check,
+  ChevronDown,
+  Circle,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   BIKE_COMPONENT_GROUPS,
   BIKE_COMPONENT_LABELS,
   BIKE_COMPONENT_SLOTS,
   componentHasDetails,
   componentOrigin,
+  componentSummary,
   emptyComponentRow,
   mergeComponentsWithTemplate,
   normalizeBikeComponents,
@@ -26,15 +33,18 @@ type Props = {
   discipline?: Discipline | "";
 };
 
-const field =
-  "h-11 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3 text-[15px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+type RowRef = { row: BikeComponent; index: number };
 
-/** Editable build sheet — shown for complete bikes / framesets on add & edit. */
+const field =
+  "h-11 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3 text-[15px] text-ink outline-none transition-[border-color,box-shadow] focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+
+/** Editable build sheet — accordion UX for complete bikes / framesets. */
 export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props) {
   const template = resolveComponentTemplate(discipline || null);
   const templateSlots = useMemo(() => slotsForTemplate(template), [template]);
   const templateSlotSet = useMemo(() => new Set(templateSlots), [templateSlots]);
   const lastTemplateRef = useRef(template);
+  const baseId = useId();
 
   const rows = value.length ? value : [];
   const used = new Set(rows.map((r) => r.slot));
@@ -45,6 +55,8 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
   const [trackAftermarket, setTrackAftermarket] = useState(() =>
     value.some((r) => componentOrigin(r) === "aftermarket"),
   );
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [openSlot, setOpenSlot] = useState<BikeComponentSlot | null>(null);
 
   useEffect(() => {
     if (value.some((r) => componentOrigin(r) === "aftermarket")) {
@@ -65,8 +77,48 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
     // eslint-disable-next-line react-hooks/exhaustive-deps -- remesh on template / incomplete list only
   }, [template, discipline, templateSlots]);
 
+  const groups = useMemo(() => {
+    const mapped = BIKE_COMPONENT_GROUPS.map((g) => ({
+      ...g,
+      rows: g.slots
+        .map((slot) => {
+          const index = rows.findIndex((r) => r.slot === slot);
+          return index >= 0 ? { row: rows[index]!, index } : null;
+        })
+        .filter((x): x is RowRef => Boolean(x)),
+    })).filter((g) => g.rows.length > 0);
+
+    const extras = rows
+      .map((row, index) => ({ row, index }))
+      .filter(({ row }) => !BIKE_COMPONENT_GROUPS.some((g) => g.slots.includes(row.slot)));
+
+    if (extras.length) {
+      mapped.push({
+        id: "additional",
+        label: "Additional",
+        slots: extras.map((e) => e.row.slot),
+        rows: extras,
+      });
+    }
+    return mapped;
+  }, [rows]);
+
+  // Open the first incomplete group once rows exist.
+  useEffect(() => {
+    if (!groups.length) return;
+    if (openGroupId === "__all__") return;
+    if (openGroupId && groups.some((g) => g.id === openGroupId)) return;
+    const firstIncomplete =
+      groups.find((g) => g.rows.some(({ row }) => !componentHasDetails(row))) ||
+      groups[0];
+    setOpenGroupId(firstIncomplete?.id ?? null);
+  }, [groups, openGroupId]);
+
+  const filledCount = rows.filter(componentHasDetails).length;
+  const totalCount = rows.length;
+  const progress = totalCount ? Math.round((filledCount / totalCount) * 100) : 0;
+
   function commit(next: BikeComponent[]) {
-    // Don't trim while typing — trailing spaces are needed for multi-word brands/models.
     onChange(
       next.map((r) => ({
         slot: r.slot,
@@ -79,8 +131,7 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
   }
 
   function updateRow(index: number, patch: Partial<BikeComponent>) {
-    const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
-    commit(next);
+    commit(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
   function clearRow(index: number) {
@@ -91,12 +142,17 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
       return;
     }
     commit(rows.filter((_, i) => i !== index));
+    if (openSlot === row.slot) setOpenSlot(null);
   }
 
   function addRow(slot?: BikeComponentSlot) {
     const pick = slot || unusedSlots[0];
     if (!pick) return;
     commit([...rows, emptyComponentRow(pick)]);
+    const group =
+      BIKE_COMPONENT_GROUPS.find((g) => g.slots.includes(pick))?.id || "additional";
+    setOpenGroupId(group);
+    setOpenSlot(pick);
   }
 
   function setHasAftermarket(enabled: boolean) {
@@ -114,37 +170,101 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
     }
   }
 
-  const groups = BIKE_COMPONENT_GROUPS.map((g) => ({
-    ...g,
-    rows: g.slots
-      .map((slot) => {
-        const index = rows.findIndex((r) => r.slot === slot);
-        return index >= 0 ? { row: rows[index]!, index } : null;
-      })
-      .filter((x): x is { row: BikeComponent; index: number } => Boolean(x)),
-  })).filter((g) => g.rows.length > 0);
+  function toggleGroup(id: string) {
+    setOpenGroupId((cur) => (cur === id ? null : id));
+    setOpenSlot(null);
+  }
 
-  const extras = rows
-    .map((row, index) => ({ row, index }))
-    .filter(({ row }) => !BIKE_COMPONENT_GROUPS.some((g) => g.slots.includes(row.slot)));
+  function expandAll() {
+    // Open every group visually by flipping to a sentinel — we use multi-open set.
+    setOpenGroupId("__all__");
+  }
+
+  function collapseAll() {
+    setOpenGroupId(null);
+    setOpenSlot(null);
+  }
+
+  function isGroupOpen(id: string) {
+    return openGroupId === "__all__" || openGroupId === id;
+  }
+
+  function openNextIncomplete(fromSlot: BikeComponentSlot) {
+    const flat = groups.flatMap((g) => g.rows.map((r) => ({ ...r, groupId: g.id })));
+    const start = flat.findIndex((r) => r.row.slot === fromSlot);
+    const next =
+      flat.slice(start + 1).find((r) => !componentHasDetails(r.row)) ||
+      flat.find((r) => !componentHasDetails(r.row));
+    if (!next) {
+      setOpenSlot(null);
+      return;
+    }
+    setOpenGroupId(next.groupId);
+    setOpenSlot(next.row.slot);
+  }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <h2 className="section-title m-0 text-[20px]">Components</h2>
-        <p className="mt-1 m-0 text-[14px] text-muted-2">
-          {template === "ebike"
-            ? "E-bike build sheet — functional bike parts plus motor, battery, and controls. Mid-drive replaces the bottom bracket."
-            : "Everything needed for a functional bike. Fill brand and model as you know them; leave blank if unknown."}
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="section-title m-0 text-[20px]">Components</h2>
+          <p className="mt-1 m-0 max-w-[40rem] text-[14px] leading-relaxed text-muted-2">
+            {template === "ebike"
+              ? "E-bike build sheet — open a section, fill what you know, skip the rest."
+              : "Open a section and fill brand and model as you go. Blank is fine for unknowns."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex h-8 items-center rounded-full px-3 font-mono text-[11px] font-medium tracking-[0.08em] uppercase ${
+            template === "ebike"
+              ? "border border-accent-soft-border bg-accent-soft text-accent-hover"
+              : "border border-line bg-ground text-muted-2"
+          }`}
+        >
+          {template === "ebike" ? "E-bike list" : "Functional bike"}
+        </span>
       </div>
 
-      <fieldset className="m-0 rounded-[14px] border border-line bg-ground px-4 py-3.5">
-        <legend className="sr-only">Aftermarket parts</legend>
-        <label className="flex cursor-pointer items-start gap-3">
+      {/* Progress + controls */}
+      <div className="rounded-[14px] border border-line bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <ProgressRing value={progress} label={`${filledCount} of ${totalCount}`} />
+            <div className="min-w-0">
+              <p className="m-0 text-[14px] font-semibold text-ink">
+                {filledCount === 0
+                  ? "Start with any section"
+                  : filledCount === totalCount
+                    ? "Build sheet complete"
+                    : `${filledCount} of ${totalCount} parts filled`}
+              </p>
+              <p className="m-0 text-[13px] text-muted-2">
+                Collapse sections you are done with — expand one at a time to stay focused.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={expandAll}
+              className="inline-flex h-9 items-center rounded-[8px] border border-line bg-white px-3 text-[13px] font-semibold text-ink hover:bg-ground"
+            >
+              Expand all
+            </button>
+            <button
+              type="button"
+              onClick={collapseAll}
+              className="inline-flex h-9 items-center rounded-[8px] border border-line bg-white px-3 text-[13px] font-semibold text-ink hover:bg-ground"
+            >
+              Collapse all
+            </button>
+          </div>
+        </div>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[12px] border border-line-soft bg-ground px-3.5 py-3">
           <input
             type="checkbox"
-            className="mt-1 size-4 shrink-0 accent-accent"
+            className="mt-0.5 size-4 shrink-0 accent-accent"
             checked={trackAftermarket}
             onChange={(e) => setHasAftermarket(e.target.checked)}
           />
@@ -153,51 +273,97 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
               This bike has aftermarket parts
             </span>
             <span className="mt-0.5 block text-[13px] text-muted-2">
-              Leave unchecked if everything listed is stock. When checked, tag each part as
-              Stock or Aftermarket.
+              When on, each part can be tagged Stock or Aftermarket for garage visitors.
             </span>
           </span>
         </label>
-      </fieldset>
+      </div>
 
-      <div className="flex flex-col gap-5">
-        {groups.map((group) => (
-          <div key={group.id} className="flex flex-col gap-2.5">
-            <h3 className="eyebrow m-0 text-muted">{group.label}</h3>
-            <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-              {group.rows.map(({ row, index }) => (
-                <ComponentRow
-                  key={row.slot}
-                  row={row}
-                  index={index}
-                  trackAftermarket={trackAftermarket}
-                  required={templateSlotSet.has(row.slot)}
-                  onUpdate={updateRow}
-                  onClear={() => clearRow(index)}
-                />
-              ))}
-            </ul>
-          </div>
-        ))}
+      {/* Group accordions */}
+      <div className="overflow-hidden rounded-[16px] border border-line bg-surface">
+        {groups.map((group, gi) => {
+          const open = isGroupOpen(group.id);
+          const filledInGroup = group.rows.filter(({ row }) =>
+            componentHasDetails(row),
+          ).length;
+          const panelId = `${baseId}-panel-${group.id}`;
+          const headerId = `${baseId}-header-${group.id}`;
+          return (
+            <div
+              key={group.id}
+              className={gi > 0 ? "border-t border-line-soft" : undefined}
+            >
+              <h3 className="m-0">
+                <button
+                  type="button"
+                  id={headerId}
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  onClick={() => toggleGroup(group.id)}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-ground/80"
+                >
+                  <span
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold tabular-nums ${
+                      filledInGroup === group.rows.length && group.rows.length
+                        ? "bg-accent-soft text-accent-hover"
+                        : "bg-ground text-muted-2"
+                    }`}
+                  >
+                    {filledInGroup === group.rows.length && group.rows.length ? (
+                      <Check className="size-3.5" aria-hidden strokeWidth={2.5} />
+                    ) : (
+                      filledInGroup
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-ink">
+                      {group.label}
+                    </span>
+                    <span className="block font-mono text-[12px] tabular-nums text-meta">
+                      {filledInGroup}/{group.rows.length} filled
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={`size-5 shrink-0 text-muted transition-transform duration-200 ${
+                      open ? "rotate-180" : ""
+                    }`}
+                    aria-hidden
+                  />
+                </button>
+              </h3>
 
-        {extras.length ? (
-          <div className="flex flex-col gap-2.5">
-            <h3 className="eyebrow m-0 text-muted">Additional</h3>
-            <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-              {extras.map(({ row, index }) => (
-                <ComponentRow
-                  key={`${row.slot}-${index}`}
-                  row={row}
-                  index={index}
-                  trackAftermarket={trackAftermarket}
-                  required={false}
-                  onUpdate={updateRow}
-                  onClear={() => clearRow(index)}
-                />
-              ))}
-            </ul>
-          </div>
-        ) : null}
+              <div
+                id={panelId}
+                role="region"
+                aria-labelledby={headerId}
+                hidden={!open}
+                className={open ? "border-t border-line-soft bg-ground/40" : undefined}
+              >
+                {open ? (
+                  <ul className="m-0 flex list-none flex-col p-0">
+                    {group.rows.map(({ row, index }, ri) => (
+                      <ComponentAccordionRow
+                        key={row.slot}
+                        row={row}
+                        index={index}
+                        open={openSlot === row.slot}
+                        trackAftermarket={trackAftermarket}
+                        required={templateSlotSet.has(row.slot)}
+                        isLast={ri === group.rows.length - 1}
+                        onToggle={() =>
+                          setOpenSlot((cur) => (cur === row.slot ? null : row.slot))
+                        }
+                        onUpdate={updateRow}
+                        onClear={() => clearRow(index)}
+                        onDone={() => openNextIncomplete(row.slot)}
+                      />
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {unusedSlots.length ? (
@@ -226,117 +392,258 @@ export function BikeComponentsEditor({ value, onChange, discipline = "" }: Props
   );
 }
 
-function ComponentRow({
+function ProgressRing({ value, label }: { value: number; label: string }) {
+  const r = 16;
+  const c = 2 * Math.PI * r;
+  const offset = c - (Math.min(100, Math.max(0, value)) / 100) * c;
+  return (
+    <div className="relative size-12 shrink-0" aria-label={label}>
+      <svg viewBox="0 0 40 40" className="size-12 -rotate-90" aria-hidden>
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          className="stroke-line"
+          strokeWidth="3"
+        />
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          className="stroke-accent transition-[stroke-dashoffset] duration-300"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] font-semibold tabular-nums text-ink">
+        {value}%
+      </span>
+    </div>
+  );
+}
+
+function ComponentAccordionRow({
   row,
   index,
+  open,
   trackAftermarket,
   required,
+  isLast,
+  onToggle,
   onUpdate,
   onClear,
+  onDone,
 }: {
   row: BikeComponent;
   index: number;
+  open: boolean;
   trackAftermarket: boolean;
   required: boolean;
+  isLast: boolean;
+  onToggle: () => void;
   onUpdate: (index: number, patch: Partial<BikeComponent>) => void;
   onClear: () => void;
+  onDone: () => void;
 }) {
+  const filled = componentHasDetails(row);
   const origin = componentOrigin(row);
-  return (
-    <li className="rounded-[14px] border border-line bg-surface p-3.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-[14px] font-semibold text-ink">
-          {BIKE_COMPONENT_LABELS[row.slot]}
-        </span>
-        <button
-          type="button"
-          aria-label={
-            required
-              ? `Clear ${BIKE_COMPONENT_LABELS[row.slot]}`
-              : `Remove ${BIKE_COMPONENT_LABELS[row.slot]}`
-          }
-          onClick={onClear}
-          className="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-muted-2 hover:border-ink hover:text-ink"
-        >
-          <Trash2 className="size-4" aria-hidden />
-        </button>
-      </div>
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-semibold text-muted" htmlFor={`comp-brand-${index}`}>
-            Brand
-          </label>
-          <input
-            id={`comp-brand-${index}`}
-            value={row.brand || ""}
-            onChange={(e) => onUpdate(index, { brand: e.target.value })}
-            placeholder="e.g. Campagnolo"
-            className={`${field} placeholder:text-meta`}
-            autoComplete="off"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-semibold text-muted" htmlFor={`comp-model-${index}`}>
-            Model
-          </label>
-          <input
-            id={`comp-model-${index}`}
-            value={row.model || ""}
-            onChange={(e) => onUpdate(index, { model: e.target.value })}
-            placeholder="e.g. Super Record"
-            className={`${field} placeholder:text-meta`}
-            autoComplete="off"
-          />
-        </div>
-      </div>
+  const brandRef = useRef<HTMLInputElement>(null);
+  const panelId = `comp-panel-${row.slot}`;
+  const headerId = `comp-header-${row.slot}`;
+  const summary = filled ? componentSummary(row) : "Not filled yet";
 
-      {trackAftermarket ? (
-        <div
-          className="mt-2.5 inline-flex rounded-[10px] border border-line bg-ground p-0.5"
-          role="group"
-          aria-label={`${BIKE_COMPONENT_LABELS[row.slot]} origin`}
-        >
-          {(
-            [
-              { id: "stock", label: "Stock" },
-              { id: "aftermarket", label: "Aftermarket" },
-            ] as const
-          ).map((opt) => {
-            const on = origin === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() =>
-                  onUpdate(index, { origin: opt.id as BikeComponentOrigin })
-                }
-                className={`min-h-9 rounded-[8px] px-3 text-[13px] font-semibold ${
-                  on
-                    ? opt.id === "aftermarket"
-                      ? "bg-accent-soft text-accent-hover"
-                      : "bg-white text-ink shadow-sm"
-                    : "bg-transparent text-muted-2 hover:text-ink"
+  useEffect(() => {
+    if (!open) return;
+    const t = window.setTimeout(() => brandRef.current?.focus(), 40);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
+  return (
+    <li className={!isLast ? "border-b border-line-soft" : undefined}>
+      <button
+        type="button"
+        id={headerId}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={onToggle}
+        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+          open ? "bg-white" : "hover:bg-white/70"
+        }`}
+      >
+        <span className="flex size-7 shrink-0 items-center justify-center" aria-hidden>
+          {filled ? (
+            <span
+              className={`flex size-5 items-center justify-center rounded-full ${
+                origin === "aftermarket" && trackAftermarket
+                  ? "bg-accent-soft text-accent-hover"
+                  : "bg-ink text-white"
+              }`}
+            >
+              <Check className="size-3" strokeWidth={2.5} />
+            </span>
+          ) : (
+            <Circle className="size-5 text-[#D4D3CD]" strokeWidth={1.5} />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-[14px] font-semibold text-ink">
+              {BIKE_COMPONENT_LABELS[row.slot]}
+            </span>
+            {trackAftermarket && filled ? (
+              <span
+                className={`rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] uppercase ${
+                  origin === "aftermarket"
+                    ? "bg-accent-soft text-accent-hover"
+                    : "bg-ground text-muted-2"
                 }`}
               >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <div className="mt-2.5 flex flex-col gap-1">
-        <label className="text-[12px] font-semibold text-muted" htmlFor={`comp-notes-${index}`}>
-          Notes <span className="font-normal">(optional)</span>
-        </label>
-        <input
-          id={`comp-notes-${index}`}
-          value={row.notes || ""}
-          onChange={(e) => onUpdate(index, { notes: e.target.value })}
-          placeholder="Year, condition, serial…"
-          className={`${field} placeholder:text-meta`}
-          autoComplete="off"
+                {origin === "aftermarket" ? "Aftermarket" : "Stock"}
+              </span>
+            ) : null}
+          </span>
+          <span
+            className={`mt-0.5 block truncate text-[13px] ${
+              filled ? "text-muted-2" : "text-meta"
+            }`}
+          >
+            {summary}
+          </span>
+        </span>
+        <ChevronDown
+          className={`size-4 shrink-0 text-muted transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
         />
+      </button>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={headerId}
+        hidden={!open}
+        className={open ? "bg-white px-4 pb-4 pt-1" : undefined}
+      >
+        {open ? (
+          <div className="rounded-[12px] border border-line bg-ground/30 p-3.5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className="text-[12px] font-semibold text-muted"
+                  htmlFor={`comp-brand-${index}`}
+                >
+                  Brand
+                </label>
+                <input
+                  ref={brandRef}
+                  id={`comp-brand-${index}`}
+                  value={row.brand || ""}
+                  onChange={(e) => onUpdate(index, { brand: e.target.value })}
+                  placeholder="e.g. Campagnolo"
+                  className={`${field} placeholder:text-meta`}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className="text-[12px] font-semibold text-muted"
+                  htmlFor={`comp-model-${index}`}
+                >
+                  Model
+                </label>
+                <input
+                  id={`comp-model-${index}`}
+                  value={row.model || ""}
+                  onChange={(e) => onUpdate(index, { model: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onDone();
+                    }
+                  }}
+                  placeholder="e.g. Super Record"
+                  className={`${field} placeholder:text-meta`}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+
+            {trackAftermarket ? (
+              <div
+                className="mt-3 inline-flex rounded-[10px] border border-line bg-white p-0.5"
+                role="group"
+                aria-label={`${BIKE_COMPONENT_LABELS[row.slot]} origin`}
+              >
+                {(
+                  [
+                    { id: "stock", label: "Stock" },
+                    { id: "aftermarket", label: "Aftermarket" },
+                  ] as const
+                ).map((opt) => {
+                  const on = origin === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() =>
+                        onUpdate(index, { origin: opt.id as BikeComponentOrigin })
+                      }
+                      className={`min-h-9 rounded-[8px] px-3.5 text-[13px] font-semibold transition-colors ${
+                        on
+                          ? opt.id === "aftermarket"
+                            ? "bg-accent-soft text-accent-hover"
+                            : "bg-ink text-white"
+                          : "bg-transparent text-muted-2 hover:text-ink"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <div className="mt-3 flex flex-col gap-1.5">
+              <label
+                className="text-[12px] font-semibold text-muted"
+                htmlFor={`comp-notes-${index}`}
+              >
+                Notes <span className="font-normal">(optional)</span>
+              </label>
+              <input
+                id={`comp-notes-${index}`}
+                value={row.notes || ""}
+                onChange={(e) => onUpdate(index, { notes: e.target.value })}
+                placeholder="Year, condition, serial…"
+                className={`${field} placeholder:text-meta`}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={onClear}
+                className="inline-flex h-10 items-center gap-1.5 rounded-[8px] px-2.5 text-[13px] font-semibold text-muted-2 hover:text-ink"
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                {required ? "Clear" : "Remove"}
+              </button>
+              <button
+                type="button"
+                onClick={onDone}
+                className="inline-flex h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover"
+              >
+                {filled ? "Done — next" : "Skip — next"}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </li>
   );
