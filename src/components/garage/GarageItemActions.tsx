@@ -71,7 +71,13 @@ export function GarageItemActions({ item, compact }: Props) {
     };
   }, [open]);
 
-  function stop(e: React.SyntheticEvent) {
+  /** Keep card/row links from navigating when using the overflow menu. */
+  function stopBubble(e: React.SyntheticEvent) {
+    e.stopPropagation();
+  }
+
+  /** Button-only: also cancel the parent card <a> default. */
+  function stopCardNav(e: React.SyntheticEvent) {
     e.preventDefault();
     e.stopPropagation();
   }
@@ -176,7 +182,12 @@ export function GarageItemActions({ item, compact }: Props) {
 
   return (
     <>
-      <div ref={rootRef} className="relative" onClick={stop} onKeyDown={stop}>
+      <div
+        ref={rootRef}
+        className="relative"
+        onClick={stopBubble}
+        onKeyDown={stopBubble}
+      >
         <button
           type="button"
           aria-label={`Manage ${item.name}`}
@@ -185,7 +196,7 @@ export function GarageItemActions({ item, compact }: Props) {
           aria-controls={menuId}
           disabled={busy}
           onClick={(e) => {
-            stop(e);
+            stopCardNav(e);
             setOpen((v) => !v);
           }}
           className={`inline-flex items-center justify-center rounded-[8px] border border-line bg-white text-ink shadow-sm hover:bg-ground disabled:opacity-60 ${
@@ -201,18 +212,34 @@ export function GarageItemActions({ item, compact }: Props) {
             role="menu"
             className="absolute right-0 z-30 mt-1.5 w-[13rem] overflow-hidden rounded-[10px] border border-line bg-white py-1 shadow-[0_10px_28px_rgba(16,23,27,0.14)]"
           >
-            <Link
-              role="menuitem"
-              href={editHref}
-              {...(marketplace
-                ? { target: "_blank", rel: "noopener noreferrer" }
-                : {})}
-              className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
-              onClick={() => setOpen(false)}
-            >
-              <Pencil className="size-3.5 text-muted" aria-hidden />
-              Edit
-            </Link>
+            {marketplace ? (
+              <a
+                role="menuitem"
+                href={editHref}
+                className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
+                onClick={(e) => {
+                  // Do not preventDefault — that was canceling navigation.
+                  stopBubble(e);
+                  setOpen(false);
+                }}
+              >
+                <Pencil className="size-3.5 text-muted" aria-hidden />
+                Edit
+              </a>
+            ) : (
+              <Link
+                role="menuitem"
+                href={editHref}
+                className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-ink no-underline hover:bg-ground"
+                onClick={(e) => {
+                  stopBubble(e);
+                  setOpen(false);
+                }}
+              >
+                <Pencil className="size-3.5 text-muted" aria-hidden />
+                Edit
+              </Link>
+            )}
 
             {!marketplace ? (
               item.archived ? (

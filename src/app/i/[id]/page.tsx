@@ -301,16 +301,23 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   {item.status === "Not for sale" ? " — not listed for sale" : ""}.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={editHref}
-                    {...(marketplace
-                      ? { target: "_blank", rel: "noopener noreferrer" }
-                      : {})}
-                    className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center gap-2 rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-                  >
-                    <Pencil className="size-4" aria-hidden />
-                    Edit item
-                  </Link>
+                  {marketplace ? (
+                    <a
+                      href={editHref}
+                      className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center gap-2 rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+                    >
+                      <Pencil className="size-4" aria-hidden />
+                      Edit item
+                    </a>
+                  ) : (
+                    <Link
+                      href={editHref}
+                      className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center gap-2 rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+                    >
+                      <Pencil className="size-4" aria-hidden />
+                      Edit item
+                    </Link>
+                  )}
                   <Link
                     href={`/u/${owner.handle}/garage`}
                     className="inline-flex h-12 min-w-[140px] flex-1 items-center justify-center rounded-[10px] border border-[#D4D3CD] bg-white px-4 text-[15px] font-semibold text-ink no-underline hover:border-ink hover:text-ink"
