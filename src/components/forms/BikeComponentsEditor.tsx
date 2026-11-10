@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
+  ChevronUp,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   BIKE_COMPONENT_GROUPS,
   BIKE_COMPONENT_LABELS,
@@ -240,39 +248,21 @@ export function BikeComponentsEditor({
         </span>
       </div>
 
-      {/* Progress + controls */}
+      {/* Progress */}
       <div className="rounded-[14px] border border-line bg-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <ProgressRing value={progress} label={`${filledCount} of ${totalCount}`} />
-            <div className="min-w-0">
-              <p className="m-0 text-[14px] font-semibold text-ink">
-                {filledCount === 0
-                  ? "Start with any section"
-                  : filledCount === totalCount
-                    ? "Build sheet complete"
-                    : `${filledCount} of ${totalCount} parts filled`}
-              </p>
-              <p className="m-0 text-[13px] text-muted-2">
-                Collapse sections you are done with — expand one at a time to stay focused.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={expandAll}
-              className="inline-flex h-9 items-center rounded-[8px] border border-line bg-white px-3 text-[13px] font-semibold text-ink hover:bg-ground"
-            >
-              Expand all
-            </button>
-            <button
-              type="button"
-              onClick={collapseAll}
-              className="inline-flex h-9 items-center rounded-[8px] border border-line bg-white px-3 text-[13px] font-semibold text-ink hover:bg-ground"
-            >
-              Collapse all
-            </button>
+        <div className="flex min-w-0 items-center gap-3">
+          <ProgressRing value={progress} label={`${filledCount} of ${totalCount}`} />
+          <div className="min-w-0">
+            <p className="m-0 text-[14px] font-semibold text-ink">
+              {filledCount === 0
+                ? "Start with any section"
+                : filledCount === totalCount
+                  ? "Build sheet complete"
+                  : `${filledCount} of ${totalCount} parts filled`}
+            </p>
+            <p className="m-0 text-[13px] text-muted-2">
+              Work section by section, or open everything at once with the control below.
+            </p>
           </div>
         </div>
 
@@ -294,8 +284,52 @@ export function BikeComponentsEditor({
         </label>
       </div>
 
-      {/* Group accordions */}
+      {/* Section list + expand/collapse — full-width so the action is unmistakable */}
       <div className="overflow-hidden rounded-[16px] border border-line bg-surface">
+        <div className="flex flex-col gap-3 border-b border-line bg-ground/50 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="m-0 text-[14px] font-semibold text-ink">Component sections</p>
+            <p className="m-0 text-[13px] text-muted-2">
+              {openGroupId === "__all__"
+                ? "All sections are open"
+                : openGroupId
+                  ? "One section open — pick another below, or open all"
+                  : "All sections are closed — open one below, or open all"}
+            </p>
+          </div>
+          <div
+            role="group"
+            aria-label="Open or close all sections"
+            className="grid w-full grid-cols-2 gap-1 rounded-[12px] border border-line bg-white p-1 sm:w-auto sm:min-w-[280px]"
+          >
+            <button
+              type="button"
+              aria-pressed={openGroupId === "__all__"}
+              onClick={expandAll}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-[13px] font-semibold transition-colors ${
+                openGroupId === "__all__"
+                  ? "bg-ink text-white"
+                  : "bg-transparent text-ink hover:bg-ground"
+              }`}
+            >
+              <ChevronsDown className="size-4 shrink-0" aria-hidden strokeWidth={2.25} />
+              Open all
+            </button>
+            <button
+              type="button"
+              aria-pressed={openGroupId === null}
+              onClick={collapseAll}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-[13px] font-semibold transition-colors ${
+                openGroupId === null
+                  ? "bg-ink text-white"
+                  : "bg-transparent text-ink hover:bg-ground"
+              }`}
+            >
+              <ChevronsUp className="size-4 shrink-0" aria-hidden strokeWidth={2.25} />
+              Close all
+            </button>
+          </div>
+        </div>
         {groups.map((group, gi) => {
           const open = isGroupOpen(group.id);
           const filledInGroup = group.rows.filter(({ row }) =>
