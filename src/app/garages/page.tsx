@@ -18,7 +18,12 @@ import {
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { FEATURES } from "@/lib/features";
 import { garageCoverPhotoUrls } from "@/lib/garage/garageCover";
+import {
+  formatUsdCompactFromCents,
+  garageEstimateTotals,
+} from "@/lib/garage/estimates";
 import { isBikeItem } from "@/lib/garage/item-types";
 import { cityFromLoc, getGarage, type GarageItem, type Person } from "@/lib/data/seed";
 
@@ -32,12 +37,16 @@ function garageStatLine(items: GarageItem[]) {
   const bikes = active.filter(isBikeItem).length;
   const other = active.length - bikes;
   const forSale = active.filter((i) => i.status !== "Not for sale").length;
+  const totals = FEATURES.garageEstimates ? garageEstimateTotals(active) : null;
 
   const parts: string[] = [];
   if (bikes) parts.push(countLabel(bikes, "bike", "bikes"));
   if (other) parts.push(countLabel(other, "part", "parts"));
   if (!parts.length) parts.push("0 items");
   if (forSale) parts.push(`${forSale} for sale`);
+  if (totals?.midCents != null) {
+    parts.push(`Total ${formatUsdCompactFromCents(totals.midCents)}`);
+  }
   return parts.join(" · ");
 }
 

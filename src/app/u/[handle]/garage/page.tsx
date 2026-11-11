@@ -103,7 +103,8 @@ export default function GaragePage({
   const partsGearItems = activeItems.filter(isPartsOrGearItem);
   const tabActiveItems = garageTab === "bikes" ? bikeItems : partsGearItems;
   const availableCount = tabActiveItems.filter((i) => i.status !== "Not for sale").length;
-  const estimateTotals = garageEstimateTotals(tabActiveItems);
+  /** Whole-garage total — not scoped to the Bikes / Parts tab. */
+  const garageTotals = garageEstimateTotals(activeItems);
   const firstName = person?.name.split(" ")[0] || "Member";
   const categoryFilters = ["All", ...categoriesForGarageTab(garageTab)];
 
@@ -346,32 +347,6 @@ export default function GaragePage({
                     {garageTab === "bikes" ? "bikes" : "parts & gear"}
                   </span>
                 </button>
-                {FEATURES.garageEstimates ? (
-                  <span
-                    className="inline-flex h-9 items-center rounded-full border border-accent-soft-border bg-accent-soft px-3.5 text-[13px] font-medium text-ink"
-                    title={
-                      estimateTotals.valuedCount
-                        ? `${formatEstimateRangeLabel({
-                            midCents: estimateTotals.midCents,
-                            lowCents: estimateTotals.lowCents,
-                            highCents: estimateTotals.highCents,
-                          })} across valued items`
-                        : isOwnGarage
-                          ? "Open a bike and tap Get estimate"
-                          : "No estimates yet"
-                    }
-                  >
-                    <span className="font-mono tabular-nums">
-                      {estimateTotals.midCents != null
-                        ? formatUsdCompactFromCents(estimateTotals.midCents)
-                        : "—"}
-                    </span>
-                    <span className="ml-1.5">est. value</span>
-                    <span className="ml-1.5 text-muted">
-                      · {estimateTotals.valuedCount}/{estimateTotals.activeCount || 0}
-                    </span>
-                  </span>
-                ) : null}
                 <button
                   type="button"
                   onClick={() => setAvailability("Available only")}
@@ -399,6 +374,47 @@ export default function GaragePage({
                 ) : null}
               </div>
             </div>
+
+            {FEATURES.garageEstimates ? (
+              <div
+                className="grid overflow-hidden rounded-[14px] border border-line bg-ground sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]"
+                aria-label="Garage totals"
+              >
+                <div className="border-b border-line px-5 py-4 sm:border-r sm:border-b-0">
+                  <p className="font-display m-0 text-[28px] leading-none tabular-nums text-ink">
+                    {activeItems.length}
+                  </p>
+                  <p className="m-0 mt-1.5 text-[13px] text-muted-2">Documented items</p>
+                </div>
+                <div className="border-b border-line bg-accent-soft/50 px-5 py-4 sm:border-r sm:border-b-0">
+                  <p className="eyebrow m-0 text-accent-hover">Total garage value</p>
+                  <p className="font-display m-0 mt-1 text-[clamp(28px,4vw,36px)] leading-none tabular-nums text-ink">
+                    {garageTotals.midCents != null
+                      ? formatUsdCompactFromCents(garageTotals.midCents)
+                      : "—"}
+                  </p>
+                  <p className="m-0 mt-1.5 text-[13px] text-muted-2">
+                    {garageTotals.valuedCount
+                      ? `${formatEstimateRangeLabel({
+                          midCents: garageTotals.midCents,
+                          lowCents: garageTotals.lowCents,
+                          highCents: garageTotals.highCents,
+                        })} · estimate · ${garageTotals.valuedCount} of ${
+                          garageTotals.activeCount
+                        } valued`
+                      : isOwnGarage
+                        ? "Add estimates on items to build this total"
+                        : "No item estimates yet"}
+                  </p>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="font-display m-0 text-[28px] leading-none tabular-nums text-accent">
+                    {activeItems.filter((i) => i.status !== "Not for sale").length}
+                  </p>
+                  <p className="m-0 mt-1.5 text-[13px] text-muted-2">Available now</p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <Feature name="marketValues">
