@@ -25,6 +25,12 @@ import {
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { FEATURES } from "@/lib/features";
+import {
+  formatEstimateRangeLabel,
+  formatUsdCompactFromCents,
+  garageEstimateTotals,
+} from "@/lib/garage/estimates";
 import { formatAskPrice } from "@/lib/garage/itemFields";
 import {
   categoriesForGarageTab,
@@ -95,6 +101,7 @@ export default function GaragePage({
   const partsGearItems = activeItems.filter(isPartsOrGearItem);
   const tabActiveItems = garageTab === "bikes" ? bikeItems : partsGearItems;
   const availableCount = tabActiveItems.filter((i) => i.status !== "Not for sale").length;
+  const estimateTotals = garageEstimateTotals(tabActiveItems);
   const firstName = person?.name.split(" ")[0] || "Member";
   const categoryFilters = ["All", ...categoriesForGarageTab(garageTab)];
 
@@ -336,6 +343,32 @@ export default function GaragePage({
                     {garageTab === "bikes" ? "bikes" : "parts & gear"}
                   </span>
                 </button>
+                {FEATURES.garageEstimates ? (
+                  <span
+                    className="inline-flex h-9 items-center rounded-full border border-accent-soft-border bg-accent-soft px-3.5 text-[13px] font-medium text-ink"
+                    title={
+                      estimateTotals.valuedCount
+                        ? `${formatEstimateRangeLabel({
+                            midCents: estimateTotals.midCents,
+                            lowCents: estimateTotals.lowCents,
+                            highCents: estimateTotals.highCents,
+                          })} across valued items`
+                        : "No estimates yet"
+                    }
+                  >
+                    <span className="font-mono tabular-nums">
+                      {estimateTotals.midCents != null
+                        ? formatUsdCompactFromCents(estimateTotals.midCents)
+                        : "—"}
+                    </span>
+                    <span className="ml-1.5">est. value</span>
+                    {estimateTotals.activeCount > 0 ? (
+                      <span className="ml-1.5 text-muted">
+                        · {estimateTotals.valuedCount}/{estimateTotals.activeCount}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setAvailability("Available only")}

@@ -1,4 +1,5 @@
 import type { BikeComponent } from "@/lib/garage/bike-components";
+import type { ItemEstimate } from "@/lib/garage/estimates";
 import type { BikeState, GarageItemType } from "@/lib/garage/item-types";
 import { seedGarageCover } from "./seed-photos";
 
@@ -78,6 +79,8 @@ export type GarageItem = {
   installedOnBikeId?: string | null;
   /** Flag Other (and similar) mappings for later review — category kept. */
   categoryNeedsReview?: boolean;
+  /** Optional fair-market estimate (opt-in; separate from AI identify). */
+  estimate?: ItemEstimate | null;
 };
 
 export type WantedRequest = {

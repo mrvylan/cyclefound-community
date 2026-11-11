@@ -9,6 +9,7 @@ import { GarageItemActions } from "@/components/garage/GarageItemActions";
 import { BuildOriginBadge } from "@/components/garage/BuildOriginBadge";
 import { InstalledPartsSection } from "@/components/garage/InstalledPartsSection";
 import { ItemDescription } from "@/components/garage/ItemDescription";
+import { ItemEstimateSection } from "@/components/garage/ItemEstimateSection";
 import { ItemSpecsCard } from "@/components/garage/ItemSpecsCard";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
 import {
@@ -34,6 +35,10 @@ import {
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
+import {
+  formatEstimateRangeLabel,
+  hasEstimate,
+} from "@/lib/garage/estimates";
 import {
   formatAskPrice,
   itemDisplayTitle,
@@ -143,7 +148,11 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     ...(item.size?.trim() ? [{ k: "Size", v: item.size.trim() }] : []),
     { k: "Condition", v: item.cond },
     { k: "Status", v: item.status },
-    ...(FEATURES.marketValues ? [{ k: "Market", v: item.mkt }] : []),
+    ...(FEATURES.garageEstimates && hasEstimate(item.estimate)
+      ? [{ k: "Est. value", v: formatEstimateRangeLabel(item.estimate) }]
+      : FEATURES.marketValues
+        ? [{ k: "Market", v: item.mkt }]
+        : []),
     { k: "Asking", v: formatAskPrice(item.ask) },
   ];
   const rawSpecs = basicSpecs;
@@ -512,6 +521,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               ) : null}
             </>
           )}
+
+          {FEATURES.garageEstimates ? (
+            <ItemEstimateSection
+              itemId={item.id}
+              estimate={item.estimate}
+              isOwner={isOwner}
+            />
+          ) : null}
         </aside>
 
         <div className="flex min-w-0 flex-col gap-5">

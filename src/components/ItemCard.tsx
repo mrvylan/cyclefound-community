@@ -7,7 +7,12 @@ import { BuildOriginBadge } from "@/components/garage/BuildOriginBadge";
 import { PlaceholderPhoto, StatusChip } from "@/components/ui";
 import { cityFromLoc, type GarageItem } from "@/lib/data/seed";
 import { getItemPhotoUrls, resolvePerson } from "@/lib/data/local-store";
+import { FEATURES } from "@/lib/features";
 import { inferDiscipline } from "@/lib/garage/disciplines";
+import {
+  formatEstimateRangeLabel,
+  hasEstimate,
+} from "@/lib/garage/estimates";
 import {
   formatAskPrice,
   itemDisplayTitle,
@@ -153,12 +158,27 @@ export function ItemCard({
           ) : null}
 
           <div className="mt-auto flex items-end justify-between gap-2 border-t border-line-soft pt-3 text-[13px]">
-            <Feature name="marketValues">
+            {FEATURES.garageEstimates ? (
               <span>
-                <span className="block text-[11px] text-meta">MARKET</span>
-                <span className="font-mono tabular-nums">{item.mkt}</span>
+                <span className="block text-[11px] text-meta">EST. VALUE</span>
+                <span
+                  className={`font-mono tabular-nums ${
+                    hasEstimate(item.estimate) ? "text-ink" : "text-meta"
+                  }`}
+                >
+                  {hasEstimate(item.estimate)
+                    ? formatEstimateRangeLabel(item.estimate)
+                    : "No estimate"}
+                </span>
               </span>
-            </Feature>
+            ) : (
+              <Feature name="marketValues">
+                <span>
+                  <span className="block text-[11px] text-meta">MARKET</span>
+                  <span className="font-mono tabular-nums">{item.mkt}</span>
+                </span>
+              </Feature>
+            )}
             <span className="ml-auto">
               <AskingLine item={item} />
             </span>

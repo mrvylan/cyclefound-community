@@ -11,6 +11,11 @@ export const FEATURES = {
   topContributors: false,
   /** Market value ranges, trends, charts, "+x% 12mo", garage value stats, composition bar */
   marketValues: false,
+  /**
+   * Optional per-item fair-market estimates (separate from AI identify),
+   * ItemCard Est. value, and garage Est. garage value total.
+   */
+  garageEstimates: true,
   /** Home "In the shop now / Online" panel */
   expertsOnline: false,
   /** /experts directory (nav uses Members instead) */

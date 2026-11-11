@@ -5,6 +5,11 @@ import {
   type BikeComponent,
 } from "@/lib/garage/bike-components";
 import {
+  estimateFromDbRow,
+  formatEstimateRangeLabel,
+  hasEstimate,
+} from "@/lib/garage/estimates";
+import {
   resolveItemTyping,
   type BikeState,
   type GarageItemType,
@@ -124,6 +129,8 @@ export function mapGarageBikeRow(
     row.bike_components ?? cfRaw?.bike_components ?? [],
   );
 
+  const estimate = estimateFromDbRow(row);
+
   return {
     id: String(row.id),
     ownerId: String(row.owner_id),
@@ -133,7 +140,7 @@ export function mapGarageBikeRow(
     year: String(row.approximate_year || "—"),
     name: title,
     cond: String(row.condition || "—"),
-    mkt: "—",
+    mkt: hasEstimate(estimate) ? formatEstimateRangeLabel(estimate) : "—",
     ask: formatUsdFromCents(askCents),
     status,
     links: "Garage",
@@ -157,5 +164,6 @@ export function mapGarageBikeRow(
     bikeState: typing.bikeState,
     installedOnBikeId: typing.installedOnBikeId,
     categoryNeedsReview: typing.categoryNeedsReview,
+    estimate,
   };
 }
