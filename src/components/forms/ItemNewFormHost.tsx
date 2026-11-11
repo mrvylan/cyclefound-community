@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { ItemNewForm } from "./ItemNewForm";
-
-/** Fresh form instance each time you open Add — avoids leftover AI/manual notes. */
+/**
+ * Legacy host kept for imports; /item/new now redirects to /garage/new.
+ * Typed forms mount from GarageNewShell with an explicit itemType.
+ */
 export function ItemNewFormHost() {
-  const [mountId] = useState(() => `item-new-${Date.now()}`);
-  return <ItemNewForm key={mountId} />;
+  return null;
 }

@@ -105,7 +105,7 @@ export function SellFromGarage({ open, onClose }: Props) {
                 Your garage is empty — document a bike or part first, then list it here.
               </p>
               <Link
-                href="/item/new?status=For%20sale"
+                href="/garage/new?status=For%20sale"
                 className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
                 onClick={onClose}
               >
@@ -165,7 +165,7 @@ export function SellFromGarage({ open, onClose }: Props) {
         {!needsLogin ? (
           <div className="border-t border-line-soft px-5 py-3">
             <Link
-              href="/item/new?status=For%20sale"
+              href="/garage/new?status=For%20sale"
               className="inline-flex h-11 w-full items-center justify-center rounded-[10px] border border-line bg-white text-[14px] font-semibold text-ink no-underline hover:bg-ground"
               onClick={onClose}
             >

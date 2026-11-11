@@ -243,7 +243,7 @@ export default function GaragePage({
                       Edit profile
                     </Link>
                     <Link
-                      href="/item/new"
+                      href="/garage/new"
                       className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-accent px-[18px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
                     >
                       Add to garage
@@ -429,7 +429,7 @@ export default function GaragePage({
               isOwnGarage && availability !== "Archived" ? "Add to garage" : undefined
             }
             actionHref={
-              isOwnGarage && availability !== "Archived" ? "/item/new" : undefined
+              isOwnGarage && availability !== "Archived" ? "/garage/new" : undefined
             }
           />
         ) : view === "Grid" ? (

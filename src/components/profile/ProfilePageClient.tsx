@@ -455,7 +455,7 @@ export function ProfilePageClient({ handle }: { handle: string }) {
                 title="No items yet — add your first bike"
                 description="Add what you own to your garage so others can ask about it."
                 actionLabel="Add to garage"
-                actionHref="/item/new"
+                actionHref="/garage/new"
               />
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
