@@ -13,6 +13,8 @@ type Props = {
   onProvenanceChange: (v: string) => void;
   title?: string;
   blurb?: string;
+  /** Hide “Where it came from” (gear path). */
+  showProvenance?: boolean;
   hidden?: boolean;
 };
 
@@ -26,6 +28,7 @@ export function GarageItemDescriptionSection({
   onProvenanceChange,
   title = "Description",
   blurb = "Shown on your garage listing. AI can draft this from photos — edit before saving.",
+  showProvenance = true,
   hidden = false,
 }: Props) {
   if (hidden) return null;
@@ -44,7 +47,7 @@ export function GarageItemDescriptionSection({
         </label>
         <textarea
           id="item-description"
-          rows={6}
+          rows={showProvenance ? 6 : 4}
           value={description}
           maxLength={Math.max(ITEM_DESCRIPTION_MAX, description.length)}
           onChange={(e) => {
@@ -58,7 +61,13 @@ export function GarageItemDescriptionSection({
           {description.length}/{ITEM_DESCRIPTION_MAX}
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div
+        className={
+          showProvenance
+            ? "grid grid-cols-1 gap-4 sm:grid-cols-2"
+            : "grid grid-cols-1 gap-4"
+        }
+      >
         <div className="flex flex-col gap-2">
           <label htmlFor="item-notes" className={label}>
             Private notes <span className="font-normal text-muted">(only you)</span>
@@ -72,23 +81,25 @@ export function GarageItemDescriptionSection({
             className={textarea}
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="item-prov" className={label}>
-            Where it came from{" "}
-            <span className="font-normal text-muted">(optional)</span>
-          </label>
-          <textarea
-            id="item-prov"
-            rows={4}
-            value={provenance}
-            onChange={(e) => onProvenanceChange(e.target.value)}
-            placeholder="Owned since…, previous owners, paperwork…"
-            className={textarea}
-          />
-          <p className="m-0 text-[12px] text-meta">
-            Shown on the item page as history when you add it.
-          </p>
-        </div>
+        {showProvenance ? (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="item-prov" className={label}>
+              Where it came from{" "}
+              <span className="font-normal text-muted">(optional)</span>
+            </label>
+            <textarea
+              id="item-prov"
+              rows={4}
+              value={provenance}
+              onChange={(e) => onProvenanceChange(e.target.value)}
+              placeholder="Owned since…, previous owners, paperwork…"
+              className={textarea}
+            />
+            <p className="m-0 text-[12px] text-meta">
+              Shown on the item page as history when you add it.
+            </p>
+          </div>
+        ) : null}
       </div>
     </section>
   );

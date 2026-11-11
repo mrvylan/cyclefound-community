@@ -344,7 +344,7 @@ export default function MarketPage() {
             title="Nothing for sale yet"
             description="When members list bikes or parts, they show up here."
             actionLabel="Sell from your garage"
-            actionHref="/item/new?status=For%20sale"
+            actionHref="/garage/new?status=For%20sale"
           />
         ) : (
           <div className="flex items-start gap-8">

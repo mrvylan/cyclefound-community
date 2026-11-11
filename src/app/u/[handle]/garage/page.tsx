@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
+import { AddToGarageCta } from "@/components/forms/garage-item/AddToGarageCta";
 import { ItemCard } from "@/components/ItemCard";
 import { MessageMember } from "@/components/messaging/MessageMember";
 import {
@@ -24,12 +25,16 @@ import {
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { ITEM_CATEGORIES } from "@/lib/data/categories";
 import { formatAskPrice } from "@/lib/garage/itemFields";
+import {
+  categoriesForGarageTab,
+  isBikeItem,
+  isPartsOrGearItem,
+} from "@/lib/garage/item-types";
 import { garageActivityFor, getGarage } from "@/lib/data/seed";
 import { Archive, Eye, ShieldCheck } from "lucide-react";
 
-const categories = ["All", ...ITEM_CATEGORIES];
+type GarageTab = "bikes" | "parts";
 
 export default function GaragePage({
   params,
@@ -41,6 +46,7 @@ export default function GaragePage({
   const [ready, setReady] = useState(false);
   const [sessionHandle, setSessionHandle] = useState("");
   const [previewVisitor, setPreviewVisitor] = useState(false);
+  const [garageTab, setGarageTab] = useState<GarageTab>("bikes");
   const [cat, setCat] = useState("All");
   const [view, setView] = useState("Grid");
   const [availability, setAvailability] = useState("Everything");
@@ -85,12 +91,19 @@ export default function GaragePage({
   const ownerWanted = ready ? getWantedLines(handle) : [];
   const allItems = ready ? getGarageItemsFor(handle) : [];
   const activeItems = allItems.filter((i) => !i.archived);
-  const availableCount = activeItems.filter((i) => i.status !== "Not for sale").length;
+  const bikeItems = activeItems.filter(isBikeItem);
+  const partsGearItems = activeItems.filter(isPartsOrGearItem);
+  const tabActiveItems = garageTab === "bikes" ? bikeItems : partsGearItems;
+  const availableCount = tabActiveItems.filter((i) => i.status !== "Not for sale").length;
   const firstName = person?.name.split(" ")[0] || "Member";
+  const categoryFilters = ["All", ...categoriesForGarageTab(garageTab)];
 
   const items = useMemo(() => {
     if (!ready) return [];
     return getGarageItemsFor(handle).filter((item) => {
+      if (garageTab === "bikes" ? !isBikeItem(item) : !isPartsOrGearItem(item)) {
+        return false;
+      }
       if (cat !== "All" && item.catShort !== cat) return false;
       const archived = Boolean(item.archived);
       if (availability === "Archived") return archived;
@@ -103,7 +116,12 @@ export default function GaragePage({
       }
       return true;
     });
-  }, [handle, cat, availability, tick, ready]);
+  }, [handle, garageTab, cat, availability, tick, ready]);
+
+  function setTab(next: GarageTab) {
+    setGarageTab(next);
+    setCat("All");
+  }
 
   function memberTrustLine() {
     if (!person) return "";
@@ -242,12 +260,9 @@ export default function GaragePage({
                     >
                       Edit profile
                     </Link>
-                    <Link
-                      href="/item/new"
-                      className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-accent px-[18px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-                    >
+                    <AddToGarageCta className="inline-flex h-[46px] items-center rounded-[10px] border-0 bg-accent px-[18px] font-semibold text-white hover:bg-accent-hover">
                       Add to garage
-                    </Link>
+                    </AddToGarageCta>
                   </>
                 ) : (
                   <>
@@ -316,8 +331,10 @@ export default function GaragePage({
                       : "border-line bg-white text-ink hover:bg-ground"
                   }`}
                 >
-                  <span className="font-mono tabular-nums">{activeItems.length}</span>
-                  <span className="ml-1.5">items</span>
+                  <span className="font-mono tabular-nums">{tabActiveItems.length}</span>
+                  <span className="ml-1.5">
+                    {garageTab === "bikes" ? "bikes" : "parts & gear"}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -381,8 +398,14 @@ export default function GaragePage({
 
       <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-7 pb-16">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex min-w-0 flex-[1_1_500px] flex-wrap gap-2">
-            {categories.map((c) => (
+          <SegmentedControl
+            options={["Bikes", "Parts & gear"]}
+            value={garageTab === "bikes" ? "Bikes" : "Parts & gear"}
+            onChange={(v) => setTab(v === "Bikes" ? "bikes" : "parts")}
+            ariaLabel="Garage section"
+          />
+          <div className="flex min-w-0 flex-[1_1_420px] flex-wrap gap-2">
+            {categoryFilters.map((c) => (
               <FilterChip key={c} active={cat === c} onClick={() => setCat(c)}>
                 {c}
               </FilterChip>
@@ -413,23 +436,37 @@ export default function GaragePage({
           <EmptyState
             title={
               availability === "Archived"
-                ? "No archived items"
+                ? garageTab === "bikes"
+                  ? "No archived bikes"
+                  : "No archived parts or gear"
                 : isOwnGarage
-                  ? "No items yet — add your first bike"
-                  : "Nothing in this garage yet"
+                  ? garageTab === "bikes"
+                    ? "No bikes yet — add your first bike"
+                    : "No parts or gear yet"
+                  : garageTab === "bikes"
+                    ? "No bikes in this garage"
+                    : "No parts or gear in this garage"
             }
             description={
               availability === "Archived"
                 ? "Archived items stay here until you restore or delete them."
                 : isOwnGarage
-                  ? "Document what you own so others can ask about it and you can link questions to real parts."
-                  : `${firstName} hasn’t added any items that match these filters.`
+                  ? garageTab === "bikes"
+                    ? "Document complete bikes and framesets so others can ask about them."
+                    : "Add components, wheels, accessories, and tools — install parts on a bike when they belong there."
+                  : `${firstName} hasn’t added any ${
+                      garageTab === "bikes" ? "bikes" : "parts or gear"
+                    } that match these filters.`
             }
             actionLabel={
               isOwnGarage && availability !== "Archived" ? "Add to garage" : undefined
             }
             actionHref={
-              isOwnGarage && availability !== "Archived" ? "/item/new" : undefined
+              isOwnGarage && availability !== "Archived"
+                ? garageTab === "bikes"
+                  ? "/garage/new?type=bike"
+                  : "/garage/new"
+                : undefined
             }
           />
         ) : view === "Grid" ? (

@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Feature } from "@/components/Feature";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
 import { BuildOriginBadge } from "@/components/garage/BuildOriginBadge";
+import { InstalledPartsSection } from "@/components/garage/InstalledPartsSection";
 import { ItemDescription } from "@/components/garage/ItemDescription";
 import { ItemSpecsCard } from "@/components/garage/ItemSpecsCard";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
@@ -25,6 +26,7 @@ import { FEATURES } from "@/lib/features";
 import {
   canManageGarageItem,
   displayHandleFor,
+  getGarageItemsFor,
   getItemLocal,
   getItemPhotoUrls,
   getItemPrivateMeta,
@@ -37,6 +39,7 @@ import {
   itemDisplayTitle,
   itemYearLabel,
 } from "@/lib/garage/itemFields";
+import { isBikeItem } from "@/lib/garage/item-types";
 import {
   getGarage,
   itemDetail,
@@ -84,6 +87,16 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         canManageGarageItem(item, authHandle, profile?.id)),
   );
   const editHref = item ? `/item/${item.id}/edit` : "#";
+  const showAsBike = Boolean(item && isBikeItem(item));
+  const installedParts =
+    item && showAsBike
+      ? getGarageItemsFor(item.ownerHandle).filter(
+          (p) =>
+            !p.archived &&
+            p.id !== item.id &&
+            p.installedOnBikeId === item.id,
+        )
+      : [];
 
   if (!ready || ((!item || !owner) && !directoryReady)) {
     return (
@@ -501,13 +514,16 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           )}
         </aside>
 
-        <ItemSpecsCard
-          specs={specs}
-          bikeComponents={item.bikeComponents}
-          showComponentsTab={
-            item.catShort === "Complete bikes" || item.catShort === "Framesets"
-          }
-        />
+        <div className="flex min-w-0 flex-col gap-5">
+          <ItemSpecsCard
+            specs={specs}
+            bikeComponents={item.bikeComponents}
+            showComponentsTab={showAsBike}
+          />
+          {showAsBike ? (
+            <InstalledPartsSection parts={installedParts} isOwner={isOwner} />
+          ) : null}
+        </div>
       </div>
 
       {showRichDetail ? (

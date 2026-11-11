@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { AddToGarageCta } from "@/components/forms/garage-item/AddToGarageCta";
 import { authHref } from "@/lib/auth/redirects";
 import { handleFromAuthProfile } from "@/lib/demo-session";
 import {
@@ -255,12 +256,9 @@ export function AccountPage() {
             >
               Open Garage
             </Link>
-            <Link
-              href="/item/new"
-              className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline"
-            >
+            <AddToGarageCta className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink">
               Add to garage
-            </Link>
+            </AddToGarageCta>
           </div>
         </div>
       </section>

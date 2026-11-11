@@ -4,6 +4,11 @@ import {
   normalizeBikeComponents,
   type BikeComponent,
 } from "@/lib/garage/bike-components";
+import {
+  resolveItemTyping,
+  type BikeState,
+  type GarageItemType,
+} from "@/lib/garage/item-types";
 
 export type RemoteGarageItem = GarageItem & {
   ownerId: string;
@@ -25,6 +30,20 @@ export type CfPayload = {
   asking_price_cents: number | null;
   bike_components?: BikeComponent[];
   archived?: boolean;
+  /** Community typing — optional on legacy payloads; category stays authoritative for display. */
+  item_type?: GarageItemType;
+  bike_state?: BikeState | null;
+  installed_on_bike_id?: string | null;
+  category_needs_review?: boolean;
+  /** Parts & gear subtype fields (cf-only; category still preserved). */
+  part_type?: string;
+  gear_type?: string;
+  quantity?: number;
+  compatibility?: {
+    speeds?: string;
+    mount?: string;
+    axle?: string;
+  };
 };
 
 export const STATUS_TO_DB: Record<ItemStatus, string> = {
@@ -86,6 +105,21 @@ export function mapGarageBikeRow(
     String(row.category || cfRaw?.category || row.part_category || "Complete bikes"),
   );
 
+  const typing = resolveItemTyping({
+    category,
+    itemType:
+      (row.community_item_type as string | undefined) || cfRaw?.item_type || null,
+    bikeState: (row.bike_state as string | undefined) || cfRaw?.bike_state || null,
+    installedOnBikeId:
+      (row.installed_on_bike_id as string | undefined) ||
+      cfRaw?.installed_on_bike_id ||
+      null,
+    categoryNeedsReview:
+      typeof row.category_needs_review === "boolean"
+        ? row.category_needs_review
+        : cfRaw?.category_needs_review,
+  });
+
   const components = normalizeBikeComponents(
     row.bike_components ?? cfRaw?.bike_components ?? [],
   );
@@ -119,5 +153,9 @@ export function mapGarageBikeRow(
     bikeComponents: components.length ? components : undefined,
     notes: String(row.notes || "").trim() || undefined,
     provenance: String(cfRaw?.provenance || "").trim() || undefined,
+    itemType: typing.itemType,
+    bikeState: typing.bikeState,
+    installedOnBikeId: typing.installedOnBikeId,
+    categoryNeedsReview: typing.categoryNeedsReview,
   };
 }

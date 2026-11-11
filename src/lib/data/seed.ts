@@ -1,4 +1,5 @@
 import type { BikeComponent } from "@/lib/garage/bike-components";
+import type { BikeState, GarageItemType } from "@/lib/garage/item-types";
 import { seedGarageCover } from "./seed-photos";
 
 export type ItemStatus = "For sale" | "Open to offers" | "Trade only" | "Not for sale";
@@ -69,6 +70,14 @@ export type GarageItem = {
   description?: string;
   /** Structured build sheet — complete bikes / framesets. */
   bikeComponents?: BikeComponent[];
+  /** Community item type — derived from category when missing on older rows. */
+  itemType?: GarageItemType;
+  /** Bike subtype when itemType is bike. */
+  bikeState?: BikeState | null;
+  /** Part → bike link; null when standalone. */
+  installedOnBikeId?: string | null;
+  /** Flag Other (and similar) mappings for later review — category kept. */
+  categoryNeedsReview?: boolean;
 };
 
 export type WantedRequest = {

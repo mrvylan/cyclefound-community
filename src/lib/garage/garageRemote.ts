@@ -13,6 +13,11 @@ import {
   type RemoteGarageItem,
 } from "@/lib/garage/garageMap";
 import { askAmount, normalizeAskInput } from "@/lib/garage/itemFields";
+import {
+  typingFieldsForSave,
+  type BikeState,
+  type GarageItemType,
+} from "@/lib/garage/item-types";
 import { communityHandleFromProfile } from "@/lib/community/handles";
 
 export type { RemoteGarageItem };
@@ -38,6 +43,18 @@ export type GarageItemInput = {
   photos: string[];
   bikeComponents?: BikeComponent[];
   archived?: boolean;
+  /** Optional — derived from category when omitted. */
+  itemType?: GarageItemType;
+  bikeState?: BikeState | null;
+  installedOnBikeId?: string | null;
+  partType?: string;
+  gearType?: string;
+  quantity?: number;
+  compatibility?: {
+    speeds?: string;
+    mount?: string;
+    axle?: string;
+  };
 };
 
 function dollarsToCents(ask: string): number | null {
@@ -75,10 +92,16 @@ function splitTitle(title: string, manufacturer?: string) {
 
 function buildCfPayload(input: GarageItemInput): CfPayload {
   const askCents = dollarsToCents(normalizeAskInput(input.askingPrice) || "");
+  const typing = typingFieldsForSave({
+    category: input.category,
+    itemType: input.itemType,
+    bikeState: input.bikeState,
+    installedOnBikeId: input.installedOnBikeId,
+  });
   return {
     v: 1,
     title: input.title.trim(),
-    category: normalizeItemCategory(input.category),
+    category: typing.category,
     discipline: input.discipline?.trim() || undefined,
     description: input.description.trim() || undefined,
     provenance: input.provenance.trim() || undefined,
@@ -91,6 +114,23 @@ function buildCfPayload(input: GarageItemInput): CfPayload {
       ? normalizeBikeComponents(input.bikeComponents)
       : undefined,
     archived: Boolean(input.archived),
+    item_type: typing.itemType,
+    bike_state: typing.bikeState,
+    installed_on_bike_id: typing.installedOnBikeId,
+    category_needs_review: typing.categoryNeedsReview,
+    part_type: input.partType?.trim() || undefined,
+    gear_type: input.gearType?.trim() || undefined,
+    quantity:
+      typeof input.quantity === "number" && Number.isFinite(input.quantity)
+        ? Math.max(1, Math.round(input.quantity))
+        : undefined,
+    compatibility: input.compatibility
+      ? {
+          speeds: input.compatibility.speeds?.trim() || undefined,
+          mount: input.compatibility.mount?.trim() || undefined,
+          axle: input.compatibility.axle?.trim() || undefined,
+        }
+      : undefined,
   };
 }
 
@@ -113,6 +153,10 @@ function rowPayload(input: GarageItemInput, ownerId: string) {
     part_category: kind === "part" ? cf.category : null,
     open_to_offers: input.status === "Open to offers",
     purchase_price_cents: cf.asking_price_cents,
+    community_item_type: cf.item_type,
+    bike_state: cf.bike_state,
+    installed_on_bike_id: cf.installed_on_bike_id,
+    category_needs_review: Boolean(cf.category_needs_review),
     ai_identification: { cf },
   };
 }
