@@ -11,7 +11,6 @@ import {
   isCommunityDirectoryReady,
 } from "@/lib/community/directory-cache";
 import { accountIdentityKey } from "@/lib/community/handles";
-import { normalizeItemCategory } from "@/lib/data/categories";
 import {
   getGarageCoverItemId,
   getGarageItemsFor,
@@ -20,23 +19,26 @@ import {
   subscribeStore,
 } from "@/lib/data/local-store";
 import { garageCoverPhotoUrls } from "@/lib/garage/garageCover";
+import { isBikeItem } from "@/lib/garage/item-types";
 import { cityFromLoc, getGarage, type GarageItem, type Person } from "@/lib/data/seed";
 
-function garageStatLine(items: GarageItem[], forSale: number) {
-  const bikeish = items.filter((i) => {
-    const cat = normalizeItemCategory(i.cat);
-    return cat === "Complete bikes" || cat === "Framesets";
-  }).length;
-  const useBikes = items.length > 0 && bikeish >= Math.ceil(items.length / 2);
-  const noun = useBikes
-    ? items.length === 1
-      ? "bike"
-      : "bikes"
-    : items.length === 1
-      ? "item"
-      : "items";
-  const base = `${items.length} ${noun}`;
-  return forSale ? `${base} · ${forSale} for sale` : base;
+function countLabel(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/** Accurate garage card footer — never call a part a bike. */
+function garageStatLine(items: GarageItem[]) {
+  const active = items.filter((i) => !i.archived);
+  const bikes = active.filter(isBikeItem).length;
+  const other = active.length - bikes;
+  const forSale = active.filter((i) => i.status !== "Not for sale").length;
+
+  const parts: string[] = [];
+  if (bikes) parts.push(countLabel(bikes, "bike", "bikes"));
+  if (other) parts.push(countLabel(other, "part", "parts"));
+  if (!parts.length) parts.push("0 items");
+  if (forSale) parts.push(`${forSale} for sale`);
+  return parts.join(" · ");
 }
 
 function GarageCover({
@@ -68,7 +70,6 @@ type GarageRow = {
   person: Person;
   garage: ReturnType<typeof getGarage>;
   items: GarageItem[];
-  forSale: number;
   photos: string[];
   isYou: boolean;
 };
@@ -141,7 +142,6 @@ export default function GaragesIndexPage() {
             getGarage(person.handle) ||
             existing?.garage,
           items,
-          forSale: items.filter((i) => i.status !== "Not for sale").length,
           photos: garageCoverPhotoUrls(
             items,
             getGarageCoverItemId(preferredPerson.handle) ||
@@ -162,7 +162,6 @@ export default function GaragesIndexPage() {
             byKey.set(myKey, {
               ...row,
               items,
-              forSale: items.filter((i) => i.status !== "Not for sale").length,
               photos: garageCoverPhotoUrls(
                 items,
                 getGarageCoverItemId(row.person.handle) ||
@@ -182,7 +181,6 @@ export default function GaragesIndexPage() {
           byKey.set(myKey, {
             ...row,
             items,
-            forSale: items.filter((i) => i.status !== "Not for sale").length,
             photos: garageCoverPhotoUrls(
               items,
               getGarageCoverItemId(row.person.handle) ||
@@ -200,7 +198,9 @@ export default function GaragesIndexPage() {
         .filter((row) => row.items.filter((i) => !i.archived).length > 0)
         .sort((a, b) => {
           if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
-          return b.items.length - a.items.length;
+          const aActive = a.items.filter((i) => !i.archived).length;
+          const bActive = b.items.filter((i) => !i.archived).length;
+          return bActive - aActive;
         });
       if (cancelled) return;
       setRows(next);
@@ -261,7 +261,7 @@ export default function GaragesIndexPage() {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-          {rows.map(({ key, person, garage, items, forSale, photos, isYou }) => (
+          {rows.map(({ key, person, garage, items, photos, isYou }) => (
             <Link
               key={key}
               href={`/u/${person.handle}/garage`}
@@ -292,7 +292,7 @@ export default function GaragesIndexPage() {
                   </div>
                 </div>
                 <p className="m-0 font-mono text-[12px] text-muted">
-                  {garageStatLine(items, forSale)}
+                  {garageStatLine(items)}
                 </p>
               </div>
             </Link>
