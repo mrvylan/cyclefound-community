@@ -353,7 +353,7 @@ export default function GaragePage({
                             lowCents: estimateTotals.lowCents,
                             highCents: estimateTotals.highCents,
                           })} across valued items`
-                        : "No estimates yet"
+                        : "No estimates yet — open an item and use Get estimate"
                     }
                   >
                     <span className="font-mono tabular-nums">
@@ -362,11 +362,9 @@ export default function GaragePage({
                         : "—"}
                     </span>
                     <span className="ml-1.5">est. value</span>
-                    {estimateTotals.activeCount > 0 ? (
-                      <span className="ml-1.5 text-muted">
-                        · {estimateTotals.valuedCount}/{estimateTotals.activeCount}
-                      </span>
-                    ) : null}
+                    <span className="ml-1.5 text-muted">
+                      · {estimateTotals.valuedCount}/{estimateTotals.activeCount || 0}
+                    </span>
                   </span>
                 ) : null}
                 <button

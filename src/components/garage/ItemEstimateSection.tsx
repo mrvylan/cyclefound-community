@@ -119,7 +119,9 @@ export function ItemEstimateSection({
         <div className="rounded-[12px] border border-dashed border-line bg-ground px-4 py-4">
           <p className="m-0 text-[15px] font-semibold text-ink">No estimate yet</p>
           <p className="m-0 mt-1 text-[14px] text-muted-2">
-            Get an AI market range, or enter your own low–high.
+            {isOwner
+              ? "Use Get estimate below for an AI market range, or enter your own low–high."
+              : "The owner hasn’t added a market estimate for this item."}
           </p>
         </div>
       )}

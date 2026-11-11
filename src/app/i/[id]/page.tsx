@@ -241,6 +241,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             <ItemDescription text={item.description} />
           ) : null}
 
+          {FEATURES.garageEstimates ? (
+            <ItemEstimateSection
+              itemId={item.id}
+              estimate={item.estimate}
+              isOwner={isOwner}
+            />
+          ) : null}
+
           <section
             aria-label={isOwner ? "Your garage" : "Owner"}
             className="flex flex-col gap-3 rounded-[14px] border border-line bg-white p-3.5"
@@ -521,14 +529,6 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               ) : null}
             </>
           )}
-
-          {FEATURES.garageEstimates ? (
-            <ItemEstimateSection
-              itemId={item.id}
-              estimate={item.estimate}
-              isOwner={isOwner}
-            />
-          ) : null}
         </aside>
 
         <div className="flex min-w-0 flex-col gap-5">
