@@ -5,6 +5,17 @@ export const ESTIMATE_DISCLAIMER =
 
 export type EstimateConfidence = "Low" | "Medium" | "High" | "None";
 
+export type EstimateComp = {
+  itemId?: string | null;
+  title?: string;
+  soldPriceCents?: number;
+  adjustedCents?: number;
+  condition?: string;
+  soldDate?: string | null;
+  itemWebUrl?: string | null;
+  score?: number;
+};
+
 export type ItemEstimate = {
   midCents: number | null;
   lowCents: number | null;
@@ -14,7 +25,18 @@ export type ItemEstimate = {
   sampleSize?: number | null;
   estimatedAt?: string | null;
   disclaimer?: string | null;
+  /** Sold comps when source is ebay_sold_comps (from estimated_value_meta). */
+  comps?: EstimateComp[] | null;
+  ebayFallbackMessage?: string | null;
 };
+
+export function estimateSourceLabel(source: string | null | undefined): string {
+  const raw = String(source || "").toLowerCase();
+  if (raw.includes("ebay")) return "eBay sold comps";
+  if (raw.includes("owner")) return "Your range";
+  if (raw.includes("ai")) return "AI estimate";
+  return "Estimate";
+}
 
 export function usdToCents(value: unknown): number | null {
   const n = Number(value);
@@ -121,6 +143,10 @@ export function estimateFromDbRow(row: Record<string, unknown>): ItemEstimate | 
     row.estimated_value_meta && typeof row.estimated_value_meta === "object"
       ? (row.estimated_value_meta as Record<string, unknown>)
       : null;
+  const comps = Array.isArray(meta?.comps)
+    ? (meta.comps as EstimateComp[])
+    : null;
+
   return {
     midCents: mid,
     lowCents: low,
@@ -134,5 +160,9 @@ export function estimateFromDbRow(row: Record<string, unknown>): ItemEstimate | 
     estimatedAt: row.estimated_value_at ? String(row.estimated_value_at) : null,
     disclaimer:
       (meta?.disclaimer ? String(meta.disclaimer) : null) || ESTIMATE_DISCLAIMER,
+    comps,
+    ebayFallbackMessage: meta?.ebayFallbackMessage
+      ? String(meta.ebayFallbackMessage)
+      : null,
   };
 }

@@ -9,8 +9,10 @@ import {
 } from "@/lib/garage/estimateClient";
 import {
   ESTIMATE_DISCLAIMER,
+  estimateSourceLabel,
   formatEstimateMidLabel,
   formatEstimateRangeLabel,
+  formatUsdCompactFromCents,
   hasEstimate,
   type ItemEstimate,
 } from "@/lib/garage/estimates";
@@ -126,17 +128,49 @@ export function ItemEstimateSection({
             {current?.confidence && current.confidence !== "None"
               ? ` · ${current.confidence} confidence`
               : ""}
+            {current?.sampleSize ? ` · ${current.sampleSize} comps` : ""}
+            {current?.source
+              ? ` · ${estimateSourceLabel(current.source)}`
+              : ""}
           </p>
           <p className="m-0 mt-2 text-[12px] leading-snug text-muted-2">
             {current?.disclaimer || ESTIMATE_DISCLAIMER}
           </p>
+          {current?.ebayFallbackMessage ? (
+            <p className="m-0 mt-2 text-[12px] leading-snug text-muted">
+              eBay comps unavailable — used AI instead. {current.ebayFallbackMessage}
+            </p>
+          ) : null}
+          {current?.comps && current.comps.length > 0 ? (
+            <ul className="mt-3 m-0 list-none space-y-1.5 border-t border-line-soft p-0 pt-3">
+              {current.comps.slice(0, 4).map((comp, i) => (
+                <li key={`${comp.itemId || comp.title || i}-${i}`} className="text-[12px]">
+                  {comp.itemWebUrl ? (
+                    <a
+                      href={comp.itemWebUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-ink no-underline hover:text-accent-hover"
+                    >
+                      {comp.title || "Sold listing"}
+                    </a>
+                  ) : (
+                    <span className="font-medium text-ink">{comp.title || "Sold listing"}</span>
+                  )}
+                  <span className="ml-1.5 font-mono text-muted-2">
+                    {formatUsdCompactFromCents(comp.adjustedCents ?? comp.soldPriceCents)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : (
         <div className="rounded-[12px] border border-dashed border-accent-soft-border bg-white px-4 py-4">
           <p className="m-0 text-[15px] font-semibold text-ink">No estimate yet</p>
           <p className="m-0 mt-1 text-[14px] text-muted-2">
             {isOwner
-              ? "Tap Get estimate for an AI market range, or enter your own low–high dollars."
+              ? "Tap Get estimate to use eBay sold comps when available (AI fallback), or enter your own low–high dollars."
               : signedIn
                 ? "Only the owner can add an estimate for this item."
                 : "Sign in as the owner to run Get estimate on this item."}

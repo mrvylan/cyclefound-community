@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
+  estimateEbaySoldValue,
+  ebaySoldConfigured,
+} from "@/lib/garage/ebaySoldClient";
+import { EBAY_SOLD_SOURCE } from "@/lib/garage/ebaySoldEstimate";
+import {
   ESTIMATE_DISCLAIMER,
   estimateFromDbRow,
   normalizeEstimateConfidence,
   orderEstimateCents,
   usdToCents,
+  type EstimateComp,
   type ItemEstimate,
 } from "@/lib/garage/estimates";
 
@@ -43,8 +49,31 @@ function estimatePayload(estimate: ItemEstimate | null) {
     estimated_value_at: estimate.estimatedAt || new Date().toISOString(),
     estimated_value_meta: {
       disclaimer: estimate.disclaimer || ESTIMATE_DISCLAIMER,
+      comps: Array.isArray(estimate.comps) ? estimate.comps.slice(0, 8) : [],
+      ebayFallbackMessage: estimate.ebayFallbackMessage || null,
     },
   };
+}
+
+function subjectKindFromRow(row: Record<string, unknown>): "bike" | "part" {
+  const type = String(row.community_item_type || "").toLowerCase();
+  if (type === "bike") return "bike";
+  if (type === "part" || type === "gear") return "part";
+  const cat = String(row.category || row.part_category || "").toLowerCase();
+  if (cat.includes("complete bike") || cat.includes("frameset")) return "bike";
+  return "part";
+}
+
+function modelFromRow(row: Record<string, unknown>, manufacturer: string) {
+  const explicit = String(row.model_name || "").trim();
+  if (explicit) return explicit;
+  const title = String(row.title || "").trim();
+  if (!title) return "";
+  const mfg = manufacturer.trim();
+  if (mfg && title.toLowerCase().startsWith(mfg.toLowerCase())) {
+    return title.slice(mfg.length).trim().replace(/^[-–—,]+/, "").trim();
+  }
+  return title;
 }
 
 async function generateAiEstimate(item: {
@@ -142,6 +171,74 @@ Notes: ${item.description?.slice(0, 400) || "None"}`;
     sampleSize: 0,
     estimatedAt: new Date().toISOString(),
     disclaimer: ESTIMATE_DISCLAIMER,
+    comps: [],
+  };
+}
+
+/** Prefer eBay sold comps; fall back to AI when comps are unavailable. */
+async function generateMarketEstimate(row: Record<string, unknown>): Promise<ItemEstimate> {
+  const manufacturer = String(row.manufacturer_name || "").trim();
+  const model = modelFromRow(row, manufacturer);
+  const year = String(row.approximate_year || "").trim();
+  const condition = String(row.condition || "").trim();
+  const discipline = String(row.discipline || row.bike_type || "").trim();
+  const category = String(row.category || row.part_category || "").trim();
+  const title =
+    String(row.title || "").trim() ||
+    [manufacturer, model].filter(Boolean).join(" ").trim() ||
+    "Item";
+  const subjectKind = subjectKindFromRow(row);
+
+  let ebayFallbackMessage: string | null = null;
+
+  if (ebaySoldConfigured()) {
+    try {
+      const ebay = await estimateEbaySoldValue({
+        manufacturer,
+        model,
+        year,
+        condition,
+        bikeType: discipline,
+        subjectKind,
+      });
+      if (ebay.available && ebay.midCents != null) {
+        return {
+          midCents: ebay.midCents,
+          lowCents: ebay.lowCents,
+          highCents: ebay.highCents,
+          confidence: ebay.confidence,
+          source: EBAY_SOLD_SOURCE,
+          sampleSize: ebay.sampleSize,
+          estimatedAt: ebay.computedAt || new Date().toISOString(),
+          disclaimer: ebay.disclaimer,
+          comps: ebay.comps as EstimateComp[],
+        };
+      }
+      ebayFallbackMessage = ebay.message;
+    } catch (err) {
+      console.warn(
+        "eBay estimate soft-fail:",
+        err instanceof Error ? err.message : err,
+      );
+      ebayFallbackMessage =
+        err instanceof Error ? err.message : "eBay sold comps unavailable.";
+    }
+  }
+
+  const ai = await generateAiEstimate({
+    title,
+    manufacturer,
+    year,
+    category,
+    condition,
+    size: String(row.frame_size_label || ""),
+    discipline,
+    description: String(row.description || row.modifications || ""),
+  });
+
+  return {
+    ...ai,
+    ebayFallbackMessage,
   };
 }
 
@@ -210,22 +307,10 @@ export async function POST(request: Request, ctx: Ctx) {
         sampleSize: 0,
         estimatedAt: new Date().toISOString(),
         disclaimer: ESTIMATE_DISCLAIMER,
+        comps: [],
       };
     } else {
-      const title =
-        String(row.title || "").trim() ||
-        [row.manufacturer_name, row.model_name].filter(Boolean).join(" ").trim() ||
-        "Item";
-      nextEstimate = await generateAiEstimate({
-        title,
-        manufacturer: String(row.manufacturer_name || ""),
-        year: String(row.approximate_year || ""),
-        category: String(row.category || row.part_category || ""),
-        condition: String(row.condition || ""),
-        size: String(row.frame_size_label || ""),
-        discipline: String(row.discipline || row.bike_type || ""),
-        description: String(row.description || row.modifications || ""),
-      });
+      nextEstimate = await generateMarketEstimate(row as Record<string, unknown>);
     }
   } catch (err) {
     return NextResponse.json(
