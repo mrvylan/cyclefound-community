@@ -11,6 +11,9 @@ type Props = {
   onNotesChange: (v: string) => void;
   provenance: string;
   onProvenanceChange: (v: string) => void;
+  title?: string;
+  blurb?: string;
+  hidden?: boolean;
 };
 
 export function GarageItemDescriptionSection({
@@ -21,18 +24,19 @@ export function GarageItemDescriptionSection({
   onNotesChange,
   provenance,
   onProvenanceChange,
+  title = "Description",
+  blurb = "Shown on your garage listing. AI can draft this from photos — edit before saving.",
+  hidden = false,
 }: Props) {
+  if (hidden) return null;
   const label = garageItemLabel;
   const textarea = garageItemTextarea;
 
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h2 className="section-title m-0 text-[20px]">Description</h2>
-        <p className="mt-1 m-0 text-[14px] text-muted-2">
-          Shown on your garage listing. AI can draft this from photos — edit before
-          saving.
-        </p>
+        <h2 className="section-title m-0 text-[20px]">{title}</h2>
+        <p className="mt-1 m-0 text-[14px] text-muted-2">{blurb}</p>
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="item-description" className={label}>
@@ -57,8 +61,7 @@ export function GarageItemDescriptionSection({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <label htmlFor="item-notes" className={label}>
-            Private notes{" "}
-            <span className="font-normal text-muted">(only you)</span>
+            Private notes <span className="font-normal text-muted">(only you)</span>
           </label>
           <textarea
             id="item-notes"

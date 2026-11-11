@@ -11,8 +11,9 @@ type Props = {
   aiApplied: boolean;
   identifyError: string;
   onIdentify: () => void;
-  /** Optional photo tip override (defaults to bike-oriented copy). */
+  title?: string;
   tip?: string;
+  hidden?: boolean;
 };
 
 export function GarageItemPhotosSection({
@@ -23,12 +24,16 @@ export function GarageItemPhotosSection({
   aiApplied,
   identifyError,
   onIdentify,
+  title = "Photos",
   tip = "Drive side, non-drive, and a close-up of markings work best.",
+  hidden = false,
 }: Props) {
+  if (hidden) return null;
+
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h2 className="section-title m-0 text-[20px]">Photos</h2>
+        <h2 className="section-title m-0 text-[20px]">{title}</h2>
         <p className="mt-1 m-0 text-[14px] text-muted-2">{tip}</p>
       </div>
       <div className="rounded-[14px] border border-line bg-surface p-4">

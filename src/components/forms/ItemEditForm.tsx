@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { normalizeBrandLabel } from "./BrandAutocomplete";
-import { bikeComponentsForSave } from "./BikeComponentsEditor";
-import { GarageItemAvailabilitySection } from "./garage-item/GarageItemAvailabilitySection";
-import { GarageItemComponentsSection } from "./garage-item/GarageItemComponentsSection";
-import { GarageItemDescriptionSection } from "./garage-item/GarageItemDescriptionSection";
-import { GarageItemDetailsSection } from "./garage-item/GarageItemDetailsSection";
-import { GarageItemPhotosSection } from "./garage-item/GarageItemPhotosSection";
+import { Sparkles } from "lucide-react";
+import { BrandAutocomplete, normalizeBrandLabel } from "./BrandAutocomplete";
+import {
+  BikeComponentsEditor,
+  bikeComponentsForSave,
+} from "./BikeComponentsEditor";
+import { PhotoPicker } from "./PhotoPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { BikeComponent } from "@/lib/garage/bike-components";
 import {
@@ -18,11 +18,7 @@ import {
   normalizeBikeComponents,
   parseComponentsBlurb,
 } from "@/lib/garage/bike-components";
-import {
-  ITEM_CATEGORIES,
-  type ItemCategory,
-  normalizeItemCategory,
-} from "@/lib/data/categories";
+import { ITEM_CATEGORIES, type ItemCategory, normalizeItemCategory } from "@/lib/data/categories";
 import {
   getCommunityGarageItem,
   getMarketplaceItem,
@@ -42,13 +38,6 @@ import {
 import type { ItemStatus } from "@/lib/data/seed";
 import { updateRemoteGarageItem } from "@/lib/garage/garageRemote";
 import { readCfPayload } from "@/lib/garage/garageMap";
-import {
-  categoriesForType,
-  showComponentsForCategory,
-  showDisciplineForCategory,
-  showSizeForCategory,
-  typeFromCategory,
-} from "@/lib/garage/item-types";
 import { updateRemoteMarketplaceListing } from "@/lib/marketplace/listingRemote";
 import { isListingUuid } from "@/lib/messaging";
 import { createClient } from "@/lib/supabase/client";
@@ -65,6 +54,7 @@ import {
   ITEM_DESCRIPTION_MAX,
 } from "@/lib/garage/itemFields";
 import {
+  CONDITION_HELP,
   CONDITIONS,
   mapAiCondition,
   type FormCondition,
@@ -88,7 +78,6 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
   const [photos, setPhotos] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [manufacturer, setManufacturer] = useState("");
-  const [modelName, setModelName] = useState("");
   const [category, setCategory] = useState<ItemCategory>("Complete bikes");
   const [discipline, setDiscipline] = useState<Discipline | "">("");
   const [year, setYear] = useState("");
@@ -110,10 +99,10 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
   const [aiConditionHint, setAiConditionHint] = useState<FormCondition | "">("");
 
   const showPrice = status === "For sale" || status === "Open to offers";
-  const showSize = showSizeForCategory(category);
-  const showComponents = showComponentsForCategory(category);
-  const showDiscipline = showDisciplineForCategory(category);
-  const categoryOptions = categoriesForType(typeFromCategory(category));
+  const showSize = category === "Complete bikes" || category === "Framesets";
+  const showComponents = category === "Complete bikes" || category === "Framesets";
+  const showDiscipline =
+    category === "Complete bikes" || category === "Framesets" || category === "Wheels";
   const sessionHandle = getSessionHandle();
   const canIdentify = photos.length > 0 && !identifying;
 
@@ -195,6 +184,14 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       unsub();
     };
   }, [itemId, searchParams, profile?.id]);
+
+  const field =
+    "h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+  const selectField =
+    "cf-select h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white pl-3.5 text-[16px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+  const label = "text-[14px] font-semibold";
+  const textarea =
+    "w-full rounded-[10px] border border-[#D4D3CD] bg-white px-3.5 py-3 text-[16px] leading-[1.5] outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
 
   async function runIdentify() {
     setIdentifyError("");
@@ -309,12 +306,7 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
     setSaving(true);
     const brand = normalizeBrandLabel(manufacturer);
     const payload = {
-      title: composeItemTitle({
-        title,
-        year,
-        manufacturer: brand,
-        modelName,
-      }),
+      title: composeItemTitle({ title, year, manufacturer: brand }),
       category,
       year: year.trim() || "—",
       size: showSize ? size.trim() : "",
@@ -425,78 +417,352 @@ export function ItemEditForm({ itemId }: { itemId: string }) {
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-10">
-        <GarageItemPhotosSection
-          photos={photos}
-          onChange={setPhotos}
-          identifying={identifying}
-          canIdentify={canIdentify}
-          aiApplied={aiApplied}
-          identifyError={identifyError}
-          onIdentify={() => void runIdentify()}
-        />
+        <section className="flex flex-col gap-4">
+          <h2 className="section-title m-0 text-[20px]">Photos</h2>
+          <div className="rounded-[14px] border border-line bg-surface p-4">
+            <PhotoPicker photos={photos} onChange={setPhotos} max={8} reorder />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={!canIdentify}
+              title={!photos.length ? "Add a photo first" : undefined}
+              onClick={() => void runIdentify()}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-accent-soft-border bg-accent-soft px-4 text-[14px] font-semibold text-accent-hover hover:bg-[#e4edd9] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Sparkles className="size-4" aria-hidden />
+              {identifying ? "Reading photos…" : "Fill details from photos"}
+            </button>
+            {!photos.length ? (
+              <p className="m-0 text-[13px] text-muted-2">Add a photo first</p>
+            ) : aiApplied ? (
+              <p className="m-0 text-[13px] text-muted-2">Suggested fields updated.</p>
+            ) : null}
+          </div>
+          {identifyError ? (
+            <p className="m-0 text-[13px] font-medium text-[#9B2C2C]" role="alert">
+              {identifyError}
+            </p>
+          ) : null}
+        </section>
 
-        <GarageItemDetailsSection
-          title={title}
-          onTitleChange={setTitle}
-          manufacturer={manufacturer}
-          onManufacturerChange={setManufacturer}
-          modelName={modelName}
-          onModelNameChange={setModelName}
-          category={category}
-          onCategoryChange={setCategory}
-          categoryOptions={categoryOptions}
-          discipline={discipline}
-          onDisciplineChange={setDiscipline}
-          showDiscipline={showDiscipline}
-          aiDisciplineHint={aiDisciplineHint}
-          onAcceptDisciplineHint={() => {
-            setDiscipline(aiDisciplineHint);
-            setAiDisciplineHint("");
-          }}
-          onDismissDisciplineHint={() => setAiDisciplineHint("")}
-          year={year}
-          onYearChange={setYear}
-          size={size}
-          onSizeChange={setSize}
-          showSize={showSize}
-          condition={condition}
-          onConditionChange={setCondition}
-          aiConditionHint={aiConditionHint}
-          onAcceptConditionHint={() => {
-            setCondition(aiConditionHint);
-            setAiConditionHint("");
-          }}
-          onDismissConditionHint={() => setAiConditionHint("")}
-        />
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label htmlFor="edit-title" className={label}>
+              Title
+            </label>
+            <input
+              id="edit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={field}
+            />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label htmlFor="edit-brand" className={label}>
+              Brand <span className="font-normal text-muted">(optional)</span>
+            </label>
+            <BrandAutocomplete
+              id="edit-brand"
+              value={manufacturer}
+              onChange={setManufacturer}
+              className={`${field} placeholder:text-meta`}
+            />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <fieldset className="m-0 border-0 p-0">
+              <legend className={label}>Category</legend>
+              <div
+                role="radiogroup"
+                aria-label="Category"
+                className="mt-2 flex flex-wrap gap-2"
+              >
+                {ITEM_CATEGORIES.map((c) => {
+                  const on = category === c;
+                  return (
+                    <label
+                      key={c}
+                      className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border px-3.5 text-[13px] font-medium ${
+                        on
+                          ? "border-ink bg-ink text-white"
+                          : "border-[#D4D3CD] bg-white text-ink hover:border-ink"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="category"
+                        value={c}
+                        checked={on}
+                        onChange={() => setCategory(c)}
+                        className="sr-only"
+                      />
+                      {c}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </div>
+          {showDiscipline ? (
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <fieldset className="m-0 border-0 p-0">
+                <legend className={label}>
+                  Discipline <span className="font-normal text-muted">(optional)</span>
+                </legend>
+                <p className="mt-1 mb-2 m-0 text-[13px] text-muted-2">
+                  Choose how this bike rides — nothing is selected until you pick one.
+                  Tap again to clear.
+                </p>
+                {aiDisciplineHint && discipline !== aiDisciplineHint ? (
+                  <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[12px] border border-accent-soft-border bg-accent-soft px-3 py-2.5">
+                    <p className="m-0 flex-1 text-[13px] text-ink">
+                      Photos suggest <strong>{aiDisciplineHint}</strong> — confirm if that
+                      looks right.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscipline(aiDisciplineHint);
+                        setAiDisciplineHint("");
+                      }}
+                      className="inline-flex h-9 items-center rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-hover"
+                    >
+                      Use {aiDisciplineHint}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAiDisciplineHint("")}
+                      className="inline-flex h-9 items-center rounded-[8px] px-2 text-[13px] font-semibold text-muted-2 hover:text-ink"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                ) : null}
+                <div role="group" aria-label="Discipline" className="flex flex-wrap gap-2">
+                  {DISCIPLINES.map((d) => {
+                    const on = discipline === d;
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() =>
+                          setDiscipline((cur) => {
+                            const next = cur === d ? "" : d;
+                            if (next === aiDisciplineHint) setAiDisciplineHint("");
+                            return next;
+                          })
+                        }
+                        className={`inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13px] font-medium ${
+                          on
+                            ? "border-ink bg-ink text-white"
+                            : "border-[#D4D3CD] bg-white text-ink hover:border-ink"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="edit-year" className={label}>
+              Year <span className="font-normal text-muted">(optional)</span>
+            </label>
+            <input
+              id="edit-year"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              placeholder="e.g. 1984"
+              className={`${field} placeholder:text-meta`}
+            />
+          </div>
+          {showSize ? (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="edit-size" className={label}>
+                Size <span className="font-normal text-muted">(optional)</span>
+              </label>
+              <input
+                id="edit-size"
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
+                placeholder="e.g. 56 cm"
+                className={`${field} placeholder:text-meta`}
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label htmlFor="edit-cond" className={label}>
+              Condition
+            </label>
+            {aiConditionHint && !condition ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-[12px] border border-accent-soft-border bg-accent-soft px-3 py-2.5">
+                <p className="m-0 flex-1 text-[13px] text-ink">
+                  Photos suggest <strong>{aiConditionHint}</strong> — confirm if that
+                  matches what you see.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCondition(aiConditionHint);
+                    setAiConditionHint("");
+                  }}
+                  className="inline-flex h-9 items-center rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-hover"
+                >
+                  Use {aiConditionHint}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiConditionHint("")}
+                  className="inline-flex h-9 items-center rounded-[8px] px-2 text-[13px] font-semibold text-muted-2 hover:text-ink"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
+            <select
+              id="edit-cond"
+              value={condition}
+              required
+              onChange={(e) => {
+                const next = (e.target.value || "") as FormCondition | "";
+                setCondition(next);
+                if (next) setAiConditionHint("");
+              }}
+              className={selectField}
+            >
+              <option value="">Select condition</option>
+              {CONDITIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            {condition ? (
+              <p className="m-0 text-[13px] text-muted-2">{CONDITION_HELP[condition]}</p>
+            ) : (
+              <p className="m-0 text-[13px] text-muted-2">
+                Required — pick the level that best matches how you’d describe it to a buyer.
+              </p>
+            )}
+          </div>
+        </section>
 
         {showComponents ? (
-          <GarageItemComponentsSection
-            value={bikeComponents}
-            onChange={setBikeComponents}
-            discipline={discipline}
-            category={category}
-          />
+          <section className="flex flex-col gap-4">
+            <BikeComponentsEditor
+              value={bikeComponents}
+              onChange={setBikeComponents}
+              discipline={discipline}
+              category={category}
+            />
+          </section>
         ) : null}
 
-        <GarageItemDescriptionSection
-          description={description}
-          onDescriptionChange={setDescription}
-          onDescriptionTouch={() => undefined}
-          notes={notes}
-          onNotesChange={setNotes}
-          provenance={provenance}
-          onProvenanceChange={setProvenance}
-        />
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="edit-description" className={label}>
+              Public description
+            </label>
+            <textarea
+              id="edit-description"
+              rows={6}
+              value={description}
+              maxLength={Math.max(ITEM_DESCRIPTION_MAX, description.length)}
+              onChange={(e) => setDescription(e.target.value)}
+              className={textarea}
+            />
+            <p className="m-0 text-right font-mono text-[12px] tabular-nums text-meta">
+              {description.length}/{ITEM_DESCRIPTION_MAX}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="edit-notes" className={label}>
+                Private notes{" "}
+                <span className="font-normal text-muted">(only you)</span>
+              </label>
+              <textarea
+                id="edit-notes"
+                rows={4}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className={textarea}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="edit-prov" className={label}>
+                Where it came from{" "}
+                <span className="font-normal text-muted">(optional)</span>
+              </label>
+              <textarea
+                id="edit-prov"
+                rows={4}
+                value={provenance}
+                onChange={(e) => setProvenance(e.target.value)}
+                className={textarea}
+              />
+            </div>
+          </div>
+        </section>
 
-        <GarageItemAvailabilitySection
-          status={status}
-          onStatusChange={setStatus}
-          askingPrice={askingPrice}
-          onAskingPriceChange={setAskingPrice}
-          showPrice={showPrice}
-          photosCount={photos.length}
-          description={description}
-        />
+        <section className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface p-5">
+          <h2 className="m-0 text-[15px] font-bold">Availability</h2>
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+            {STATUSES.map((s) => (
+              <label
+                key={s}
+                className={`flex min-h-12 cursor-pointer items-center justify-center rounded-[10px] border px-3 text-center text-[13px] font-medium ${
+                  status === s
+                    ? "border-ink bg-ink text-white"
+                    : "border-[#D4D3CD] bg-white text-ink hover:border-ink"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="status"
+                  value={s}
+                  checked={status === s}
+                  onChange={() => setStatus(s)}
+                  className="sr-only"
+                />
+                {s}
+              </label>
+            ))}
+          </div>
+          {showPrice ? (
+            <div className="flex max-w-xs flex-col gap-2">
+              <label htmlFor="edit-ask" className={label}>
+                Asking price <span className="font-normal text-muted">(required)</span>
+              </label>
+              <input
+                id="edit-ask"
+                value={askingPrice}
+                onChange={(e) => setAskingPrice(e.target.value)}
+                required
+                className={field}
+              />
+              {!photos.length ? (
+                <p className="m-0 text-[13px] text-[#9B2C2C]">
+                  Add at least one photo to list {status}.
+                </p>
+              ) : null}
+              {descriptionPriceMismatch(description, askingPrice) != null ? (
+                <p className="m-0 text-[13px] text-[#9B2C2C]">
+                  Description quotes a different dollar amount — keep price only in Asking.
+                </p>
+              ) : (
+                <p className="m-0 text-[12px] text-meta">
+                  Keep the price here, not in the description. Photo + asking price required
+                  for {status}.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </section>
 
         {error ? (
           <p className="m-0 text-[14px] font-medium text-[#9B2C2C]" role="alert">

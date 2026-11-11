@@ -19,6 +19,9 @@ type Props = {
   showPrice: boolean;
   photosCount: number;
   description: string;
+  title?: string;
+  blurb?: string;
+  hidden?: boolean;
 };
 
 export function GarageItemAvailabilitySection({
@@ -29,18 +32,19 @@ export function GarageItemAvailabilitySection({
   showPrice,
   photosCount,
   description,
+  title = "Availability",
+  blurb = "Defaults to in your garage only. Change this if someone could ask about buying or trading it.",
+  hidden = false,
 }: Props) {
+  if (hidden) return null;
   const label = garageItemLabel;
   const field = garageItemField;
 
   return (
     <section className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface p-5">
       <div>
-        <h2 className="m-0 text-[15px] font-bold">Availability</h2>
-        <p className="mt-1 m-0 text-[13px] text-muted-2">
-          Defaults to in your garage only. Change this if someone could ask about buying or
-          trading it.
-        </p>
+        <h2 className="m-0 text-[15px] font-bold">{title}</h2>
+        <p className="mt-1 m-0 text-[13px] text-muted-2">{blurb}</p>
       </div>
       <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
         <legend className="sr-only">Status</legend>
@@ -91,8 +95,8 @@ export function GarageItemAvailabilitySection({
             </p>
           ) : (
             <p className="m-0 text-[12px] text-meta">
-              Keep the price here, not in the description. Photo + asking price required
-              for {status}.
+              Keep the price here, not in the description. Photo + asking price required for{" "}
+              {status}.
             </p>
           )}
         </div>

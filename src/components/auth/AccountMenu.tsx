@@ -265,7 +265,7 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
             <MenuDivider />
 
             {/* Actions */}
-            <MenuLink href="/garage/new" onClick={close}>
+            <MenuLink href="/item/new" onClick={close}>
               Add to garage
             </MenuLink>
 

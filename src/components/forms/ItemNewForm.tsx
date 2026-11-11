@@ -1,19 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { normalizeBrandLabel } from "./BrandAutocomplete";
 import { bikeComponentsForSave } from "./BikeComponentsEditor";
 import { GarageItemAvailabilitySection } from "./garage-item/GarageItemAvailabilitySection";
+import { GarageItemCategoryDisciplineFields } from "./garage-item/GarageItemCategoryDisciplineFields";
 import { GarageItemComponentsSection } from "./garage-item/GarageItemComponentsSection";
+import { GarageItemConditionFields } from "./garage-item/GarageItemConditionFields";
 import { GarageItemDescriptionSection } from "./garage-item/GarageItemDescriptionSection";
-import { GarageItemDetailsSection } from "./garage-item/GarageItemDetailsSection";
-import {
-  PHOTO_FIRST_STASH_KEY,
-  type PhotoFirstStash,
-} from "./garage-item/GarageItemPhotoFirst";
+import { GarageItemFormFooter } from "./garage-item/GarageItemFormFooter";
+import { GarageItemFormHeader } from "./garage-item/GarageItemFormHeader";
+import { GarageItemIdentityFields } from "./garage-item/GarageItemIdentityFields";
 import { GarageItemPhotosSection } from "./garage-item/GarageItemPhotosSection";
+import { GarageItemWhatItIsSection } from "./garage-item/GarageItemWhatItIsSection";
+import { GarageItemYearSizeFields } from "./garage-item/GarageItemYearSizeFields";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { BikeComponent } from "@/lib/garage/bike-components";
 import {
@@ -28,7 +29,7 @@ import {
   saveItemDraft,
 } from "@/lib/auth/drafts";
 import { authHref } from "@/lib/auth/redirects";
-import type { ItemCategory } from "@/lib/data/categories";
+import { ITEM_CATEGORIES, type ItemCategory } from "@/lib/data/categories";
 import { upsertCommunityGarageItem } from "@/lib/community/directory-cache";
 import { getSessionHandle } from "@/lib/data/local-store";
 import type { ItemStatus } from "@/lib/data/seed";
@@ -50,19 +51,8 @@ import {
 import {
   CONDITIONS,
   mapAiCondition,
-  mapAiToGarageCategory,
   type FormCondition,
 } from "@/lib/garage/mapAiCategory";
-import {
-  categoriesForType,
-  clampCategoryToType,
-  defaultCategoryForType,
-  garageNewHref,
-  showComponentsForCategory,
-  showDisciplineForCategory,
-  showSizeForCategory,
-  type GarageItemType,
-} from "@/lib/garage/item-types";
 
 const STATUSES: ItemStatus[] = [
   "Not for sale",
@@ -76,57 +66,20 @@ function statusFromQuery(raw: string | null): ItemStatus | null {
   return (STATUSES as readonly string[]).includes(raw) ? (raw as ItemStatus) : null;
 }
 
-const TYPE_COPY: Record<
-  GarageItemType,
-  { eyebrow: string; blurb: string; photoTip: string; titlePh: string; modelPh: string }
-> = {
-  bike: {
-    eyebrow: "Bike",
-    blurb:
-      "Photos, identity, and history for what you own. Availability is optional — this is not a marketplace listing wizard.",
-    photoTip: "Drive side, non-drive, and a close-up of markings work best.",
-    titlePh: "e.g. 1984 Colnago Super, Saronni red, 56 cm",
-    modelPh: "e.g. Super",
-  },
-  part: {
-    eyebrow: "Parts & wheels",
-    blurb: "Document components or wheelsets in your garage — brand, condition, and notes.",
-    photoTip: "Clear shots of logos, drive side, and any wear help identification.",
-    titlePh: "e.g. Shimano Ultegra R8000 rear derailleur",
-    modelPh: "e.g. RD-R8000",
-  },
-  gear: {
-    eyebrow: "Gear",
-    blurb: "Accessories, tools, apparel, and other garage gear.",
-    photoTip: "A clear product shot plus any labels or size marks works best.",
-    titlePh: "e.g. Park Tool PCS-10.3 repair stand",
-    modelPh: "e.g. PCS-10.3",
-  },
-};
-
-type Props = {
-  /** Locked add path from /garage/new?type= */
-  itemType: GarageItemType;
-};
-
 /**
  * Garage documentation form — catalog what you own.
- * Field set varies by itemType (bike | part | gear); state/validation stay here.
+ * Not a marketplace listing wizard (cyclefound.com sell flow stays separate).
  */
-export function ItemNewForm({ itemType }: Props) {
+export function ItemNewForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { ready, configured, user } = useAuth();
-  const copy = TYPE_COPY[itemType];
-  const categoryOptions = categoriesForType(itemType);
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [manufacturer, setManufacturer] = useState("");
   const [modelName, setModelName] = useState("");
-  const [category, setCategory] = useState<ItemCategory>(() =>
-    defaultCategoryForType(itemType),
-  );
+  const [category, setCategory] = useState<ItemCategory>("Complete bikes");
   const [discipline, setDiscipline] = useState<Discipline | "">("");
   const [year, setYear] = useState("");
   const [size, setSize] = useState("");
@@ -145,31 +98,29 @@ export function ItemNewForm({ itemType }: Props) {
   const [identifying, setIdentifying] = useState(false);
   const [identifyError, setIdentifyError] = useState("");
   const [aiApplied, setAiApplied] = useState(false);
+  /** Soft AI hints — never auto-applied; owner confirms. */
   const [aiDisciplineHint, setAiDisciplineHint] = useState<Discipline | "">("");
   const [aiConditionHint, setAiConditionHint] = useState<FormCondition | "">("");
+  /** Last description written by AI — re-identify replaces unless the owner edited it. */
   const lastAiDescriptionRef = useRef("");
   const descriptionTouchedRef = useRef(false);
-  const photoStashAppliedRef = useRef(false);
 
   const showPrice = status === "For sale" || status === "Open to offers";
-  const showSize = showSizeForCategory(category);
-  const showComponents = showComponentsForCategory(category);
-  const showDiscipline = showDisciplineForCategory(category);
+  const showSize = category === "Complete bikes" || category === "Framesets";
+  const showComponents = category === "Complete bikes" || category === "Framesets";
+  const showDiscipline =
+    category === "Complete bikes" || category === "Framesets" || category === "Wheels";
   const sessionHandle = getSessionHandle();
   const sessionOk = Boolean(sessionHandle) || Boolean(user);
   const needsAuth = ready && configured && !sessionOk;
   const canIdentify = photos.length > 0 && !identifying;
-  const returnPath = garageNewHref({
-    type: itemType,
-    status: searchParams.get("status"),
-  });
 
   function resetForm(nextStatus: ItemStatus = "Not for sale") {
     setPhotos([]);
     setTitle("");
     setManufacturer("");
     setModelName("");
-    setCategory(defaultCategoryForType(itemType));
+    setCategory("Complete bikes");
     setDiscipline("");
     setYear("");
     setSize("");
@@ -189,19 +140,43 @@ export function ItemNewForm({ itemType }: Props) {
     descriptionTouchedRef.current = false;
   }
 
+  useEffect(() => {
+    const fromQuery = statusFromQuery(searchParams.get("status"));
+    if (fromQuery) setStatus(fromQuery);
+    const draft = readItemDraft();
+    if (!draft) return;
+    setTitle(draft.title || "");
+    if (draft.category) {
+      const match = ITEM_CATEGORIES.find(
+        (c) => c.toLowerCase() === draft.category.toLowerCase(),
+      );
+      if (match) setCategory(match);
+      else if (/groupset/i.test(draft.category)) setCategory("Components");
+    }
+    setYear(draft.year || "");
+    if (draft.condition && (CONDITIONS as readonly string[]).includes(draft.condition)) {
+      setCondition(draft.condition as FormCondition);
+    }
+    if (draft.status) setStatus(draft.status as ItemStatus);
+    setAskingPrice(draft.askingPrice || "");
+    setDescription(draft.description || "");
+    setNotes(draft.notes || "");
+    setProvenance(draft.provenance || "");
+    descriptionTouchedRef.current = Boolean(draft.description);
+    clearItemDraft();
+  }, [searchParams]);
+
   function applySuggestion(s: IdentifySuggestion) {
     if (s.title) setTitle(s.title);
     if (s.manufacturer) setManufacturer(normalizeBrandLabel(s.manufacturer));
     if (s.model) setModelName(s.model);
-    const mappedCat = mapAiToGarageCategory({
-      subjectKind: s.subjectKind,
-      category: s.category,
-      partCategory: s.partCategory,
-    });
-    setCategory(clampCategoryToType(mappedCat, itemType));
+    if (ITEM_CATEGORIES.includes(s.category as ItemCategory)) {
+      setCategory(s.category as ItemCategory);
+    }
     if (s.year && s.year !== "Unknown") {
       setYear(s.year.replace(/[^\d]/g, "").slice(0, 4) || s.year);
     }
+    // Never auto-select discipline or condition — offer confirmable hints only.
     const mappedCondition =
       mapAiCondition(s.condition) ||
       ((CONDITIONS as readonly string[]).includes(s.condition)
@@ -231,77 +206,30 @@ export function ItemNewForm({ itemType }: Props) {
         return cur;
       });
     }
-    if (showComponentsForCategory(clampCategoryToType(mappedCat, itemType))) {
-      const fromList = normalizeBikeComponents(s.componentList);
-      const fromBlurb =
-        fromList.length === 0 && s.components
-          ? parseComponentsBlurb(s.components)
-          : [];
-      const nextComponents = fromList.length ? fromList : fromBlurb;
-      if (nextComponents.length) {
-        setBikeComponents((cur) => {
-          const hasOwnerEdits = cur.some(componentHasDetails);
-          const base = hasOwnerEdits ? cur : nextComponents;
-          const merged = hasOwnerEdits
-            ? [
-                ...cur,
-                ...nextComponents.filter(
-                  (n) =>
-                    !cur.some((c) => c.slot === n.slot && componentHasDetails(c)),
-                ),
-              ]
-            : base;
-          return mergeComponentsWithTemplate(merged, {
-            discipline: discipline || null,
-            category: clampCategoryToType(mappedCat, itemType),
-          });
+    const fromList = normalizeBikeComponents(s.componentList);
+    const fromBlurb =
+      fromList.length === 0 && s.components ? parseComponentsBlurb(s.components) : [];
+    const nextComponents = fromList.length ? fromList : fromBlurb;
+    if (nextComponents.length) {
+      setBikeComponents((cur) => {
+        const hasOwnerEdits = cur.some(componentHasDetails);
+        const base = hasOwnerEdits ? cur : nextComponents;
+        const merged = hasOwnerEdits
+          ? [
+              ...cur,
+              ...nextComponents.filter(
+                (n) => !cur.some((c) => c.slot === n.slot && componentHasDetails(c)),
+              ),
+            ]
+          : base;
+        return mergeComponentsWithTemplate(merged, {
+          discipline: discipline || null,
+          category,
         });
-      }
+      });
     }
     setAiApplied(true);
   }
-
-  useEffect(() => {
-    const fromQuery = statusFromQuery(searchParams.get("status"));
-    if (fromQuery) setStatus(fromQuery);
-
-    // Photo-first stash wins over draft once.
-    if (!photoStashAppliedRef.current) {
-      photoStashAppliedRef.current = true;
-      try {
-        const raw = sessionStorage.getItem(PHOTO_FIRST_STASH_KEY);
-        if (raw) {
-          sessionStorage.removeItem(PHOTO_FIRST_STASH_KEY);
-          const stash = JSON.parse(raw) as PhotoFirstStash;
-          if (stash.photos?.length) setPhotos(stash.photos);
-          if (stash.suggestion) applySuggestion(stash.suggestion);
-          clearItemDraft();
-          return;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    const draft = readItemDraft();
-    if (!draft) return;
-    setTitle(draft.title || "");
-    if (draft.category) {
-      setCategory(clampCategoryToType(draft.category, itemType));
-    }
-    setYear(draft.year || "");
-    if (draft.condition && (CONDITIONS as readonly string[]).includes(draft.condition)) {
-      setCondition(draft.condition as FormCondition);
-    }
-    if (draft.status) setStatus(draft.status as ItemStatus);
-    setAskingPrice(draft.askingPrice || "");
-    setDescription(draft.description || "");
-    setNotes(draft.notes || "");
-    setProvenance(draft.provenance || "");
-    descriptionTouchedRef.current = Boolean(draft.description);
-    clearItemDraft();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply once per mount/type
-  }, [searchParams, itemType]);
 
   async function runIdentify() {
     setIdentifyError("");
@@ -335,7 +263,7 @@ export function ItemNewForm({ itemType }: Props) {
         notes,
         provenance,
       });
-      router.push(authHref("join", returnPath));
+      router.push(authHref("join", "/item/new"));
       return;
     }
     if (!photos.length) {
@@ -415,31 +343,10 @@ export function ItemNewForm({ itemType }: Props) {
 
   return (
     <div className="mx-auto max-w-[920px] px-5 py-8 pb-8 sm:px-8">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="eyebrow m-0">{copy.eyebrow}</p>
-          <h1 className="section-title m-0 text-[clamp(32px,6vw,48px)]">Add to garage</h1>
-          <p className="mt-2 m-0 max-w-[40rem] text-[15px] leading-[1.5] text-muted-2">
-            {copy.blurb}
-          </p>
-          <p className="mt-2 m-0">
-            <Link
-              href={garageNewHref({ status: searchParams.get("status") })}
-              className="text-[13px] font-semibold text-accent no-underline hover:text-accent-hover"
-            >
-              Change item type
-            </Link>
-          </p>
-        </div>
-        {needsAuth ? (
-          <p className="m-0 max-w-[18rem] rounded-[10px] border border-line bg-ground px-3 py-2 text-[13px] text-muted-2 sm:text-right">
-            Join to save to your garage — draft is kept.{" "}
-            <Link href={authHref("join", returnPath)} className="font-semibold text-accent">
-              Join
-            </Link>
-          </p>
-        ) : null}
-      </div>
+      <GarageItemFormHeader
+        needsAuth={needsAuth}
+        joinHref={authHref("join", "/item/new")}
+      />
 
       <form onSubmit={onSubmit} className="flex flex-col gap-10">
         <GarageItemPhotosSection
@@ -450,53 +357,48 @@ export function ItemNewForm({ itemType }: Props) {
           aiApplied={aiApplied}
           identifyError={identifyError}
           onIdentify={() => void runIdentify()}
-          tip={copy.photoTip}
         />
 
-        <GarageItemDetailsSection
-          title={title}
-          onTitleChange={setTitle}
-          manufacturer={manufacturer}
-          onManufacturerChange={setManufacturer}
-          modelName={modelName}
-          onModelNameChange={setModelName}
-          category={category}
-          onCategoryChange={setCategory}
-          categoryOptions={categoryOptions}
-          discipline={discipline}
-          onDisciplineChange={setDiscipline}
-          showDiscipline={showDiscipline}
-          aiDisciplineHint={aiDisciplineHint}
-          onAcceptDisciplineHint={() => {
-            setDiscipline(aiDisciplineHint);
-            setAiDisciplineHint("");
-          }}
-          onDismissDisciplineHint={() => setAiDisciplineHint("")}
-          year={year}
-          onYearChange={setYear}
-          size={size}
-          onSizeChange={setSize}
-          showSize={showSize}
-          condition={condition}
-          onConditionChange={setCondition}
-          aiConditionHint={aiConditionHint}
-          onAcceptConditionHint={() => {
-            setCondition(aiConditionHint);
-            setAiConditionHint("");
-          }}
-          onDismissConditionHint={() => setAiConditionHint("")}
-          titlePlaceholder={copy.titlePh}
-          modelPlaceholder={copy.modelPh}
-        />
-
-        {showComponents ? (
-          <GarageItemComponentsSection
-            value={bikeComponents}
-            onChange={setBikeComponents}
-            discipline={discipline}
-            category={category}
+        <GarageItemWhatItIsSection>
+          <GarageItemIdentityFields
+            title={title}
+            onTitleChange={setTitle}
+            manufacturer={manufacturer}
+            onManufacturerChange={setManufacturer}
+            modelName={modelName}
+            onModelNameChange={setModelName}
           />
-        ) : null}
+          <GarageItemCategoryDisciplineFields
+            category={category}
+            onCategoryChange={setCategory}
+            discipline={discipline}
+            onDisciplineChange={setDiscipline}
+            showDiscipline={showDiscipline}
+            aiDisciplineHint={aiDisciplineHint}
+            onClearDisciplineHint={() => setAiDisciplineHint("")}
+          />
+          <GarageItemYearSizeFields
+            year={year}
+            onYearChange={setYear}
+            size={size}
+            onSizeChange={setSize}
+            showSize={showSize}
+          />
+          <GarageItemConditionFields
+            condition={condition}
+            onConditionChange={setCondition}
+            aiConditionHint={aiConditionHint}
+            onClearConditionHint={() => setAiConditionHint("")}
+          />
+        </GarageItemWhatItIsSection>
+
+        <GarageItemComponentsSection
+          value={bikeComponents}
+          onChange={setBikeComponents}
+          discipline={discipline}
+          category={category}
+          hidden={!showComponents}
+        />
 
         <GarageItemDescriptionSection
           description={description}
@@ -520,31 +422,12 @@ export function ItemNewForm({ itemType }: Props) {
           description={description}
         />
 
-        {error ? (
-          <p className="m-0 text-[14px] font-medium text-[#9B2C2C]" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-line-soft pt-5">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex h-12 min-w-[180px] items-center justify-center rounded-[10px] bg-accent px-6 text-[16px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
-          >
-            {needsAuth
-              ? "Join & add to garage"
-              : saving
-                ? "Saving to your account…"
-                : "Add to garage"}
-          </button>
-          <Link
-            href={sessionHandle ? `/u/${sessionHandle}/garage` : "/"}
-            className="inline-flex h-12 items-center px-2 text-[14px] font-semibold text-muted-2 no-underline hover:text-ink"
-          >
-            Cancel
-          </Link>
-        </div>
+        <GarageItemFormFooter
+          needsAuth={needsAuth}
+          saving={saving}
+          error={error}
+          cancelHref={sessionHandle ? `/u/${sessionHandle}/garage` : "/"}
+        />
       </form>
     </div>
   );
