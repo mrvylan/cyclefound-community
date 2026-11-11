@@ -3,16 +3,30 @@
 export const ESTIMATE_DISCLAIMER =
   "Market estimate based on typical asking and sold ranges for similar bikes/parts — not an appraisal. Verify condition and originality.";
 
+export const EBAY_ACTIVE_DISCLAIMER =
+  "Based on current eBay listing asking prices (not sold prices) — not an appraisal.";
+
 export type EstimateConfidence = "Low" | "Medium" | "High" | "None";
 
+export type EstimateSample = {
+  title: string;
+  price: number;
+  url: string;
+  image?: string | null;
+};
+
+/** @deprecated Prefer EstimateSample — kept for rows saved before Browse API. */
 export type EstimateComp = {
   itemId?: string | null;
   title?: string;
   soldPriceCents?: number;
   adjustedCents?: number;
+  price?: number;
   condition?: string;
   soldDate?: string | null;
   itemWebUrl?: string | null;
+  url?: string;
+  image?: string | null;
   score?: number;
 };
 
@@ -25,16 +39,34 @@ export type ItemEstimate = {
   sampleSize?: number | null;
   estimatedAt?: string | null;
   disclaimer?: string | null;
-  /** Sold comps when source is ebay_sold_comps (from estimated_value_meta). */
+  /** Active eBay listing samples (asking prices). */
+  samples?: EstimateSample[] | null;
+  /** Legacy comps field (still read from older meta). */
   comps?: EstimateComp[] | null;
+  query?: string | null;
   ebayFallbackMessage?: string | null;
+};
+
+/** API / market payload shape for Get estimate. */
+export type MarketEstimateResult = {
+  source: "ebay_active" | "ai" | "owner_range";
+  median: number | null;
+  low: number | null;
+  high: number | null;
+  count: number;
+  samples: EstimateSample[];
+  query: string;
+  fetchedAt: string;
 };
 
 export function estimateSourceLabel(source: string | null | undefined): string {
   const raw = String(source || "").toLowerCase();
-  if (raw.includes("ebay")) return "eBay sold comps";
+  if (raw === "ebay_active" || raw.includes("ebay_active")) {
+    return "eBay listings";
+  }
+  if (raw.includes("ebay")) return "eBay listings";
   if (raw.includes("owner")) return "Your range";
-  if (raw.includes("ai")) return "AI estimate";
+  if (raw === "ai" || raw.includes("ai")) return "AI estimate";
   return "Estimate";
 }
 
@@ -42,6 +74,11 @@ export function usdToCents(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.round(n * 100);
+}
+
+export function centsToUsd(cents: number | null | undefined): number | null {
+  if (cents == null || !Number.isFinite(cents)) return null;
+  return Math.round(cents) / 100;
 }
 
 export function formatUsdCompactFromCents(cents: number | null | undefined): string {
@@ -57,6 +94,11 @@ export function formatUsdCompactFromCents(cents: number | null | undefined): str
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(dollars);
+}
+
+export function formatUsdCompact(dollars: number | null | undefined): string {
+  if (dollars == null || !Number.isFinite(dollars)) return "—";
+  return formatUsdCompactFromCents(Math.round(dollars * 100));
 }
 
 export function formatEstimateRangeLabel(estimate: ItemEstimate | null | undefined): string {
@@ -90,6 +132,13 @@ export function normalizeEstimateConfidence(value: unknown): EstimateConfidence 
   if (raw.includes("high")) return "High";
   if (raw.includes("low")) return "Low";
   return "Medium";
+}
+
+export function confidenceFromListingCount(count: number): EstimateConfidence {
+  if (count >= 15) return "High";
+  if (count >= 8) return "Medium";
+  if (count >= 5) return "Low";
+  return "None";
 }
 
 export function orderEstimateCents(input: {
@@ -127,6 +176,33 @@ export function garageEstimateTotals(items: Array<{ estimate?: ItemEstimate | nu
   };
 }
 
+function samplesFromMeta(meta: Record<string, unknown> | null): EstimateSample[] | null {
+  if (!meta) return null;
+  if (Array.isArray(meta.samples)) {
+    return (meta.samples as EstimateSample[]).filter(
+      (s) => s && typeof s.title === "string" && typeof s.price === "number",
+    );
+  }
+  if (Array.isArray(meta.comps)) {
+    return (meta.comps as EstimateComp[])
+      .map((c) => ({
+        title: String(c.title || "Listing"),
+        price:
+          typeof c.price === "number"
+            ? c.price
+            : typeof c.adjustedCents === "number"
+              ? c.adjustedCents / 100
+              : typeof c.soldPriceCents === "number"
+                ? c.soldPriceCents / 100
+                : 0,
+        url: String(c.url || c.itemWebUrl || ""),
+        image: c.image || null,
+      }))
+      .filter((s) => s.price > 0);
+  }
+  return null;
+}
+
 export function estimateFromDbRow(row: Record<string, unknown>): ItemEstimate | null {
   const mid =
     typeof row.estimated_value_cents === "number" ? row.estimated_value_cents : null;
@@ -143,9 +219,7 @@ export function estimateFromDbRow(row: Record<string, unknown>): ItemEstimate | 
     row.estimated_value_meta && typeof row.estimated_value_meta === "object"
       ? (row.estimated_value_meta as Record<string, unknown>)
       : null;
-  const comps = Array.isArray(meta?.comps)
-    ? (meta.comps as EstimateComp[])
-    : null;
+  const samples = samplesFromMeta(meta);
 
   return {
     midCents: mid,
@@ -160,9 +234,33 @@ export function estimateFromDbRow(row: Record<string, unknown>): ItemEstimate | 
     estimatedAt: row.estimated_value_at ? String(row.estimated_value_at) : null,
     disclaimer:
       (meta?.disclaimer ? String(meta.disclaimer) : null) || ESTIMATE_DISCLAIMER,
-    comps,
+    samples,
+    comps: Array.isArray(meta?.comps) ? (meta.comps as EstimateComp[]) : null,
+    query: meta?.query ? String(meta.query) : null,
     ebayFallbackMessage: meta?.ebayFallbackMessage
       ? String(meta.ebayFallbackMessage)
       : null,
+  };
+}
+
+export function toMarketEstimateResult(estimate: ItemEstimate | null): MarketEstimateResult | null {
+  if (!estimate || estimate.midCents == null) return null;
+  const sourceRaw = String(estimate.source || "").toLowerCase();
+  const source: MarketEstimateResult["source"] =
+    sourceRaw === "ebay_active" || sourceRaw.includes("ebay")
+      ? "ebay_active"
+      : sourceRaw.includes("owner")
+        ? "owner_range"
+        : "ai";
+
+  return {
+    source,
+    median: centsToUsd(estimate.midCents),
+    low: centsToUsd(estimate.lowCents),
+    high: centsToUsd(estimate.highCents),
+    count: estimate.sampleSize || 0,
+    samples: estimate.samples || [],
+    query: estimate.query || "",
+    fetchedAt: estimate.estimatedAt || new Date().toISOString(),
   };
 }

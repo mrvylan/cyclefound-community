@@ -7,11 +7,12 @@ import {
   requestGarageItemEstimate,
   saveOwnerEstimateRange,
 } from "@/lib/garage/estimateClient";
+import { ebaySearchUrl } from "@/lib/garage/ebayActiveEstimate";
 import {
   ESTIMATE_DISCLAIMER,
-  estimateSourceLabel,
   formatEstimateMidLabel,
   formatEstimateRangeLabel,
+  formatUsdCompact,
   formatUsdCompactFromCents,
   hasEstimate,
   type ItemEstimate,
@@ -46,6 +47,12 @@ export function ItemEstimateSection({
 
   const current = local ?? estimate;
   const valued = hasEstimate(current);
+  const source = String(current?.source || "").toLowerCase();
+  const isEbay = source === "ebay_active" || source.includes("ebay_active");
+  const isAi = source === "ai" || source.includes("ai_estimate") || source === "ai_estimate";
+  const seeListingsHref =
+    current?.samples?.[0]?.url ||
+    (current?.query ? ebaySearchUrl(current.query) : null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -68,7 +75,11 @@ export function ItemEstimateSection({
       await afterChange(result.estimate);
       setShowManual(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Estimate failed.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not get an estimate. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -114,51 +125,97 @@ export function ItemEstimateSection({
     >
       <h2 className="section-title mb-1 mt-0 text-[20px]">Estimated value</h2>
       <p className="mt-0 mb-4 text-[14px] text-muted-2">
-        Optional fair-market range — separate from photo identify.
+        Optional fair-market range — checks current eBay asking prices first, then AI.
       </p>
 
-      {valued ? (
+      {busy ? (
+        <div
+          className="rounded-[12px] border border-dashed border-accent-soft-border bg-white px-4 py-5"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="m-0 text-[15px] font-semibold text-ink">Looking up eBay listings…</p>
+          <p className="m-0 mt-1 text-[14px] text-muted-2">
+            Searching current asking prices. If there aren&apos;t enough matches, we&apos;ll use
+            an AI estimate.
+          </p>
+        </div>
+      ) : valued ? (
         <div className="rounded-[12px] border border-accent-soft-border bg-white px-4 py-4">
-          <p className="eyebrow m-0 text-accent-hover">Estimated fair market value</p>
+          <p className="eyebrow m-0 text-accent-hover">
+            {isEbay
+              ? "Estimated value"
+              : isAi
+                ? "AI estimate"
+                : "Estimated fair market value"}
+          </p>
           <p className="section-title m-0 mt-1 text-[32px]">
             {formatEstimateMidLabel(current)}
           </p>
-          <p className="m-0 mt-1 font-mono text-[13px] text-muted-2">
-            {formatEstimateRangeLabel(current)} · estimate
-            {current?.confidence && current.confidence !== "None"
-              ? ` · ${current.confidence} confidence`
-              : ""}
-            {current?.sampleSize ? ` · ${current.sampleSize} comps` : ""}
-            {current?.source
-              ? ` · ${estimateSourceLabel(current.source)}`
-              : ""}
-          </p>
+
+          {isEbay ? (
+            <p className="m-0 mt-1 text-[14px] leading-snug text-muted-2">
+              Estimated value {formatEstimateMidLabel(current)} (range{" "}
+              {formatUsdCompactFromCents(current?.lowCents)}–
+              {formatUsdCompactFromCents(current?.highCents)}). Based on{" "}
+              {current?.sampleSize || 0} current eBay listings (asking prices, not sold
+              prices).
+            </p>
+          ) : isAi ? (
+            <p className="m-0 mt-1 text-[14px] leading-snug text-muted-2">
+              AI estimate (not enough eBay listings found)
+              {current?.confidence && current.confidence !== "None"
+                ? ` · ${current.confidence} confidence`
+                : ""}
+              . Range {formatEstimateRangeLabel(current)}.
+            </p>
+          ) : (
+            <p className="m-0 mt-1 font-mono text-[13px] text-muted-2">
+              {formatEstimateRangeLabel(current)} · your range
+            </p>
+          )}
+
           <p className="m-0 mt-2 text-[12px] leading-snug text-muted-2">
             {current?.disclaimer || ESTIMATE_DISCLAIMER}
           </p>
-          {current?.ebayFallbackMessage ? (
+
+          {isEbay && seeListingsHref ? (
+            <a
+              href={seeListingsHref}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex text-[13px] font-semibold text-accent-hover no-underline hover:underline"
+            >
+              See listings on eBay →
+            </a>
+          ) : null}
+
+          {isAi && current?.ebayFallbackMessage ? (
             <p className="m-0 mt-2 text-[12px] leading-snug text-muted">
-              eBay comps unavailable — used AI instead. {current.ebayFallbackMessage}
+              {current.ebayFallbackMessage}
             </p>
           ) : null}
-          {current?.comps && current.comps.length > 0 ? (
+
+          {isEbay && current?.samples && current.samples.length > 0 ? (
             <ul className="mt-3 m-0 list-none space-y-1.5 border-t border-line-soft p-0 pt-3">
-              {current.comps.slice(0, 4).map((comp, i) => (
-                <li key={`${comp.itemId || comp.title || i}-${i}`} className="text-[12px]">
-                  {comp.itemWebUrl ? (
+              {current.samples.slice(0, 3).map((sample, i) => (
+                <li key={`${sample.url || sample.title}-${i}`} className="text-[12px]">
+                  {sample.url ? (
                     <a
-                      href={comp.itemWebUrl}
+                      href={sample.url}
                       target="_blank"
                       rel="noreferrer"
                       className="font-medium text-ink no-underline hover:text-accent-hover"
                     >
-                      {comp.title || "Sold listing"}
+                      {sample.title || "eBay listing"}
                     </a>
                   ) : (
-                    <span className="font-medium text-ink">{comp.title || "Sold listing"}</span>
+                    <span className="font-medium text-ink">
+                      {sample.title || "eBay listing"}
+                    </span>
                   )}
                   <span className="ml-1.5 font-mono text-muted-2">
-                    {formatUsdCompactFromCents(comp.adjustedCents ?? comp.soldPriceCents)}
+                    {formatUsdCompact(sample.price)}
                   </span>
                 </li>
               ))}
@@ -170,7 +227,7 @@ export function ItemEstimateSection({
           <p className="m-0 text-[15px] font-semibold text-ink">No estimate yet</p>
           <p className="m-0 mt-1 text-[14px] text-muted-2">
             {isOwner
-              ? "Tap Get estimate to use eBay sold comps when available (AI fallback), or enter your own low–high dollars."
+              ? "Tap Get estimate to check current eBay asking prices (AI if fewer than 5 matches), or enter your own low–high dollars."
               : signedIn
                 ? "Only the owner can add an estimate for this item."
                 : "Sign in as the owner to run Get estimate on this item."}
@@ -265,9 +322,15 @@ export function ItemEstimateSection({
       ) : null}
 
       {error ? (
-        <p className="m-0 mt-3 text-[14px] font-medium text-[#9B2C2C]" role="alert">
-          {error}
-        </p>
+        <div
+          className="mt-3 rounded-[10px] border border-[#E8C4C4] bg-[#FDF6F6] px-3.5 py-3"
+          role="alert"
+        >
+          <p className="m-0 text-[14px] font-medium text-[#9B2C2C]">{error}</p>
+          <p className="m-0 mt-1 text-[13px] text-muted-2">
+            You can try again, or enter your own range below.
+          </p>
+        </div>
       ) : null}
     </section>
   );

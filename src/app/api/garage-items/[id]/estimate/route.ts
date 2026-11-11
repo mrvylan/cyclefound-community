@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  estimateEbaySoldValue,
-  ebaySoldConfigured,
-} from "@/lib/garage/ebaySoldClient";
-import { EBAY_SOLD_SOURCE } from "@/lib/garage/ebaySoldEstimate";
+  buildEbayActiveQuery,
+  EBAY_ACTIVE_DISCLAIMER,
+  EBAY_ACTIVE_SOURCE,
+} from "@/lib/garage/ebayActiveEstimate";
+import { ebayBrowseConfigured, estimateEbayActiveValue } from "@/lib/garage/ebayBrowseClient";
+import { readEbayPriceCache, writeEbayPriceCache } from "@/lib/garage/ebayPriceCache";
 import {
   ESTIMATE_DISCLAIMER,
+  confidenceFromListingCount,
   estimateFromDbRow,
   normalizeEstimateConfidence,
   orderEstimateCents,
+  toMarketEstimateResult,
   usdToCents,
-  type EstimateComp,
+  type EstimateSample,
   type ItemEstimate,
+  type MarketEstimateResult,
 } from "@/lib/garage/estimates";
 
 export const runtime = "nodejs";
@@ -45,12 +50,14 @@ function estimatePayload(estimate: ItemEstimate | null) {
     estimated_value_high_cents: estimate.highCents,
     estimated_value_sample_size: estimate.sampleSize ?? 0,
     estimated_value_confidence: estimate.confidence || "Medium",
-    estimated_value_source: estimate.source || "ai_estimate",
+    estimated_value_source: estimate.source || "ai",
     estimated_value_at: estimate.estimatedAt || new Date().toISOString(),
     estimated_value_meta: {
       disclaimer: estimate.disclaimer || ESTIMATE_DISCLAIMER,
-      comps: Array.isArray(estimate.comps) ? estimate.comps.slice(0, 8) : [],
+      samples: Array.isArray(estimate.samples) ? estimate.samples.slice(0, 3) : [],
+      query: estimate.query || null,
       ebayFallbackMessage: estimate.ebayFallbackMessage || null,
+      market: toMarketEstimateResult(estimate),
     },
   };
 }
@@ -64,6 +71,15 @@ function subjectKindFromRow(row: Record<string, unknown>): "bike" | "part" {
   return "part";
 }
 
+function bikeStateFromRow(row: Record<string, unknown>): "complete" | "frameset" | null {
+  const state = String(row.bike_state || "").toLowerCase();
+  if (state === "complete" || state === "frameset") return state;
+  const cat = String(row.category || "").toLowerCase();
+  if (cat.includes("frameset")) return "frameset";
+  if (cat.includes("complete bike")) return "complete";
+  return subjectKindFromRow(row) === "bike" ? "complete" : null;
+}
+
 function modelFromRow(row: Record<string, unknown>, manufacturer: string) {
   const explicit = String(row.model_name || "").trim();
   if (explicit) return explicit;
@@ -74,6 +90,32 @@ function modelFromRow(row: Record<string, unknown>, manufacturer: string) {
     return title.slice(mfg.length).trim().replace(/^[-–—,]+/, "").trim();
   }
   return title;
+}
+
+function itemEstimateFromEbay(result: {
+  median: number | null;
+  low: number | null;
+  high: number | null;
+  count: number;
+  samples: EstimateSample[];
+  query: string;
+  fetchedAt: string;
+}): ItemEstimate {
+  const ordered = orderEstimateCents({
+    lowCents: usdToCents(result.low),
+    midCents: usdToCents(result.median),
+    highCents: usdToCents(result.high),
+  });
+  return {
+    ...ordered,
+    confidence: confidenceFromListingCount(result.count),
+    source: EBAY_ACTIVE_SOURCE,
+    sampleSize: result.count,
+    estimatedAt: result.fetchedAt,
+    disclaimer: EBAY_ACTIVE_DISCLAIMER,
+    samples: result.samples,
+    query: result.query,
+  };
 }
 
 async function generateAiEstimate(item: {
@@ -141,7 +183,8 @@ Notes: ${item.description?.slice(0, 400) || "None"}`;
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(text.slice(0, 200) || "Estimate request failed.");
+    console.warn("[estimate-ai] openai status=", res.status, text.slice(0, 200));
+    throw new Error("Could not generate an AI estimate right now.");
   }
 
   const json = (await res.json()) as {
@@ -167,62 +210,97 @@ Notes: ${item.description?.slice(0, 400) || "None"}`;
   return {
     ...ordered,
     confidence: normalizeEstimateConfidence(parsed.confidence),
-    source: "ai_estimate",
+    source: "ai",
     sampleSize: 0,
     estimatedAt: new Date().toISOString(),
     disclaimer: ESTIMATE_DISCLAIMER,
-    comps: [],
+    samples: [],
+    query: "",
   };
 }
 
-/** Prefer eBay sold comps; fall back to AI when comps are unavailable. */
-async function generateMarketEstimate(row: Record<string, unknown>): Promise<ItemEstimate> {
+/** Prefer eBay active listing asking prices; fall back to AI when <5 comps. */
+async function generateMarketEstimate(row: Record<string, unknown>): Promise<{
+  estimate: ItemEstimate;
+  market: MarketEstimateResult;
+}> {
   const manufacturer = String(row.manufacturer_name || "").trim();
   const model = modelFromRow(row, manufacturer);
   const year = String(row.approximate_year || "").trim();
   const condition = String(row.condition || "").trim();
   const discipline = String(row.discipline || row.bike_type || "").trim();
   const category = String(row.category || row.part_category || "").trim();
+  const size = String(row.frame_size_label || "").trim();
   const title =
     String(row.title || "").trim() ||
     [manufacturer, model].filter(Boolean).join(" ").trim() ||
     "Item";
   const subjectKind = subjectKindFromRow(row);
+  const bikeState = bikeStateFromRow(row);
 
   let ebayFallbackMessage: string | null = null;
+  let ebayQuery = "";
 
-  if (ebaySoldConfigured()) {
+  if (ebayBrowseConfigured()) {
+    const input = {
+      manufacturer,
+      model,
+      year,
+      size,
+      partType: subjectKind === "part" ? category : "",
+      discipline,
+      subjectKind,
+      bikeState,
+      categoryHint: process.env.EBAY_CYCLING_CATEGORY_ID || "",
+    };
+
     try {
-      const ebay = await estimateEbaySoldValue({
-        manufacturer,
-        model,
-        year,
-        condition,
-        bikeType: discipline,
-        subjectKind,
-      });
-      if (ebay.available && ebay.midCents != null) {
+      ebayQuery = buildEbayActiveQuery(input);
+
+      const cached = ebayQuery ? await readEbayPriceCache(ebayQuery) : null;
+      const ebay =
+        cached?.available && cached.median != null
+          ? cached
+          : await estimateEbayActiveValue(input);
+
+      if (ebay.available && ebay.median != null && ebay.count >= 5) {
+        if (!cached?.available) {
+          await writeEbayPriceCache(ebay.query || ebayQuery, ebay);
+        }
+        const estimate = itemEstimateFromEbay({
+          median: ebay.median,
+          low: ebay.low,
+          high: ebay.high,
+          count: ebay.count,
+          samples: ebay.samples,
+          query: ebay.query,
+          fetchedAt: ebay.fetchedAt,
+        });
         return {
-          midCents: ebay.midCents,
-          lowCents: ebay.lowCents,
-          highCents: ebay.highCents,
-          confidence: ebay.confidence,
-          source: EBAY_SOLD_SOURCE,
-          sampleSize: ebay.sampleSize,
-          estimatedAt: ebay.computedAt || new Date().toISOString(),
-          disclaimer: ebay.disclaimer,
-          comps: ebay.comps as EstimateComp[],
+          estimate,
+          market: {
+            source: "ebay_active",
+            median: ebay.median,
+            low: ebay.low,
+            high: ebay.high,
+            count: ebay.count,
+            samples: ebay.samples,
+            query: ebay.query,
+            fetchedAt: ebay.fetchedAt,
+          },
         };
       }
-      ebayFallbackMessage = ebay.message;
+      ebayFallbackMessage = ebay.message || "Not enough eBay listings found.";
+      ebayQuery = ebay.query || ebayQuery;
     } catch (err) {
       console.warn(
-        "eBay estimate soft-fail:",
+        "[estimate] eBay soft-fail:",
         err instanceof Error ? err.message : err,
       );
-      ebayFallbackMessage =
-        err instanceof Error ? err.message : "eBay sold comps unavailable.";
+      ebayFallbackMessage = "eBay listings unavailable right now.";
     }
+  } else {
+    ebayFallbackMessage = "eBay is not configured.";
   }
 
   const ai = await generateAiEstimate({
@@ -231,14 +309,30 @@ async function generateMarketEstimate(row: Record<string, unknown>): Promise<Ite
     year,
     category,
     condition,
-    size: String(row.frame_size_label || ""),
+    size,
     discipline,
     description: String(row.description || row.modifications || ""),
   });
 
-  return {
+  const estimate: ItemEstimate = {
     ...ai,
+    source: "ai",
+    query: ebayQuery || null,
     ebayFallbackMessage,
+  };
+
+  return {
+    estimate,
+    market: {
+      source: "ai",
+      median: (estimate.midCents ?? 0) / 100,
+      low: (estimate.lowCents ?? estimate.midCents ?? 0) / 100,
+      high: (estimate.highCents ?? estimate.midCents ?? 0) / 100,
+      count: 0,
+      samples: [],
+      query: ebayQuery,
+      fetchedAt: estimate.estimatedAt || new Date().toISOString(),
+    },
   };
 }
 
@@ -282,6 +376,7 @@ export async function POST(request: Request, ctx: Ctx) {
   }
 
   let nextEstimate: ItemEstimate | null = null;
+  let market: MarketEstimateResult | null = null;
 
   try {
     if (action === "clear") {
@@ -307,14 +402,24 @@ export async function POST(request: Request, ctx: Ctx) {
         sampleSize: 0,
         estimatedAt: new Date().toISOString(),
         disclaimer: ESTIMATE_DISCLAIMER,
-        comps: [],
+        samples: [],
+        query: "",
       };
+      market = toMarketEstimateResult(nextEstimate);
     } else {
-      nextEstimate = await generateMarketEstimate(row as Record<string, unknown>);
+      const generated = await generateMarketEstimate(row as Record<string, unknown>);
+      nextEstimate = generated.estimate;
+      market = generated.market;
     }
   } catch (err) {
+    console.warn("[estimate] failed:", err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Estimate failed." },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Could not update estimate. Please try again.",
+      },
       { status: 502 },
     );
   }
@@ -336,5 +441,9 @@ export async function POST(request: Request, ctx: Ctx) {
     ? estimateFromDbRow(updated as Record<string, unknown>)
     : nextEstimate;
 
-  return NextResponse.json({ itemId: id, estimate });
+  return NextResponse.json({
+    itemId: id,
+    estimate,
+    market: market || toMarketEstimateResult(estimate),
+  });
 }
