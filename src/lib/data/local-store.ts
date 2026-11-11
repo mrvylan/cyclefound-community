@@ -70,6 +70,8 @@ export type LocalProfilePatch = {
   coverUrl?: string;
   /** Vertical crop focus for cover (`object-position` Y%), 0–100. */
   coverPositionY?: number;
+  /** Garage directory / spotlight cover — item id whose photo features. */
+  garageCoverItemId?: string;
   /** Public @handle claimed by the member (hides provisional hash handles). */
   claimedHandle?: string;
 };
@@ -284,6 +286,7 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
         patch?.coverPositionY !== undefined
           ? clampCoverPositionY(patch.coverPositionY)
           : undefined,
+      garageCoverItemId: patch?.garageCoverItemId || undefined,
     },
     patch?.claimedHandle,
   );
@@ -314,6 +317,7 @@ export function getMergedPerson(handle: string): Person | undefined {
         patch.coverPositionY !== undefined
           ? clampCoverPositionY(patch.coverPositionY)
           : base.coverPositionY,
+      garageCoverItemId: patch.garageCoverItemId ?? base.garageCoverItemId,
     },
     patch.claimedHandle,
   );
@@ -372,6 +376,8 @@ export function resolvePerson(handle: string): Person | undefined {
           patch.coverPositionY !== undefined
             ? clampCoverPositionY(patch.coverPositionY)
             : directory.coverPositionY,
+        garageCoverItemId:
+          patch.garageCoverItemId ?? directory.garageCoverItemId,
       },
       patch.claimedHandle,
     );
@@ -398,6 +404,23 @@ export function saveProfilePatch(handle: string, patch: LocalProfilePatch) {
   if (patch.skills) {
     next.skills = normalizeSkillLabels(patch.skills);
   }
+  store.profilePatches[handle] = next;
+  writeStore(store);
+}
+
+export function getGarageCoverItemId(handle: string): string | undefined {
+  const id = readStore().profilePatches[handle]?.garageCoverItemId;
+  return id?.trim() || undefined;
+}
+
+/** Persist which garage item photo features on /garages and spotlights. */
+export function setGarageCoverItemId(handle: string, itemId: string | null) {
+  const store = readStore();
+  const prev = store.profilePatches[handle] || {};
+  const next: LocalProfilePatch = { ...prev };
+  const cleaned = String(itemId || "").trim();
+  if (cleaned) next.garageCoverItemId = cleaned;
+  else delete next.garageCoverItemId;
   store.profilePatches[handle] = next;
   writeStore(store);
 }
@@ -678,6 +701,11 @@ export function deleteGarageItem(id: string) {
     store.extraItems.some((i) => i.id === id) ||
     Boolean(getMarketplaceItem(id));
   if (!known) return;
+  // Drop garage cover selection if it pointed at the deleted item.
+  const owner = existing?.ownerHandle || getSessionHandle();
+  if (owner && getGarageCoverItemId(owner) === id) {
+    setGarageCoverItemId(owner, null);
+  }
   mergeItemPatch(id, { deleted: true });
   clearItemPhotos(id);
   try {

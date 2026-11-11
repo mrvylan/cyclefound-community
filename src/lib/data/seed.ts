@@ -33,6 +33,8 @@ export type Person = {
   coverUrl?: string;
   /** Vertical crop focus for cover (`object-position` Y%), 0 = top, 100 = bottom. */
   coverPositionY?: number;
+  /** Garage directory / spotlight cover — garage item id whose photo features. */
+  garageCoverItemId?: string;
   /**
    * Member-claimed public @handle. When missing and `handle` is provisional
    * (auto hash suffix), UI should hide the @ until they claim one.

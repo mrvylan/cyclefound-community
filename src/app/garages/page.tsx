@@ -13,12 +13,13 @@ import {
 import { accountIdentityKey } from "@/lib/community/handles";
 import { normalizeItemCategory } from "@/lib/data/categories";
 import {
+  getGarageCoverItemId,
   getGarageItemsFor,
-  getItemPhotoUrls,
   getSessionHandle,
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { garageCoverPhotoUrls } from "@/lib/garage/garageCover";
 import { cityFromLoc, getGarage, type GarageItem, type Person } from "@/lib/data/seed";
 
 function garageStatLine(items: GarageItem[], forSale: number) {
@@ -141,7 +142,12 @@ export default function GaragesIndexPage() {
             existing?.garage,
           items,
           forSale: items.filter((i) => i.status !== "Not for sale").length,
-          photos: items.flatMap((i) => getItemPhotoUrls(i)),
+          photos: garageCoverPhotoUrls(
+            items,
+            getGarageCoverItemId(preferredPerson.handle) ||
+              getGarageCoverItemId(person.handle) ||
+              preferredPerson.garageCoverItemId,
+          ),
           isYou: Boolean(existing?.isYou || isYou),
         });
       }
@@ -157,7 +163,12 @@ export default function GaragesIndexPage() {
               ...row,
               items,
               forSale: items.filter((i) => i.status !== "Not for sale").length,
-              photos: items.flatMap((i) => getItemPhotoUrls(i)),
+              photos: garageCoverPhotoUrls(
+                items,
+                getGarageCoverItemId(row.person.handle) ||
+                  getGarageCoverItemId(sessionHandle) ||
+                  row.person.garageCoverItemId,
+              ),
               isYou: true,
             });
           }
@@ -172,7 +183,12 @@ export default function GaragesIndexPage() {
             ...row,
             items,
             forSale: items.filter((i) => i.status !== "Not for sale").length,
-            photos: items.flatMap((i) => getItemPhotoUrls(i)),
+            photos: garageCoverPhotoUrls(
+              items,
+              getGarageCoverItemId(row.person.handle) ||
+                getGarageCoverItemId(canonicalMe) ||
+                row.person.garageCoverItemId,
+            ),
             isYou: true,
           });
         }

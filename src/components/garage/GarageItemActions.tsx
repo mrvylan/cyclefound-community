@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { Archive, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, ImageIcon, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import {
   getCommunityGarageItem,
   getMarketplaceItem,
@@ -15,7 +15,10 @@ import type { GarageItem } from "@/lib/data/seed";
 import {
   archiveGarageItem,
   deleteGarageItem,
+  getGarageCoverItemId,
+  getItemPhotoUrls,
   isMarketplaceListingItem,
+  setGarageCoverItemId,
   unarchiveGarageItem,
 } from "@/lib/data/local-store";
 import {
@@ -23,6 +26,7 @@ import {
   setRemoteGarageArchived,
 } from "@/lib/garage/garageRemote";
 import { RemoveListingDialog } from "@/components/garage/RemoveListingDialog";
+import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   item: GarageItem;
@@ -50,6 +54,11 @@ export function GarageItemActions({ item, compact }: Props) {
     (item as { listingId?: string }).listingId ||
     item.id;
   const editHref = `/item/${item.id}/edit`;
+  const hasPhoto = getItemPhotoUrls(item).length > 0;
+  const isCover =
+    !item.archived &&
+    hasPhoto &&
+    getGarageCoverItemId(item.ownerHandle) === item.id;
 
   useEffect(() => {
     if (!open) return;
@@ -125,6 +134,27 @@ export function GarageItemActions({ item, compact }: Props) {
       setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not restore.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSetGarageCover() {
+    setError("");
+    setBusy(true);
+    try {
+      setGarageCoverItemId(item.ownerHandle, item.id);
+      try {
+        const supabase = createClient();
+        await supabase.auth.updateUser({
+          data: { garage_cover_item_id: item.id },
+        });
+      } catch {
+        // Local patch is authoritative for this browser.
+      }
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not set cover.");
     } finally {
       setBusy(false);
     }
@@ -208,7 +238,7 @@ export function GarageItemActions({ item, compact }: Props) {
           <div
             id={menuId}
             role="menu"
-            className="absolute right-0 z-30 mt-1.5 w-[13rem] overflow-hidden rounded-[10px] border border-line bg-white py-1 shadow-[0_10px_28px_rgba(16,23,27,0.14)]"
+            className="absolute right-0 z-30 mt-1.5 w-[15rem] overflow-hidden rounded-[10px] border border-line bg-white py-1 shadow-[0_10px_28px_rgba(16,23,27,0.14)]"
           >
             <Link
               role="menuitem"
@@ -252,6 +282,21 @@ export function GarageItemActions({ item, compact }: Props) {
                   Archive
                 </button>
               )
+            ) : null}
+
+            {!marketplace && !item.archived && hasPhoto ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy || isCover}
+                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-ink hover:bg-ground disabled:opacity-60"
+                onClick={() => {
+                  void onSetGarageCover();
+                }}
+              >
+                <ImageIcon className="size-3.5 text-muted" aria-hidden />
+                {isCover ? "Garage cover" : "Use as garage cover"}
+              </button>
             ) : null}
 
             <div className="my-1 border-t border-line-soft" role="separator" />

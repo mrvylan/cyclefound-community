@@ -6,6 +6,7 @@ import { getDirectoryHandleForUserId } from "@/lib/community/directory-cache";
 import { communityHandleFromProfile } from "@/lib/community/handles";
 import { profileService } from "@/lib/profile/profileService";
 import {
+  getGarageCoverItemId,
   getSessionHandle,
   migrateSessionHandle,
   saveProfilePatch,
@@ -27,7 +28,7 @@ function canonicalHandle(userId: string, displayName: string) {
  * don't split into a "You" stub + a separate marketplace row.
  */
 export function AuthSessionSync() {
-  const { ready, profile } = useAuth();
+  const { ready, profile, user } = useAuth();
 
   useEffect(() => {
     if (!ready) return;
@@ -37,7 +38,7 @@ export function AuthSessionSync() {
       ? profile.displayName || profile.fullName || profile.email.split("@")[0] || ""
       : "";
 
-    function apply(avatarUrl = "") {
+    function apply(avatarUrl = "", garageCoverItemId = "") {
       if (cancelled) return;
       if (!profile) {
         if (getSessionHandle()) setSessionHandle("");
@@ -57,9 +58,14 @@ export function AuthSessionSync() {
         else setSessionHandle(next);
       }
 
+      // Don't clobber a local cover choice with empty remote metadata.
+      const cover =
+        garageCoverItemId || getGarageCoverItemId(next) || undefined;
+
       saveProfilePatch(next, {
         name,
         ...(avatarUrl ? { avatarUrl } : {}),
+        ...(cover ? { garageCoverItemId: cover } : {}),
       });
     }
 
@@ -68,14 +74,17 @@ export function AuthSessionSync() {
         apply();
         return;
       }
+      const coverFromMeta = String(
+        user?.user_metadata?.garage_cover_item_id || "",
+      ).trim();
       try {
         const row = await profileService.getMyProfile();
         if (cancelled) return;
         if (row?.displayName) displayName = row.displayName;
         else if (row?.fullName) displayName = row.fullName;
-        apply(row?.avatarUrl || profile.avatarUrl || "");
+        apply(row?.avatarUrl || profile.avatarUrl || "", coverFromMeta);
       } catch {
-        if (!cancelled) apply(profile.avatarUrl || "");
+        if (!cancelled) apply(profile.avatarUrl || "", coverFromMeta);
       }
     }
 
@@ -89,7 +98,7 @@ export function AuthSessionSync() {
       const prev = getSessionHandle();
       if (prev !== fromDir) migrateSessionHandle(prev || fromDir, fromDir);
     });
-  }, [ready, profile]);
+  }, [ready, profile, user]);
 
   return null;
 }

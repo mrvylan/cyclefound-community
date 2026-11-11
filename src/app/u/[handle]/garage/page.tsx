@@ -4,6 +4,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
+import { GarageCoverPicker } from "@/components/garage/GarageCoverPicker";
 import { GarageItemActions } from "@/components/garage/GarageItemActions";
 import { AddToGarageCta } from "@/components/forms/garage-item/AddToGarageCta";
 import { ItemCard } from "@/components/ItemCard";
@@ -261,6 +262,7 @@ export default function GaragePage({
                 ) : null}
                 {isOwnGarage ? (
                   <>
+                    <GarageCoverPicker handle={handle} items={activeItems} />
                     <Link
                       href="/settings/profile"
                       className="inline-flex h-[46px] items-center rounded-[10px] border border-[#D4D3CD] bg-white px-[18px] font-semibold text-ink no-underline hover:bg-ground hover:text-ink"

@@ -7,12 +7,13 @@ import { Feature } from "@/components/Feature";
 import { Avatar } from "@/components/ui";
 import { cityFromLoc, featuredGarages, getGarage } from "@/lib/data/seed";
 import {
+  getGarageCoverItemId,
   getGarageItemsFor,
-  getItemPhotoUrls,
   isMockDataEnabled,
   listMembers,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { garageCoverPhotoUrls } from "@/lib/garage/garageCover";
 
 type Spotlight = {
   handle: string;
@@ -33,7 +34,10 @@ function loadSpotlights(): Spotlight[] {
   const out: Spotlight[] = [];
   for (const m of listMembers()) {
     const items = getGarageItemsFor(m.handle);
-    const photos = items.flatMap((i) => getItemPhotoUrls(i));
+    const photos = garageCoverPhotoUrls(
+      items,
+      getGarageCoverItemId(m.handle) || m.garageCoverItemId,
+    );
     if (!photos.length) continue;
     out.push({
       handle: m.handle,
