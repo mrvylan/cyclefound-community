@@ -31,6 +31,7 @@ import {
   formatEstimateRangeLabel,
   formatUsdCompactFromCents,
   garageEstimateTotals,
+  hasEstimate,
 } from "@/lib/garage/estimates";
 import { formatAskPrice } from "@/lib/garage/itemFields";
 import {
@@ -355,7 +356,9 @@ export default function GaragePage({
                             lowCents: estimateTotals.lowCents,
                             highCents: estimateTotals.highCents,
                           })} across valued items`
-                        : "No estimates yet — open an item and use Get estimate"
+                        : isOwnGarage
+                          ? "Open a bike and tap Get estimate"
+                          : "No estimates yet"
                     }
                   >
                     <span className="font-mono tabular-nums">
@@ -509,6 +512,7 @@ export default function GaragePage({
                 key={item.id}
                 item={item}
                 photoHeight={180}
+                estimateCta={isOwnGarage}
                 className={`${item.archived ? "opacity-90" : ""} ${
                   justAddedId === item.id ? "ring-2 ring-accent/40" : ""
                 }`}
@@ -530,7 +534,9 @@ export default function GaragePage({
                   <th className="px-4 py-3 font-medium">Item</th>
                   <th className="px-4 py-3 font-medium">Description</th>
                   <th className="px-4 py-3 font-medium">Condition</th>
-                  <th className="px-4 py-3 font-medium">Market</th>
+                  <th className="px-4 py-3 font-medium">
+                    {FEATURES.garageEstimates ? "Est. value" : "Market"}
+                  </th>
                   <th className="px-4 py-3 font-medium">Ask</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   {isOwnGarage ? (
@@ -549,7 +555,16 @@ export default function GaragePage({
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <Link href={`/i/${item.id}`} className="font-semibold text-ink no-underline hover:text-accent-hover">
+                      <Link
+                        href={
+                          isOwnGarage &&
+                          FEATURES.garageEstimates &&
+                          !hasEstimate(item.estimate)
+                            ? `/i/${item.id}#estimate`
+                            : `/i/${item.id}`
+                        }
+                        className="font-semibold text-ink no-underline hover:text-accent-hover"
+                      >
                         {item.name}
                       </Link>
                       <div className="font-mono text-[11px] text-muted">
@@ -565,7 +580,24 @@ export default function GaragePage({
                       )}
                     </td>
                     <td className="px-4 py-3">{item.cond}</td>
-                    <td className="px-4 py-3 font-mono">{item.mkt}</td>
+                    <td className="px-4 py-3 font-mono">
+                      {FEATURES.garageEstimates ? (
+                        hasEstimate(item.estimate) ? (
+                          formatEstimateRangeLabel(item.estimate)
+                        ) : isOwnGarage ? (
+                          <Link
+                            href={`/i/${item.id}#estimate`}
+                            className="font-sans font-semibold text-accent-hover no-underline"
+                          >
+                            Get estimate →
+                          </Link>
+                        ) : (
+                          "—"
+                        )
+                      ) : (
+                        item.mkt
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-mono tabular-nums">
                       {item.status === "Not for sale" || item.archived
                         ? "—"

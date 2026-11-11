@@ -69,6 +69,11 @@ type Props = {
   showOwner?: boolean;
   showDescription?: boolean;
   showPhotoCount?: boolean;
+  /**
+   * Own garage: turn empty Est. value into a Get estimate CTA that opens
+   * the item estimate block.
+   */
+  estimateCta?: boolean;
   /** Extra chrome above the card body (e.g. owner actions). */
   overlay?: React.ReactNode;
   className?: string;
@@ -82,6 +87,7 @@ export function ItemCard({
   showOwner = false,
   showDescription = false,
   showPhotoCount = false,
+  estimateCta = false,
   overlay,
   className = "",
 }: Props) {
@@ -90,7 +96,10 @@ export function ItemCard({
   const type = itemTypeLabel(item);
   const meta = itemMetaLine(item);
   const owner = showOwner ? resolvePerson(item.ownerHandle) : undefined;
-  const to = href || `/i/${item.id}`;
+  const showGetEstimate =
+    FEATURES.garageEstimates && estimateCta && !hasEstimate(item.estimate);
+  const baseTo = href || `/i/${item.id}`;
+  const to = showGetEstimate ? `${baseTo}#estimate` : baseTo;
 
   return (
     <div
@@ -159,18 +168,25 @@ export function ItemCard({
 
           <div className="mt-auto flex items-end justify-between gap-2 border-t border-line-soft pt-3 text-[13px]">
             {FEATURES.garageEstimates ? (
-              <span>
-                <span className="block text-[11px] text-meta">EST. VALUE</span>
-                <span
-                  className={`font-mono tabular-nums ${
-                    hasEstimate(item.estimate) ? "text-ink" : "text-meta"
-                  }`}
-                >
-                  {hasEstimate(item.estimate)
-                    ? formatEstimateRangeLabel(item.estimate)
-                    : "No estimate"}
+              showGetEstimate ? (
+                <span>
+                  <span className="block text-[11px] text-meta">EST. VALUE</span>
+                  <span className="font-semibold text-accent-hover">Get estimate →</span>
                 </span>
-              </span>
+              ) : (
+                <span>
+                  <span className="block text-[11px] text-meta">EST. VALUE</span>
+                  <span
+                    className={`font-mono tabular-nums ${
+                      hasEstimate(item.estimate) ? "text-ink" : "text-meta"
+                    }`}
+                  >
+                    {hasEstimate(item.estimate)
+                      ? formatEstimateRangeLabel(item.estimate)
+                      : "No estimate"}
+                  </span>
+                </span>
+              )
             ) : (
               <Feature name="marketValues">
                 <span>

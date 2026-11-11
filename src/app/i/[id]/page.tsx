@@ -246,6 +246,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               itemId={item.id}
               estimate={item.estimate}
               isOwner={isOwner}
+              signedIn={Boolean(profile)}
             />
           ) : null}
 

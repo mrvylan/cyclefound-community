@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   clearGarageItemEstimate,
   requestGarageItemEstimate,
@@ -19,6 +20,8 @@ type Props = {
   itemId: string;
   estimate: ItemEstimate | null | undefined;
   isOwner: boolean;
+  /** When true, show a Log in path for would-be owners. */
+  signedIn?: boolean;
   onEstimateChange?: (next: ItemEstimate | null) => void;
 };
 
@@ -29,6 +32,7 @@ export function ItemEstimateSection({
   itemId,
   estimate,
   isOwner,
+  signedIn = false,
   onEstimateChange,
 }: Props) {
   const [busy, setBusy] = useState(false);
@@ -40,6 +44,13 @@ export function ItemEstimateSection({
 
   const current = local ?? estimate;
   const valued = hasEstimate(current);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#estimate") return;
+    const el = document.getElementById("estimate");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   async function afterChange(next: ItemEstimate | null) {
     setLocal(next);
@@ -92,15 +103,20 @@ export function ItemEstimateSection({
     }
   }
 
+  const loginHref = `/auth?mode=login&next=${encodeURIComponent(`/i/${itemId}#estimate`)}`;
+
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
+    <section
+      id="estimate"
+      className="scroll-mt-24 rounded-2xl border border-accent-soft-border bg-accent-soft/40 p-6"
+    >
       <h2 className="section-title mb-1 mt-0 text-[20px]">Estimated value</h2>
       <p className="mt-0 mb-4 text-[14px] text-muted-2">
-        Optional. Separate from photo identify — run only when you want a market range.
+        Optional fair-market range — separate from photo identify.
       </p>
 
       {valued ? (
-        <div className="rounded-[12px] border border-accent-soft-border bg-accent-soft px-4 py-4">
+        <div className="rounded-[12px] border border-accent-soft-border bg-white px-4 py-4">
           <p className="eyebrow m-0 text-accent-hover">Estimated fair market value</p>
           <p className="section-title m-0 mt-1 text-[32px]">
             {formatEstimateMidLabel(current)}
@@ -116,13 +132,23 @@ export function ItemEstimateSection({
           </p>
         </div>
       ) : (
-        <div className="rounded-[12px] border border-dashed border-line bg-ground px-4 py-4">
+        <div className="rounded-[12px] border border-dashed border-accent-soft-border bg-white px-4 py-4">
           <p className="m-0 text-[15px] font-semibold text-ink">No estimate yet</p>
           <p className="m-0 mt-1 text-[14px] text-muted-2">
             {isOwner
-              ? "Use Get estimate below for an AI market range, or enter your own low–high."
-              : "The owner hasn’t added a market estimate for this item."}
+              ? "Tap Get estimate for an AI market range, or enter your own low–high dollars."
+              : signedIn
+                ? "Only the owner can add an estimate for this item."
+                : "Sign in as the owner to run Get estimate on this item."}
           </p>
+          {!isOwner && !signedIn ? (
+            <Link
+              href={loginHref}
+              className="mt-3 inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
+            >
+              Log in to estimate
+            </Link>
+          ) : null}
         </div>
       )}
 
