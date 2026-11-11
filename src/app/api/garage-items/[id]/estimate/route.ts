@@ -127,6 +127,8 @@ async function generateAiEstimate(item: {
   size: string;
   discipline: string;
   description: string;
+  /** Exact-model eBay asking prices (fewer than 5) to ground the estimate. */
+  comps?: Array<{ title: string; price: number }>;
 }): Promise<ItemEstimate> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
@@ -134,6 +136,13 @@ async function generateAiEstimate(item: {
       "Estimates are not configured. Add OPENAI_API_KEY to the server environment.",
     );
   }
+
+  const compsBlock = item.comps?.length
+    ? `\nCurrent eBay ASKING prices for this exact model (not sold prices; private sales usually close 10-25% below ask; dealer listings sit higher):\n${item.comps
+        .slice(0, 10)
+        .map((c) => `- $${Math.round(c.price)} — ${c.title.slice(0, 100)}`)
+        .join("\n")}\n`
+    : "";
 
   const prompt = `You estimate used bicycle / part fair market value in USD for Cycle Found.
 Return JSON only:
@@ -158,7 +167,8 @@ Category: ${item.category || "Unknown"}
 Condition: ${item.condition || "Unknown"}
 Size/spec: ${item.size || "Unknown"}
 Discipline: ${item.discipline || "Unknown"}
-Notes: ${item.description?.slice(0, 400) || "None"}`;
+Notes: ${item.description?.slice(0, 400) || "None"}
+${compsBlock}`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -240,6 +250,7 @@ async function generateMarketEstimate(row: Record<string, unknown>): Promise<{
 
   let ebayFallbackMessage: string | null = null;
   let ebayQuery = "";
+  let ebayComps: Array<{ title: string; price: number }> = [];
 
   if (ebayBrowseConfigured()) {
     const input = {
@@ -291,6 +302,7 @@ async function generateMarketEstimate(row: Record<string, unknown>): Promise<{
         };
       }
       ebayFallbackMessage = ebay.message || "Not enough eBay listings found.";
+      ebayComps = (ebay.matched || []).map((m) => ({ title: m.title, price: m.price }));
       ebayQuery = ebay.query || ebayQuery;
     } catch (err) {
       console.warn(
@@ -312,6 +324,7 @@ async function generateMarketEstimate(row: Record<string, unknown>): Promise<{
     size,
     discipline,
     description: String(row.description || row.modifications || ""),
+    comps: ebayComps,
   });
 
   const estimate: ItemEstimate = {

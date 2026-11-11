@@ -22,6 +22,14 @@ export type EbayActiveResult = {
   high: number | null;
   count: number;
   samples: EbayActiveSample[];
+  /**
+   * Listings that matched the exact model (pre-IQR), up to 10.
+   * Populated even when available=false so the AI fallback can be
+   * grounded in the few real comps that exist.
+   */
+  matched?: EbayActiveSample[];
+  /** Raw listings returned by eBay before model/title filtering. */
+  rawCount?: number;
   query: string;
   fetchedAt: string;
   message: string | null;
@@ -103,11 +111,90 @@ export function buildEbayActiveQuery(input: EbayActiveQueryInput): string {
   return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, 80);
 }
 
+/**
+ * Bump when filtering/aggregation logic changes so stale aggregates in
+ * `ebay_price_cache` (computed with the old rules) are not reused.
+ */
+const CACHE_KEY_VERSION = "v2";
+
 export function normalizeEbayQueryKey(query: string) {
-  return String(query || "")
+  const q = String(query || "")
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+  return q ? `${CACHE_KEY_VERSION}:${q}` : "";
+}
+
+/* ------------------------------------------------------------------ */
+/* Model matching                                                      */
+/* ------------------------------------------------------------------ */
+
+const MODEL_NOISE_TOKENS = new Set([
+  "bike", "bicycle", "road", "mountain", "mtb", "gravel", "complete", "frame",
+  "frameset", "carbon", "aluminum", "alloy", "steel", "used", "the", "and",
+  "with", "series", "xs", "s", "m", "l", "xl", "xxl",
+]);
+
+export type ModelMatcher = {
+  /** Tokens containing digits (e.g. "5.5", "sl6", "1x"). All required, strict boundaries. */
+  numeric: string[];
+  /** First alpha token (model family, e.g. "madone"). Required when present. */
+  family: string | null;
+};
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Pull the distinguishing tokens out of a model name.
+ * "Madone 5.5"  → { family: "madone", numeric: ["5.5"] }
+ * "Tarmac SL7"  → { family: "tarmac", numeric: ["sl7"] }
+ * Years (19xx/20xx) and frame sizes ("54cm", "56") are ignored — those
+ * are handled by the search query, not the identity of the model.
+ */
+export function buildModelMatcher(model: string, manufacturer = ""): ModelMatcher {
+  const brandTokens = new Set(
+    cleanPart(manufacturer).toLowerCase().split(/\s+/).filter(Boolean),
+  );
+  const tokens = cleanPart(model)
+    .toLowerCase()
+    .split(/[\s/]+/)
+    .map((t) => t.replace(/^[-.]+|[-.]+$/g, ""))
+    .filter(Boolean)
+    .filter((t) => !brandTokens.has(t))
+    .filter((t) => !MODEL_NOISE_TOKENS.has(t))
+    .filter((t) => !/^(19|20)\d{2}$/.test(t)) // years
+    .filter((t) => !/^\d{2}(\.\d)?\s*cm$/.test(t)) // 54cm
+    .filter((t) => !/^\d{2}$/.test(t)); // bare frame size like "54"
+
+  const numeric = tokens.filter((t) => /\d/.test(t));
+  const family = tokens.find((t) => !/\d/.test(t) && t.length >= 2) || null;
+  return { numeric, family };
+}
+
+/**
+ * True when a listing title is the same model, not a sibling tier.
+ * "Trek Madone 5.5 54cm"        ✓  for Madone 5.5
+ * "2010 Trek Madone 4.5, 52cm"  ✗  (4.5 ≠ 5.5)
+ * "Trek Madone 5.2 Series 5"    ✗
+ */
+export function titleMatchesModel(title: string, matcher: ModelMatcher) {
+  const t = String(title || "").toLowerCase();
+  if (!t) return false;
+  if (!matcher.family && !matcher.numeric.length) return true; // nothing to check
+
+  if (matcher.family) {
+    const re = new RegExp(`(?<![a-z])${escapeRegExp(matcher.family)}(?![a-z])`);
+    if (!re.test(t)) return false;
+  }
+
+  for (const tok of matcher.numeric) {
+    // Not part of a longer number: blocks "15.5", "5.52", "5.5.1", "45".
+    const re = new RegExp(`(?<![\\d.])${escapeRegExp(tok)}(?![\\d]|\\.\\d)`);
+    if (!re.test(t)) return false;
+  }
+  return true;
 }
 
 export function shouldKeepListingTitle(
@@ -165,17 +252,25 @@ export function estimateFromActiveListings(
   query: string,
   subjectKind: EbayActiveQueryInput["subjectKind"] = "bike",
   bikeState?: EbayActiveQueryInput["bikeState"],
+  model?: { model?: string; manufacturer?: string },
 ): EbayActiveResult {
   const fetchedAt = new Date().toISOString();
   const q = String(query || "").trim();
+  const matcher = buildModelMatcher(model?.model || "", model?.manufacturer || "");
 
   const filtered = listings.filter(
     (l) =>
       l &&
       Number.isFinite(l.price) &&
       l.price > 0 &&
-      shouldKeepListingTitle(l.title, subjectKind, bikeState),
+      shouldKeepListingTitle(l.title, subjectKind, bikeState) &&
+      titleMatchesModel(l.title, matcher),
   );
+
+  const matched: EbayActiveSample[] = [...filtered]
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 10)
+    .map((l) => ({ title: l.title, price: Math.round(l.price), url: l.url, image: l.image }));
 
   const keptPrices = filterOutliersIqr(filtered.map((l) => l.price));
   if (keptPrices.length < 5) {
@@ -187,12 +282,14 @@ export function estimateFromActiveListings(
       high: null,
       count: keptPrices.length,
       samples: [],
+      matched,
+      rawCount: listings.length,
       query: q,
       fetchedAt,
       message:
         keptPrices.length === 0
-          ? "No matching eBay listings found."
-          : `Only ${keptPrices.length} eBay listings after filters — need at least 5.`,
+          ? "No eBay listings matched this exact model."
+          : `Only ${keptPrices.length} eBay listings matched this exact model — need at least 5.`,
     };
   }
 
@@ -228,6 +325,8 @@ export function estimateFromActiveListings(
     high,
     count: sorted.length,
     samples,
+    matched,
+    rawCount: listings.length,
     query: q,
     fetchedAt,
     message: null,

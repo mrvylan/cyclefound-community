@@ -269,6 +269,7 @@ export async function estimateEbayActiveValue(
       query,
       input.subjectKind,
       input.bikeState,
+      { model: input.model, manufacturer: input.manufacturer },
     );
   } catch (err) {
     console.warn("[ebay] active estimate soft-fail:", err instanceof Error ? err.message : err);
