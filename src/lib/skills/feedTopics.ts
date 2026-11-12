@@ -6,7 +6,7 @@
 import { SKILL_TAXONOMY, type SkillDef } from "./taxonomy";
 
 export type AskIntent = {
-  id: "fix" | "find" | "value" | "build";
+  id: "fix" | "find" | "value" | "build" | "other";
   label: string;
   /** Short helper under the ask box */
   blurb: string;
@@ -16,7 +16,7 @@ export type AskIntent = {
   tagMatchers: string[];
 };
 
-/** Four intents — one row, instantly answerable. */
+/** Intent chips — Fix / Find / Value / Build, plus Other last. */
 export const ASK_INTENTS: AskIntent[] = [
   {
     id: "fix",
@@ -90,6 +90,13 @@ export const ASK_INTENTS: AskIntent[] = [
       "brazing",
       "setup",
     ],
+  },
+  {
+    id: "other",
+    label: "Other",
+    blurb: "Anything else — stories, advice, or questions that don’t fit the jobs above.",
+    example: "e.g. First vintage ride meetup tips — what should I bring and ask about?",
+    tagMatchers: ["other", "general", "misc"],
   },
 ];
 
@@ -191,8 +198,11 @@ export function suggestIntentFromText(raw: string): AskIntent["id"] | "" {
     find: 0,
     value: 0,
     build: 0,
+    other: 0,
   };
+  // Never auto-pick Other from keywords — only the four job intents.
   for (const intent of ASK_INTENTS) {
+    if (intent.id === "other") continue;
     for (const m of intent.tagMatchers) {
       if (t.includes(m)) scores[intent.id] += 2;
     }

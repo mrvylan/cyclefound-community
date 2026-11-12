@@ -11,6 +11,7 @@ import { InstalledPartsSection } from "@/components/garage/InstalledPartsSection
 import { ItemDescription } from "@/components/garage/ItemDescription";
 import { ItemEstimateSection } from "@/components/garage/ItemEstimateSection";
 import { ItemSpecsCard } from "@/components/garage/ItemSpecsCard";
+import { PhotoLightbox } from "@/components/garage/PhotoLightbox";
 import { MessageOwner } from "@/components/messaging/MessageOwner";
 import {
   Avatar,
@@ -58,6 +59,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [photo, setPhoto] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [range, setRange] = useState<"1Y" | "5Y" | "All">("5Y");
   const [watching, setWatching] = useState(false);
   const [sessionHandle, setSessionHandle] = useState("");
@@ -174,12 +176,22 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
         <div className="flex min-w-0 flex-col gap-2.5">
           {itemPhotos.length ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={itemPhotos[photo] ?? itemPhotos[0]}
-              alt=""
-              className="aspect-[4/3] max-h-[520px] min-h-[280px] w-full rounded-[18px] object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              aria-label={`View photo ${photo + 1} of ${itemPhotos.length} full size`}
+              className="group relative block w-full overflow-hidden rounded-[18px] p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={itemPhotos[photo] ?? itemPhotos[0]}
+                alt=""
+                className="aspect-[4/3] max-h-[520px] min-h-[280px] w-full object-cover transition-[filter] group-hover:brightness-[0.97]"
+              />
+              <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-ink/70 px-3 py-1.5 font-mono text-[11px] font-medium tracking-[0.06em] text-white uppercase opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                View larger
+              </span>
+            </button>
           ) : (
             <PlaceholderPhoto
               label={`Photo ${photo + 1} of ${labels.length} · ${labels[photo] ?? "Item"}`}
@@ -204,6 +216,16 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               </button>
             ))}
           </div>
+          {itemPhotos.length ? (
+            <PhotoLightbox
+              photos={itemPhotos}
+              index={photo}
+              alt={displayTitle}
+              open={lightboxOpen}
+              onClose={() => setLightboxOpen(false)}
+              onIndexChange={setPhoto}
+            />
+          ) : null}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-[18px] lg:row-span-2">

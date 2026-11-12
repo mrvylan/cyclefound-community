@@ -112,7 +112,7 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
         onChange={(e) => setText(e.target.value)}
         placeholder={
           intentMeta?.example ||
-          "e.g. What’s stuck — pick Fix, Find, Value, or Build above for a matching example"
+          "e.g. What’s stuck — pick Fix, Find, Value, Build, or Other above for a matching example"
         }
         className="resize-none rounded-md border-0 bg-transparent text-base leading-normal text-ink outline-none placeholder:text-meta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       />

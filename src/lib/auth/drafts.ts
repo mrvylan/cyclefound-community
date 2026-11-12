@@ -8,7 +8,7 @@ export type AskDraft = {
   title: string;
   body: string;
   tags: string[];
-  /** Fix / Find / Value / Build intent id */
+  /** Fix / Find / Value / Build / Other intent id */
   intent?: string;
   /** @deprecated Prefer intent */
   category?: string;

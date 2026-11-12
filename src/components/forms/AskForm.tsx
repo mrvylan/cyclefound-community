@@ -214,7 +214,7 @@ export function AskForm() {
       return;
     }
     if (!intent) {
-      setError("Pick what you’re trying to do — Fix, Find, Value, or Build.");
+      setError("Pick what you’re trying to do — Fix, Find, Value, Build, or Other.");
       return;
     }
     if (!tags.length) {
@@ -277,8 +277,8 @@ export function AskForm() {
         <div className="flex flex-col gap-2">
           <span className="text-[14px] font-semibold">What are you trying to do?</span>
           <p className="m-0 text-[13px] text-muted-2">
-            Intent routes your question into Fix / Find / Value / Build. Expertise tags
-            (next) match people who know the brand or discipline.
+            Intent routes your question into Fix / Find / Value / Build / Other. Expertise
+            tags (next) match people who know the brand or discipline.
           </p>
           <ChipRadioGroup
             ariaLabel="Question intent"

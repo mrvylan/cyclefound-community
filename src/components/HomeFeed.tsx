@@ -106,7 +106,7 @@ export function HomeFeed() {
         ? {
             title: "No questions in this view",
             description:
-              "Try another filter, or ask the community — Fix, Find, Value, or Build.",
+              "Try another filter, or ask the community — Fix, Find, Value, Build, or Other.",
             actionLabel: "Ask the community",
             actionHref: "/ask",
           }
@@ -207,7 +207,7 @@ export function HomeFeed() {
             <div>
               <p className="m-0 text-[17px] font-semibold text-ink">Didn&apos;t find it?</p>
               <p className="m-0 text-[14px] text-muted-2">
-                Ask the community — Fix it, Find it, Value it, or Build it.
+                Ask the community — Fix it, Find it, Value it, Build it, or Other.
               </p>
             </div>
             <a
