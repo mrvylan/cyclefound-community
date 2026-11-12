@@ -189,34 +189,16 @@ export function HomeFeed() {
         shown.map((q) => <QuestionCard key={q.id} q={q} />)
       )}
 
-      {ready && filtered.length > 0 ? (
-        <div className="flex flex-col items-center gap-4 pt-2">
-          {remaining > 0 ? (
-            <button
-              type="button"
-              onClick={() => setVisible((v) => v + PAGE_SIZE)}
-              className="inline-flex h-11 items-center rounded-[10px] border border-[#D4D3CD] bg-white px-6 text-[15px] font-semibold text-ink hover:border-ink"
-            >
-              Load more
-              <span className="ml-2 font-mono text-[12px] text-meta">{remaining} left</span>
-            </button>
-          ) : (
-            <p className="m-0 text-[13px] text-meta">You&apos;re all caught up.</p>
-          )}
-          <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-[14px] border border-accent-soft-border bg-accent-soft p-5">
-            <div>
-              <p className="m-0 text-[17px] font-semibold text-ink">Didn&apos;t find it?</p>
-              <p className="m-0 text-[14px] text-muted-2">
-                Ask the community — Fix it, Find it, Value it, Build it, or Other.
-              </p>
-            </div>
-            <a
-              href="#home-ask-composer"
-              className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white no-underline hover:bg-accent-hover hover:text-white"
-            >
-              Ask above
-            </a>
-          </div>
+      {ready && remaining > 0 ? (
+        <div className="flex flex-col items-center pt-2">
+          <button
+            type="button"
+            onClick={() => setVisible((v) => v + PAGE_SIZE)}
+            className="inline-flex h-11 items-center rounded-[10px] border border-[#D4D3CD] bg-white px-6 text-[15px] font-semibold text-ink hover:border-ink"
+          >
+            Load more
+            <span className="ml-2 font-mono text-[12px] text-meta">{remaining} left</span>
+          </button>
         </div>
       ) : null}
     </div>
