@@ -104,13 +104,13 @@ export async function GET(request: Request) {
   if (ownerIds.length) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, display_name")
+      .select("id, handle, display_name")
       .in("id", ownerIds);
     for (const p of profiles || []) {
-      handleByOwner.set(
-        String(p.id),
-        communityHandleFromProfile(String(p.id), String(p.display_name || "Member")),
-      );
+      const handle =
+        String(p.handle || "").trim().toLowerCase() ||
+        communityHandleFromProfile(String(p.id), String(p.display_name || "Member"));
+      handleByOwner.set(String(p.id), handle);
     }
   }
 

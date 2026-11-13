@@ -1,78 +1,153 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PhotoPicker } from "@/components/forms/PhotoPicker";
+import { HandlePicker } from "@/components/forms/HandlePicker";
 import { SkillsEditor } from "@/components/forms/SkillsEditor";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
-import {
-  isClaimableHandle,
-  normalizeClaimedHandle,
-} from "@/lib/data/handles";
 import {
   getSessionHandle,
   postItem,
   saveProfilePatch,
   setSessionHandle,
 } from "@/lib/data/local-store";
-import { handleFromAuthProfile } from "@/lib/demo-session";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
+
+const STEP_LABELS: Record<Step, string> = {
+  1: "Handle",
+  2: "Expertise",
+  3: "Garage",
+  4: "Wanted",
+};
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { ready, user, profile } = useAuth();
+  const { ready, user, profile, refresh } = useAuth();
   const [step, setStep] = useState<Step>(1);
-  const [claimedHandle, setClaimedHandle] = useState("");
+  const [handle, setHandle] = useState("");
+  const [handleReady, setHandleReady] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [year, setYear] = useState("");
   const [wantedText, setWantedText] = useState("");
   const [error, setError] = useState("");
-
-  const handle = useMemo(() => {
-    if (profile) return handleFromAuthProfile(profile);
-    return getSessionHandle();
-  }, [profile]);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
-    if (!user && !getSessionHandle()) {
+    if (!user) {
       router.replace(authHref("join", "/onboarding"));
     }
   }, [ready, user, router]);
 
-  function persistProfileBasics() {
-    if (!handle) return;
-    setSessionHandle(handle);
-    const nextClaim = normalizeClaimedHandle(claimedHandle);
-    saveProfilePatch(handle, {
-      skills: normalizeSkillLabels(skills),
-      wantedLines: [],
-      ...(nextClaim && isClaimableHandle(nextClaim)
-        ? { claimedHandle: nextClaim }
-        : {}),
-    });
+  useEffect(() => {
+    if (!ready || !user || bootstrapped) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/profile/handle?suggest=1", {
+          cache: "no-store",
+        });
+        const data = (await res.json()) as {
+          suggested?: string;
+          current?: string | null;
+        };
+        if (cancelled) return;
+        if (data.current) {
+          setSessionHandle(data.current);
+          setHandle(data.current);
+          setHandleReady(true);
+          setStep(2);
+        } else if (data.suggested) {
+          setHandle(data.suggested);
+        }
+      } catch {
+        /* keep empty; user can type */
+      } finally {
+        if (!cancelled) setBootstrapped(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, user, bootstrapped]);
+
+  const onAvailability = useCallback(
+    (state: {
+      checking: boolean;
+      available: boolean;
+      error: string;
+      suggestions: string[];
+    }) => {
+      setHandleReady(!state.checking && state.available);
+    },
+    [],
+  );
+
+  async function claimHandleAndContinue() {
+    setError("");
+    setClaiming(true);
+    try {
+      const res = await fetch("/api/profile/handle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle, initial: true }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        handle?: string;
+        error?: string;
+        suggestions?: string[];
+      };
+      if (!res.ok || !data.ok || !data.handle) {
+        setError(data.error || "Could not claim that handle.");
+        if (data.suggestions?.[0]) setHandle(data.suggestions[0]);
+        return;
+      }
+      setSessionHandle(data.handle);
+      setHandle(data.handle);
+      await refresh();
+      setStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not claim handle.");
+    } finally {
+      setClaiming(false);
+    }
+  }
+
+  function sessionOrClaimed() {
+    return handle || getSessionHandle() || profile?.handle || "";
   }
 
   function persistSkills() {
-    persistProfileBasics();
+    const h = sessionOrClaimed();
+    if (!h) return;
+    setSessionHandle(h);
+    saveProfilePatch(h, {
+      skills: normalizeSkillLabels(skills),
+      claimedHandle: h,
+    });
   }
 
   function onFinishWanted() {
-    if (!handle) return;
+    const h = sessionOrClaimed();
+    if (!h) return;
     const wantedLines = wantedText
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean)
       .slice(0, 8);
-    saveProfilePatch(handle, {
+    saveProfilePatch(h, {
       skills: normalizeSkillLabels(skills),
       wantedLines,
+      claimedHandle: h,
     });
     router.replace("/?onboarded=1");
   }
@@ -87,7 +162,8 @@ export default function OnboardingPage() {
       setError("Add at least one photo.");
       return;
     }
-    if (handle) setSessionHandle(handle);
+    const h = sessionOrClaimed();
+    if (h) setSessionHandle(h);
     persistSkills();
     postItem({
       title: title.trim(),
@@ -102,10 +178,10 @@ export default function OnboardingPage() {
       provenance: "",
       photoDataUrls: photos,
     });
-    setStep(3);
+    setStep(4);
   }
 
-  if (!ready) {
+  if (!ready || !bootstrapped) {
     return (
       <div className="mx-auto max-w-[640px] px-8 py-16 text-[15px] text-muted">
         Loading…
@@ -116,70 +192,69 @@ export default function OnboardingPage() {
   return (
     <div className="mx-auto max-w-[640px] px-8 py-10 pb-16">
       <p className="eyebrow m-0">Welcome</p>
-      <h1 className="section-title m-0 text-[clamp(36px,5vw,52px)]">Set up your profile</h1>
+      <h1 className="section-title m-0 text-[clamp(36px,5vw,52px)]">
+        {step === 1 ? "Choose your handle" : "Set up your profile"}
+      </h1>
       <p className="mt-2 text-[15px] text-muted-2">
-        Three quick steps — you can skip and finish later from Edit profile.
+        {step === 1
+          ? "Pick how riders will find and mention you. Expertise, garage, and wanted are optional next."
+          : "You can skip the rest and finish later from Edit profile."}
       </p>
 
-      <ol className="mt-5 flex list-none gap-2 p-0 font-mono text-[12px] tracking-wide uppercase">
-        {([1, 2, 3] as Step[]).map((n) => (
+      <ol className="mt-5 flex list-none flex-wrap gap-2 p-0 font-mono text-[12px] tracking-wide uppercase">
+        {([1, 2, 3, 4] as Step[]).map((n) => (
           <li
             key={n}
             className={`rounded-full px-3 py-1 ${
               step === n ? "bg-ink text-white" : "bg-ground text-muted"
             }`}
           >
-            {n === 1 ? "Expertise" : n === 2 ? "Garage" : "Wanted"}
+            {STEP_LABELS[n]}
           </li>
         ))}
       </ol>
 
       {step === 1 ? (
         <section className="mt-8 flex flex-col gap-4">
+          <HandlePicker
+            value={handle}
+            onChange={(v) => {
+              setHandle(v);
+              setError("");
+            }}
+            onAvailability={onAvailability}
+            disabled={claiming}
+          />
+          {error ? (
+            <p className="m-0 text-[14px] text-[#9B1C1C]" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={!handleReady || claiming}
+            onClick={() => void claimHandleAndContinue()}
+            className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-4 text-[14px] font-bold text-white hover:bg-accent-hover disabled:opacity-50"
+          >
+            {claiming ? "Claiming…" : "Continue"}
+          </button>
+        </section>
+      ) : null}
+
+      {step === 2 ? (
+        <section className="mt-8 flex flex-col gap-4">
           <h2 className="section-title m-0 text-[28px]">What do you know?</h2>
           <p className="m-0 text-[14px] text-meta">
-            Claim a public handle, then build a short expertise list — same tags Members use
-            to find you.
+            Build a short expertise list — same tags Members use to find you.
           </p>
-          <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
-            Public handle
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[15px] text-muted">@</span>
-              <input
-                value={claimedHandle}
-                onChange={(e) =>
-                  setClaimedHandle(
-                    e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24),
-                  )
-                }
-                placeholder="dylan_s"
-                maxLength={24}
-                className="h-11 flex-1 rounded-[10px] border border-[#D4D3CD] px-3.5 text-[15px] font-normal outline-none focus:border-accent"
-              />
-            </div>
-            <span className="font-normal text-[13px] text-meta">
-              Optional now — until you claim one, the auto-generated hash handle stays hidden.
-            </span>
-          </label>
-          <SkillsEditor
-            value={skills}
-            onChange={setSkills}
-            compact
-            max={5}
-          />
+          <SkillsEditor value={skills} onChange={setSkills} compact max={5} />
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
               disabled={skills.length === 0}
               onClick={() => {
-                const nextClaim = normalizeClaimedHandle(claimedHandle);
-                if (claimedHandle.trim() && !isClaimableHandle(nextClaim)) {
-                  setError("Handle must be 3–24 characters: letters, numbers, underscores.");
-                  return;
-                }
-                setError("");
                 persistSkills();
-                setStep(2);
+                setStep(3);
               }}
               className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-bold text-white hover:bg-accent-hover disabled:opacity-50"
             >
@@ -187,7 +262,10 @@ export default function OnboardingPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.replace("/")}
+              onClick={() => {
+                persistSkills();
+                setStep(3);
+              }}
               className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink"
             >
               Skip for now
@@ -196,7 +274,7 @@ export default function OnboardingPage() {
         </section>
       ) : null}
 
-      {step === 2 ? (
+      {step === 3 ? (
         <section className="mt-8 flex flex-col gap-4">
           <h2 className="section-title m-0 text-[28px]">Add something to your garage</h2>
           <p className="m-0 text-[14px] text-meta">
@@ -238,7 +316,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={() => {
                 persistSkills();
-                setStep(3);
+                setStep(4);
               }}
               className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold"
             >
@@ -248,7 +326,7 @@ export default function OnboardingPage() {
         </section>
       ) : null}
 
-      {step === 3 ? (
+      {step === 4 ? (
         <section className="mt-8 flex flex-col gap-4">
           <h2 className="section-title m-0 text-[28px]">Anything you&apos;re looking for?</h2>
           <p className="m-0 text-[14px] text-meta">Optional — one part per line.</p>

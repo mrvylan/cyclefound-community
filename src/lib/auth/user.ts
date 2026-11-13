@@ -14,8 +14,15 @@ export const AVATAR_COLORS = [
 export type AuthProfile = {
   id: string;
   email: string;
+  /** Private legal name — never show publicly. */
   fullName: string;
+  /**
+   * @deprecated Public identity is `handle`. Kept briefly for migration
+   * from older user_metadata.display_name values.
+   */
   displayName: string;
+  /** Public @handle from profiles.handle when loaded. */
+  handle: string;
   avatarUrl: string;
   initials: string;
   avatarColor: string;
@@ -67,27 +74,27 @@ export function profileFromUser(user: User | null): AuthProfile | null {
   if (!user) return null;
   const meta = user.user_metadata || {};
   const fullName = String(meta.full_name || meta.name || "").trim();
-  const displayName = String(
-    meta.display_name || firstName(fullName) || user.email?.split("@")[0] || "Rider",
-  ).trim();
+  const handle = String(meta.handle || "").trim().toLowerCase();
+  // Legacy only — not for public UI.
+  const displayName = String(meta.display_name || "").trim();
   return {
     id: user.id,
     email: user.email || "",
     fullName,
     displayName,
+    handle,
     avatarUrl: String(meta.avatar_url || "").trim(),
-    initials: initialsFromName(fullName || displayName, user.email),
+    initials: initialsFromName(handle || fullName || user.email || "CF", user.email),
     avatarColor: colorForId(user.id),
   };
 }
 
-export function signupMetadata(fullName: string, displayName?: string) {
+/** Join OTP metadata — full_name only (handle claimed in onboarding). */
+export function signupMetadata(fullName: string) {
   const trimmed = String(fullName).trim();
-  const publicName = String(displayName || "").trim() || firstName(trimmed) || "Rider";
   const attestedAt = new Date().toISOString();
   return {
     full_name: trimmed,
-    display_name: publicName,
     age_attested: true,
     age_attested_at: attestedAt,
     accepted_terms: true,
@@ -96,14 +103,14 @@ export function signupMetadata(fullName: string, displayName?: string) {
   };
 }
 
-/** Compact label for menus (e.g. "Dylan S."). */
-export function abbreviatedDisplayName(fullOrDisplay: string) {
-  const parts = String(fullOrDisplay || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]} ${parts[1]![0]!.toUpperCase()}.`;
+/** Compact public label from a handle (e.g. "@dylan_s"). */
+export function abbreviatedDisplayName(handleOrName: string) {
+  const raw = String(handleOrName || "").trim();
+  if (!raw) return "@member";
+  if (raw.startsWith("@")) return raw;
+  if (/^[a-z][a-z0-9_]{2,19}$/i.test(raw) && !/\s/.test(raw)) {
+    return `@${raw.toLowerCase()}`;
   }
-  return parts[0] || "Rider";
+  // Legacy full/display names — do not surface; fall back.
+  return "@member";
 }

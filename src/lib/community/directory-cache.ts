@@ -58,20 +58,23 @@ function locOf(city?: string | null, state?: string | null) {
 
 function personFromRow(row: {
   id: string;
-  display_name: string | null;
+  handle?: string | null;
+  display_name?: string | null;
   avatar_url: string | null;
   city: string | null;
   state: string | null;
   created_at: string | null;
 }): DirectoryMember {
-  const name = String(row.display_name || "").trim() || "Member";
-  const handle = communityHandleFromProfile(row.id, name);
+  const handle =
+    String(row.handle || "").trim().toLowerCase() ||
+    communityHandleFromProfile(row.id, String(row.display_name || "member"));
+  const name = `@${handle}`;
   const year = row.created_at ? String(new Date(row.created_at).getFullYear()) : "2026";
   const badge = roleBadgeForMember({ userId: row.id, handle });
   const person: Person = {
     handle,
     name,
-    init: initialsFromName(name),
+    init: initialsFromName(handle),
     bg: colorForId(row.id),
     role: badge,
     loc: locOf(row.city, row.state),
@@ -90,6 +93,7 @@ function personFromRow(row: {
     roleBadge: badge,
     memberSince: year,
     avatarUrl: row.avatar_url || undefined,
+    publicHandle: handle,
   };
   return { userId: row.id, handle, person };
 }
@@ -198,7 +202,8 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
     const dirPayload = (await dirRes.json().catch(() => ({}))) as {
       members?: Array<{
         id: string;
-        display_name: string | null;
+        handle?: string | null;
+        display_name?: string | null;
         avatar_url: string | null;
         city: string | null;
         state: string | null;

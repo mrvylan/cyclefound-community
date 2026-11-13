@@ -328,14 +328,11 @@ export default function MembersPage() {
                   <div className="flex items-center gap-3.5">
                     <Avatar init={m.init} bg={m.bg} size={52} src={m.avatarUrl} />
                     <div className="min-w-0 flex-1">
-                      <div className="text-[17px] font-bold">{m.name}</div>
+                      <div className="text-[17px] font-bold">
+                        {m.publicHandle ? `@${m.publicHandle}` : m.name}
+                      </div>
                       <div className="text-[13px] text-meta">
-                        {[
-                          m.publicHandle ? `@${m.publicHandle}` : null,
-                          m.loc ? m.loc.split("·")[0]?.trim() : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "Member"}
+                        {m.loc ? m.loc.split("·")[0]?.trim() : "Member"}
                       </div>
                     </div>
                   </div>

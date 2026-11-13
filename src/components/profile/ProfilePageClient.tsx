@@ -140,8 +140,9 @@ export function ProfilePageClient({ handle }: { handle: string }) {
     );
   }
 
-  const firstName = person.name.split(" ")[0] || person.name;
   const publicHandle = displayHandleFor(person);
+  const publicLabel = publicHandle ? `@${publicHandle}` : person.name;
+  const askLabel = publicHandle ? `Ask @${publicHandle}` : "Ask";
   const acceptedCount = Math.max(
     person.accepted || 0,
     contribution?.activity.accepted ?? 0,
@@ -162,13 +163,13 @@ export function ProfilePageClient({ handle }: { handle: string }) {
       <section className="bg-ink text-white">
         <ProfileCover
           handle={handle}
-          fallbackLabel={`Cover photo: ${firstName}'s workshop`}
+          fallbackLabel={`Cover photo: ${publicLabel}'s workshop`}
         />
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-end gap-x-8 gap-y-6 px-8 pb-8 pt-2">
           <ProfileIdentity
             handle={handle}
             fallback={{
-              name: person.name,
+              name: publicLabel,
               init: person.init,
               bg: person.bg,
               avatarUrl: person.avatarUrl,
@@ -192,7 +193,7 @@ export function ProfilePageClient({ handle }: { handle: string }) {
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">
               <ProfileDisplayName
                 handle={handle}
-                fallback={person.name}
+                fallback={publicLabel}
                 className="section-title m-0 text-[clamp(36px,5vw,54px)] leading-none !text-white"
               />
               <Feature name="spokesLevels">
@@ -209,7 +210,6 @@ export function ProfilePageClient({ handle }: { handle: string }) {
             </div>
             <p className="m-0 text-[15px] text-on-dark-muted">
               {[
-                publicHandle ? `@${publicHandle}` : null,
                 person.loc ? person.loc.split(" · ")[0] : null,
                 `Member since ${person.memberSince}`,
                 askedCount > 0 ? `${askedCount} asked` : null,
@@ -253,9 +253,9 @@ export function ProfilePageClient({ handle }: { handle: string }) {
               <>
                 <MessageMember
                   handle={person.handle}
-                  name={person.name}
+                  name={publicLabel}
                   variant="dark"
-                  askLabel={`Ask ${firstName}`}
+                  askLabel={askLabel}
                   showWhenSelf={previewVisitor}
                 />
                 <Feature name="followGarage">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AuthSessionSync } from "@/components/auth/AuthSessionSync";
+import { RequireHandle } from "@/components/auth/RequireHandle";
 import { CommunityDataSync } from "@/components/community/CommunityDataSync";
 import { AnalyticsLoader, CookieSettings } from "@/components/CookieSettings";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
@@ -48,12 +49,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteGate>
           <AuthProvider>
             <AuthSessionSync />
-            <CommunityDataSync />
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-            <CookieSettings />
-            <AnalyticsLoader />
+            <RequireHandle>
+              <CommunityDataSync />
+              <SiteHeader />
+              <main className="flex-1">{children}</main>
+              <SiteFooter />
+              <CookieSettings />
+              <AnalyticsLoader />
+            </RequireHandle>
           </AuthProvider>
         </SiteGate>
       </body>

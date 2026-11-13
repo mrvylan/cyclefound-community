@@ -37,7 +37,6 @@ type PendingAuth = {
   email: string;
   intent: OtpIntent;
   fullName?: string;
-  displayName?: string;
   next: string;
 };
 
@@ -122,7 +121,6 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -140,7 +138,6 @@ export function AuthForm() {
       setEmail(pending.email);
       setOtpIntent(pending.intent);
       if (pending.fullName) setFullName(pending.fullName);
-      if (pending.displayName) setDisplayName(pending.displayName);
       if (initialMode === "otp" || (!searchParams.get("mode") && pending.email)) {
         // Keep otp screen if we already sent a code this session.
         if (initialMode === "otp") setMode("otp");
@@ -176,7 +173,6 @@ export function AuthForm() {
     intent: OtpIntent,
     targetEmail: string,
     name?: string,
-    publicName?: string,
   ) {
     const cleanEmail = validateEmail(targetEmail);
     const supabase = createClient();
@@ -189,10 +185,7 @@ export function AuthForm() {
       options: {
         shouldCreateUser: intent === "join",
         emailRedirectTo,
-        data:
-          intent === "join" && name
-            ? signupMetadata(name, publicName)
-            : undefined,
+        data: intent === "join" && name ? signupMetadata(name) : undefined,
       },
     });
     if (error) throw error;
@@ -201,7 +194,6 @@ export function AuthForm() {
       email: cleanEmail,
       intent,
       fullName: name,
-      displayName: publicName,
       next: dest,
     });
     setEmail(cleanEmail);
@@ -247,13 +239,12 @@ export function AuthForm() {
     setLoading(true);
     try {
       if (!fullName.trim()) throw new Error("Full name is required.");
-      if (!displayName.trim()) throw new Error("Display name is required.");
       if (!acceptedTerms) {
         throw new Error(
           "Please confirm you are 18+ and agree to the Terms and Privacy Policy.",
         );
       }
-      await sendOtp("join", email, fullName.trim(), displayName.trim());
+      await sendOtp("join", email, fullName.trim());
     } catch (error) {
       setBanner({ type: "error", text: toAuthErrorMessage(error) });
     } finally {
@@ -333,7 +324,7 @@ export function AuthForm() {
       const intent = pending?.intent || otpIntent;
       if (intent === "join" && pending?.fullName && data.user) {
         await supabase.auth.updateUser({
-          data: signupMetadata(pending.fullName, pending.displayName),
+          data: signupMetadata(pending.fullName),
         });
       }
 
@@ -391,12 +382,7 @@ export function AuthForm() {
     setBanner(null);
     setLoading(true);
     try {
-      await sendOtp(
-        otpIntent,
-        email,
-        fullName || undefined,
-        displayName || undefined,
-      );
+      await sendOtp(otpIntent, email, fullName || undefined);
     } catch (error) {
       setBanner({ type: "error", text: toAuthErrorMessage(error) });
     } finally {
@@ -480,17 +466,6 @@ export function AuthForm() {
               autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </Field>
-          <Field id="displayName" label="Display name (public)">
-            <input
-              id="displayName"
-              className={inputClass}
-              autoComplete="nickname"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="How others will see you"
               required
             />
           </Field>

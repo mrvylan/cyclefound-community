@@ -162,7 +162,10 @@ export function ItemCard({
           ) : null}
           {owner ? (
             <span className="text-[13px] text-meta">
-              {owner.name} · {cityFromLoc(owner.loc)}
+              {owner.publicHandle
+                ? `@${owner.publicHandle}`
+                : owner.name}{" "}
+              · {cityFromLoc(owner.loc)}
             </span>
           ) : null}
 

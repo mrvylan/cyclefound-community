@@ -1,13 +1,16 @@
 /**
- * Duplicated from Cycle-Found-Website profileService.
- * Shared `profiles` table via RLS. Keep in sync until repos merge.
+ * Shared `profiles` table via RLS. Keep in sync with marketplace until repos merge.
+ * Community public identity is `handle`; `full_name` is private.
  */
 import { createClient } from "@/lib/supabase/client";
 
 export type SellerProfile = {
   id: string;
   fullName: string;
+  /** @deprecated Prefer handle — mirrored for marketplace during transition. */
   displayName: string;
+  handle: string;
+  handleChangedAt: string | null;
   city: string;
   state: string;
   zipCode: string;
@@ -19,10 +22,13 @@ export type SellerProfile = {
 
 function normalizeProfile(row: Record<string, unknown> | null): SellerProfile | null {
   if (!row) return null;
+  const handle = String(row.handle ?? "").trim().toLowerCase();
   return {
     id: String(row.id),
     fullName: String(row.full_name ?? ""),
-    displayName: String(row.display_name ?? ""),
+    displayName: String(row.display_name ?? handle),
+    handle,
+    handleChangedAt: (row.handle_changed_at as string | null) ?? null,
     city: String(row.city ?? ""),
     state: String(row.state ?? ""),
     zipCode: String(row.zip_code ?? ""),
@@ -34,7 +40,7 @@ function normalizeProfile(row: Record<string, unknown> | null): SellerProfile | 
 }
 
 const SELECT =
-  "id, full_name, display_name, city, state, zip_code, avatar_url, seller_type, created_at, updated_at";
+  "id, full_name, display_name, handle, handle_changed_at, city, state, zip_code, avatar_url, seller_type, created_at, updated_at";
 
 export const profileService = {
   async getMyProfile() {
@@ -76,7 +82,6 @@ export const profileService = {
 
   async updateMyProfile(updates: {
     fullName?: string;
-    displayName?: string;
     city?: string;
     state?: string;
     zipCode?: string;
@@ -93,9 +98,6 @@ export const profileService = {
 
     const payload: Record<string, string | null> = {};
     if (updates.fullName !== undefined) payload.full_name = String(updates.fullName).trim();
-    if (updates.displayName !== undefined) {
-      payload.display_name = String(updates.displayName).trim();
-    }
     if (updates.city !== undefined) payload.city = String(updates.city).trim() || null;
     if (updates.state !== undefined) payload.state = String(updates.state).trim() || null;
     if (updates.zipCode !== undefined) {
@@ -110,10 +112,6 @@ export const profileService = {
         throw new Error("Seller type must be Individual or Business.");
       }
       payload.seller_type = sellerType;
-    }
-
-    if (payload.display_name !== undefined && !payload.display_name) {
-      throw new Error("Display name is required.");
     }
 
     const { data, error } = await supabase

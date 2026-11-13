@@ -7,14 +7,12 @@ import { Camera, X } from "lucide-react";
 import { SessionPicker } from "./SessionPicker";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar } from "@/components/ui";
+import { HandlePicker } from "@/components/forms/HandlePicker";
 import { SkillsEditor } from "@/components/forms/SkillsEditor";
 import { authHref } from "@/lib/auth/redirects";
 import { handleFromAuthProfile } from "@/lib/demo-session";
-import {
-  isClaimableHandle,
-  isProvisionalHandle,
-  normalizeClaimedHandle,
-} from "@/lib/data/handles";
+import { handlePublicLabel } from "@/lib/community/handleRules";
+import { normalizeClaimedHandle } from "@/lib/data/handles";
 import {
   clampCoverPositionY,
   getGarageItemsFor,
@@ -49,8 +47,8 @@ export function ProfileEditForm() {
 
   // Empty on SSR + first client paint — session handle lives in localStorage.
   const [handle, setHandle] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [claimedHandle, setClaimedHandle] = useState("");
+  const [editHandle, setEditHandle] = useState("");
+  const [nextHandleAllowedAt, setNextHandleAllowedAt] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [coverPositionY, setCoverPositionY] = useState(50);
@@ -70,12 +68,7 @@ export function ProfileEditForm() {
     if (!h) return;
     const person = getMergedPerson(h);
     if (person) {
-      setDisplayName(person.name);
-      setClaimedHandle(
-        person.publicHandle && !isProvisionalHandle(person.publicHandle)
-          ? person.publicHandle
-          : "",
-      );
+      setEditHandle(person.publicHandle || person.handle || h);
       const parsed = parsePublicLocation(person.loc);
       setCity(parsed.city);
       setStateCode(parsed.stateCode);
@@ -88,9 +81,8 @@ export function ProfileEditForm() {
       return;
     }
     if (profile && handleFromAuthProfile(profile) === h) {
-      setDisplayName(profile.displayName || profile.fullName || "");
+      setEditHandle(profile.handle || h);
       setAvatarUrl(profile.avatarUrl || "");
-      setClaimedHandle("");
     }
   }
 
@@ -105,7 +97,7 @@ export function ProfileEditForm() {
       load(next);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when auth profile arrives
-  }, [profile?.id, profile?.displayName, profile?.avatarUrl]);
+  }, [profile?.id, profile?.handle, profile?.avatarUrl]);
 
   useEffect(() => {
     if (!ready) return;
@@ -122,7 +114,19 @@ export function ProfileEditForm() {
       try {
         const remote = await profileService.getMyProfile();
         if (cancelled || !remote) return;
-        if (remote.displayName) setDisplayName((cur) => cur || remote.displayName);
+        if (remote.handle) {
+          setHandle(remote.handle);
+          setEditHandle(remote.handle);
+        }
+        setNextHandleAllowedAt(
+          remote.handleChangedAt
+            ? (() => {
+                const d = new Date(remote.handleChangedAt);
+                d.setUTCDate(d.getUTCDate() + 30);
+                return d.toISOString();
+              })()
+            : null,
+        );
         if (remote.avatarUrl) setAvatarUrl((cur) => cur || remote.avatarUrl);
         if (remote.city) {
           const parsed = parsePublicLocation(
@@ -250,15 +254,9 @@ export function ProfileEditForm() {
     e.preventDefault();
     setError("");
     setSaved(false);
-    const name = displayName.trim();
-    if (!name) {
-      setError("Display name is required.");
-      return;
-    }
-
-    const nextClaim = normalizeClaimedHandle(claimedHandle);
-    if (claimedHandle.trim() && !isClaimableHandle(nextClaim)) {
-      setError("Handle must be 3–24 characters: letters, numbers, underscores.");
+    const nextClaim = normalizeClaimedHandle(editHandle);
+    if (!nextClaim) {
+      setError("Public handle is required.");
       return;
     }
 
@@ -268,8 +266,31 @@ export function ProfileEditForm() {
 
     setSaving(true);
     try {
-      saveProfilePatch(handle, {
-        name,
+      let publicHandle = handle;
+
+      if (user && nextClaim !== handle) {
+        const res = await fetch("/api/profile/handle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ handle: nextClaim, initial: false }),
+        });
+        const data = (await res.json()) as {
+          ok?: boolean;
+          handle?: string;
+          error?: string;
+          nextAllowedAt?: string | null;
+        };
+        if (!res.ok || !data.ok || !data.handle) {
+          if (data.nextAllowedAt) setNextHandleAllowedAt(data.nextAllowedAt);
+          throw new Error(data.error || "Could not change handle.");
+        }
+        publicHandle = data.handle;
+        setHandle(data.handle);
+        setEditHandle(data.handle);
+      }
+
+      saveProfilePatch(publicHandle, {
+        name: handlePublicLabel(publicHandle),
         loc,
         bio: bio.trim(),
         skills: normalizeSkillLabels(skills),
@@ -280,26 +301,24 @@ export function ProfileEditForm() {
         avatarUrl: avatarUrl || undefined,
         coverUrl: coverUrl || undefined,
         coverPositionY: coverUrl ? clampCoverPositionY(coverPositionY) : 50,
-        claimedHandle: nextClaim || undefined,
+        claimedHandle: publicHandle,
       });
 
       if (user && profile) {
         const supabase = createClient();
-        const meta: Record<string, string> = {
-          display_name: name,
-        };
-        // Prefer remote URLs in auth metadata (data URLs are too large).
+        const meta: Record<string, string> = {};
         if (avatarUrl && !avatarUrl.startsWith("data:")) {
           meta.avatar_url = avatarUrl;
         }
-        const { error: metaError } = await supabase.auth.updateUser({
-          data: meta,
-        });
-        if (metaError) throw metaError;
+        if (Object.keys(meta).length) {
+          const { error: metaError } = await supabase.auth.updateUser({
+            data: meta,
+          });
+          if (metaError) throw metaError;
+        }
 
         try {
           await profileService.updateMyProfile({
-            displayName: name,
             city: cityOnly || undefined,
             state: st || "",
             avatarUrl: avatarUrl && !avatarUrl.startsWith("data:") ? avatarUrl : undefined,
@@ -311,7 +330,7 @@ export function ProfileEditForm() {
       }
 
       setSaved(true);
-      router.push(`/u/${handle}`);
+      router.push(`/u/${publicHandle}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save profile.");
     } finally {
@@ -324,8 +343,16 @@ export function ProfileEditForm() {
   const selectField =
     "cf-select h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white pl-3.5 text-[16px] text-ink outline-none focus:border-accent";
 
-  const previewInit = initialsFromName(displayName || profile?.displayName || "CF");
+  const previewInit = initialsFromName(editHandle || handle || "CF");
   const previewBg = user ? colorForId(user.id) : getMergedPerson(handle)?.bg || "#527D31";
+  const handleCooldown =
+    nextHandleAllowedAt && new Date(nextHandleAllowedAt).getTime() > Date.now()
+      ? new Date(nextHandleAllowedAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null;
 
   return (
     <div className="mx-auto flex max-w-[640px] flex-col gap-5 px-8 py-10 pb-16">
@@ -333,7 +360,7 @@ export function ProfileEditForm() {
         <p className="eyebrow m-0">Public</p>
         <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Public profile</h1>
         <p className="m-0 text-[15px] text-muted-2">
-          What members see — display name, location, photos, bio, and expertise. Private
+          What members see — your @handle, location, photos, bio, and expertise. Private
           account details live under{" "}
           <Link href="/account" className="font-semibold">
             Account settings
@@ -499,48 +526,20 @@ export function ProfileEditForm() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="p-display-name" className="text-[14px] font-semibold">
-            Display name
-          </label>
-          <input
-            id="p-display-name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            autoComplete="nickname"
-            maxLength={80}
-            className={field}
-            required
+          <HandlePicker
+            value={editHandle}
+            onChange={setEditHandle}
+            disabled={Boolean(handleCooldown)}
           />
-          <p className="m-0 text-[13px] text-muted">
-            Shown on your profile, answers, and in the account menu.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="p-handle" className="text-[14px] font-semibold">
-            Public handle
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[15px] text-muted">@</span>
-            <input
-              id="p-handle"
-              value={claimedHandle}
-              onChange={(e) =>
-                setClaimedHandle(
-                  e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24),
-                )
-              }
-              placeholder="dylan_s"
-              autoComplete="username"
-              maxLength={24}
-              className={field}
-            />
-          </div>
-          <p className="m-0 text-[13px] text-muted">
-            {isProvisionalHandle(handle) && !claimedHandle
-              ? "Claim a short @handle — the auto-generated one stays hidden until you do."
-              : "Shown on your profile and garage cards."}
-          </p>
+          {handleCooldown ? (
+            <p className="m-0 text-[13px] text-muted-2">
+              You can change your handle again on {handleCooldown}.
+            </p>
+          ) : (
+            <p className="m-0 text-[13px] text-muted">
+              Handles can be changed once every 30 days. Old handles redirect for 90 days.
+            </p>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -602,7 +601,7 @@ export function ProfileEditForm() {
           value={skills}
           onChange={setSkills}
           bio={bio}
-          role={displayName}
+          role={handlePublicLabel(editHandle || handle)}
           city={formatPublicLocation(city, stateCode)}
           garageHints={getGarageItemsFor(handle).map((i) =>
             [i.catShort, i.name].filter(Boolean).join(" · "),

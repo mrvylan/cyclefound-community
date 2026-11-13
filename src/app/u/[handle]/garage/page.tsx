@@ -167,7 +167,12 @@ export default function GaragePage({
     );
   }
 
-  const garageName = garage?.name ?? `${person.name.split(" ")[0]}'s garage`;
+  const publicLabel = person.publicHandle
+    ? `@${person.publicHandle}`
+    : person.name.startsWith("@")
+      ? person.name
+      : `@${person.handle}`;
+  const garageName = garage?.name ?? `${publicLabel}'s garage`;
   const justAdded = justAddedId
     ? getGarageItemsFor(handle).find((i) => i.id === justAddedId)
     : undefined;
@@ -279,7 +284,7 @@ export default function GaragePage({
                   <>
                     <MessageMember
                       handle={person.handle}
-                      name={person.name}
+                      name={publicLabel}
                       variant="light"
                       askLabel={`Ask ${firstName}`}
                       showWhenSelf={previewVisitor}
@@ -310,7 +315,7 @@ export default function GaragePage({
                 />
                 <span>
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">{person.name}</span>
+                    <span className="font-semibold">{publicLabel}</span>
                     {person.verified ? (
                       <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-blue">
                         <ShieldCheck className="size-3.5" aria-hidden />
@@ -649,7 +654,7 @@ export default function GaragePage({
           <section className="rounded-[14px] border border-accent-soft-border bg-accent-soft p-5">
             <h2 className="section-title mb-1 mt-0 text-[20px]">Wanted</h2>
             <p className="mb-3 mt-0 text-[13px] text-[#3d5f24]">
-              Parts {person.name.split(" ")[0]} is hunting for.
+              Parts {publicLabel} is hunting for.
             </p>
             {ownerWanted.length ? (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
@@ -668,7 +673,7 @@ export default function GaragePage({
                 description={
                   isOwnGarage
                     ? "Add plain-text lines for parts you’re looking for."
-                    : `${person.name.split(" ")[0]} hasn’t listed wanted parts yet.`
+                    : `${publicLabel} hasn’t listed wanted parts yet.`
                 }
                 actionLabel={isOwnGarage ? "Edit profile" : undefined}
                 actionHref={isOwnGarage ? "/settings/profile" : undefined}

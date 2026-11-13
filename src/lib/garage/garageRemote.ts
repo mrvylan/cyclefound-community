@@ -252,10 +252,22 @@ async function signPaths(
   return (data || []).map((d) => d.signedUrl || "").filter(Boolean);
 }
 
-function handleForUser(user: { id: string; user_metadata?: Record<string, unknown>; email?: string }) {
+async function handleForUser(user: {
+  id: string;
+  user_metadata?: Record<string, unknown>;
+  email?: string;
+}) {
+  const { data } = await (await import("@/lib/supabase/client"))
+    .createClient()
+    .from("profiles")
+    .select("handle")
+    .eq("id", user.id)
+    .maybeSingle();
+  const handle = String(data?.handle || "").trim().toLowerCase();
+  if (handle) return handle;
   return communityHandleFromProfile(
     user.id,
-    String(user.user_metadata?.display_name || user.email || "Member"),
+    String(user.user_metadata?.full_name || user.email || "Member"),
   );
 }
 
@@ -279,7 +291,7 @@ export async function createRemoteGarageItem(
     const photoUrls = await signPaths(supabase, paths);
     return mapGarageBikeRow(
       data as Record<string, unknown>,
-      handleForUser(user),
+      await handleForUser(user),
       photoUrls,
     );
   } catch (err) {
@@ -330,7 +342,7 @@ export async function updateRemoteGarageItem(
   const photoUrls = await signPaths(supabase, paths);
   return mapGarageBikeRow(
     data as Record<string, unknown>,
-    handleForUser(user),
+    await handleForUser(user),
     photoUrls,
   );
 }

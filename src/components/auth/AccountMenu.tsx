@@ -138,8 +138,12 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
   }
 
   const handle = handleFromAuthProfile(profile);
-  const displayName = localName || profile.displayName || profile.fullName;
-  const shortName = abbreviatedDisplayName(displayName);
+  const shortName = abbreviatedDisplayName(
+    localName?.startsWith("@")
+      ? localName
+      : profile.handle || handle,
+  );
+  const displayName = shortName;
   const avatarSrc = localAvatar || profile.avatarUrl || null;
   const close = () => setOpen(false);
 

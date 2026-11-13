@@ -25,6 +25,9 @@ export function canUseAdminSessionSwitch(): boolean {
 
 /** Stable local-store handle when posting as a real Supabase user. */
 export function handleFromAuthProfile(profile: AuthProfile): string {
-  const name = profile.displayName || profile.fullName || profile.email.split("@")[0] || "";
-  return communityHandleFromProfile(profile.id, name);
+  const claimed = String(profile.handle || "").trim().toLowerCase();
+  if (claimed) return claimed;
+  // Legacy fallback until directory / profiles.handle hydrates.
+  const legacy = profile.displayName || profile.email.split("@")[0] || "";
+  return communityHandleFromProfile(profile.id, legacy);
 }

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { getDirectoryHandleForUserId } from "@/lib/community/directory-cache";
-import { communityHandleFromProfile } from "@/lib/community/handles";
+import { handlePublicLabel } from "@/lib/community/handleRules";
 import { profileService } from "@/lib/profile/profileService";
 import {
   getGarageCoverItemId,
@@ -14,56 +14,36 @@ import {
   subscribeStore,
 } from "@/lib/data/local-store";
 
-function canonicalHandle(userId: string, displayName: string) {
-  // Directory handle wins once hydrated — keeps slug drift from creating a second "You" card.
-  return (
-    getDirectoryHandleForUserId(userId) ||
-    communityHandleFromProfile(userId, displayName)
-  );
-}
-
 /**
- * Keep the local session handle aligned with the signed-in Supabase user.
- * Prefer the community directory handle for this user id so garage cards
- * don't split into a "You" stub + a separate marketplace row.
+ * Keep the local session handle aligned with profiles.handle.
+ * Public label is always @handle — never full_name / display_name.
  */
 export function AuthSessionSync() {
-  const { ready, profile, user } = useAuth();
+  const { ready, profile, user, handleResolved } = useAuth();
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !handleResolved) return;
 
     let cancelled = false;
-    let displayName = profile
-      ? profile.displayName || profile.fullName || profile.email.split("@")[0] || ""
-      : "";
 
-    function apply(avatarUrl = "", garageCoverItemId = "") {
+    function apply(handle: string, avatarUrl = "", garageCoverItemId = "") {
       if (cancelled) return;
-      if (!profile) {
-        if (getSessionHandle()) setSessionHandle("");
+      if (!profile || !handle) {
+        if (!profile && getSessionHandle()) setSessionHandle("");
         return;
       }
-      const name =
-        displayName ||
-        profile.displayName ||
-        profile.fullName ||
-        profile.email.split("@")[0] ||
-        "";
-      const next = canonicalHandle(profile.id, name);
       const prev = getSessionHandle();
-
-      if (prev !== next) {
-        if (prev) migrateSessionHandle(prev, next);
-        else setSessionHandle(next);
+      if (prev !== handle) {
+        if (prev) migrateSessionHandle(prev, handle);
+        else setSessionHandle(handle);
       }
 
-      // Don't clobber a local cover choice with empty remote metadata.
       const cover =
-        garageCoverItemId || getGarageCoverItemId(next) || undefined;
+        garageCoverItemId || getGarageCoverItemId(handle) || undefined;
 
-      saveProfilePatch(next, {
-        name,
+      saveProfilePatch(handle, {
+        name: handlePublicLabel(handle),
+        claimedHandle: handle,
         ...(avatarUrl ? { avatarUrl } : {}),
         ...(cover ? { garageCoverItemId: cover } : {}),
       });
@@ -71,7 +51,7 @@ export function AuthSessionSync() {
 
     async function loadRemote() {
       if (!profile) {
-        apply();
+        apply("");
         return;
       }
       const coverFromMeta = String(
@@ -80,17 +60,22 @@ export function AuthSessionSync() {
       try {
         const row = await profileService.getMyProfile();
         if (cancelled) return;
-        if (row?.displayName) displayName = row.displayName;
-        else if (row?.fullName) displayName = row.fullName;
-        apply(row?.avatarUrl || profile.avatarUrl || "", coverFromMeta);
+        const handle =
+          String(row?.handle || profile.handle || "").trim().toLowerCase() ||
+          getDirectoryHandleForUserId(profile.id) ||
+          "";
+        apply(handle, row?.avatarUrl || profile.avatarUrl || "", coverFromMeta);
       } catch {
-        if (!cancelled) apply(profile.avatarUrl || "", coverFromMeta);
+        if (!cancelled) {
+          const handle =
+            profile.handle || getDirectoryHandleForUserId(profile.id) || "";
+          apply(handle, profile.avatarUrl || "", coverFromMeta);
+        }
       }
     }
 
     void loadRemote();
 
-    // When directory hydrates, rematch session handle to the directory row for this user.
     return subscribeStore(() => {
       if (cancelled || !profile) return;
       const fromDir = getDirectoryHandleForUserId(profile.id);
@@ -98,7 +83,7 @@ export function AuthSessionSync() {
       const prev = getSessionHandle();
       if (prev !== fromDir) migrateSessionHandle(prev || fromDir, fromDir);
     });
-  }, [ready, profile, user]);
+  }, [ready, handleResolved, profile, user]);
 
   return null;
 }

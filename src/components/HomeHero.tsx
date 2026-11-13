@@ -45,18 +45,15 @@ export function HomeHero() {
   if (memberHome && profile) {
     const authHandle = handleFromAuthProfile(profile);
     const person = resolvePerson(handle || authHandle);
-    const displayName =
-      person?.name ||
-      profile.displayName ||
-      profile.fullName ||
-      authHandle;
-    const firstName =
-      abbreviatedDisplayName(displayName).split(" ")[0] || "there";
+    const publicLabel =
+      abbreviatedDisplayName(
+        person?.publicHandle || person?.handle || profile.handle || authHandle,
+      ) || "@member";
     return (
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-8 pb-7">
           <div>
-            <p className="eyebrow m-0 text-[17px] text-accent">Hi {firstName}</p>
+            <p className="eyebrow m-0 text-[17px] text-accent">Hi {publicLabel}</p>
             <h1 className="section-title m-0 mt-1.5 text-[clamp(28px,4vw,40px)]">
               What&apos;s rolling around in your head?
             </h1>

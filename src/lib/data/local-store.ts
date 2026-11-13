@@ -256,13 +256,16 @@ function seedPerson(_handle: string): Person | undefined {
 }
 
 function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
-  const name = patch?.name?.trim() || handle;
+  const publicName =
+    patch?.name?.trim()?.startsWith("@")
+      ? patch.name.trim()
+      : `@${handle}`;
   const badge = roleBadgeForMember({ handle });
   return withPublicHandle(
     {
       handle,
-      name,
-      init: initialsFromDisplayName(name),
+      name: publicName,
+      init: initialsFromDisplayName(handle),
       bg: "#527D31",
       role: badge,
       loc: patch?.loc ?? "",
@@ -340,14 +343,15 @@ function withPublicHandle(person: Person, claimed?: string): Person {
   return { ...person, publicHandle: person.handle };
 }
 
-/** Public @handle for display, or null when still provisional. */
+/** Public @handle for display (sole public identity). */
 export function displayHandleFor(person: Pick<Person, "handle" | "publicHandle">) {
   const claimed = person.publicHandle?.trim();
   if (claimed && !isProvisionalHandle(claimed) && isClaimableHandle(claimed)) {
     return claimed;
   }
   if (person.handle && !isProvisionalHandle(person.handle)) return person.handle;
-  return null;
+  // Prefer claiming a real handle; provisional only as last resort for seed rows.
+  return person.handle?.trim() || null;
 }
 
 /**
