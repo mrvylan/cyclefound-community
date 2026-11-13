@@ -23,6 +23,8 @@ export type AuthProfile = {
   displayName: string;
   /** Public @handle from profiles.handle when loaded. */
   handle: string;
+  /** Optional short bio (user_metadata or profile patch). */
+  bio?: string;
   avatarUrl: string;
   initials: string;
   avatarColor: string;
@@ -77,12 +79,14 @@ export function profileFromUser(user: User | null): AuthProfile | null {
   const handle = String(meta.handle || "").trim().toLowerCase();
   // Legacy only — not for public UI.
   const displayName = String(meta.display_name || "").trim();
+  const bio = String(meta.bio || "").trim();
   return {
     id: user.id,
     email: user.email || "",
     fullName,
     displayName,
     handle,
+    ...(bio ? { bio } : {}),
     avatarUrl: String(meta.avatar_url || "").trim(),
     initials: initialsFromName(handle || fullName || user.email || "CF", user.email),
     avatarColor: colorForId(user.id),
