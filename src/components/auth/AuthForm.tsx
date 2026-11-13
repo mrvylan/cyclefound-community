@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { toAuthErrorMessage } from "@/lib/auth/errors";
@@ -119,6 +119,8 @@ export function AuthForm() {
     queryError ? { type: "error", text: queryError } : null,
   );
   const [loading, setLoading] = useState(false);
+  /** Sync lock — React `loading` state is too late to stop a double-click. */
+  const sendLock = useRef(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
@@ -174,36 +176,42 @@ export function AuthForm() {
     targetEmail: string,
     name?: string,
   ) {
-    const cleanEmail = validateEmail(targetEmail);
-    const supabase = createClient();
-    const dest = intent === "join" ? joinRedirect() : next;
-    stashAuthNext(dest);
-    const emailRedirectTo = authCallbackUrl(window.location.origin);
+    if (sendLock.current) return;
+    sendLock.current = true;
+    try {
+      const cleanEmail = validateEmail(targetEmail);
+      const supabase = createClient();
+      const dest = intent === "join" ? joinRedirect() : next;
+      stashAuthNext(dest);
+      const emailRedirectTo = authCallbackUrl(window.location.origin);
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: cleanEmail,
-      options: {
-        shouldCreateUser: intent === "join",
-        emailRedirectTo,
-        data: intent === "join" && name ? signupMetadata(name) : undefined,
-      },
-    });
-    if (error) throw error;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          shouldCreateUser: intent === "join",
+          emailRedirectTo,
+          data: intent === "join" && name ? signupMetadata(name) : undefined,
+        },
+      });
+      if (error) throw error;
 
-    writePending({
-      email: cleanEmail,
-      intent,
-      fullName: name,
-      next: dest,
-    });
-    setEmail(cleanEmail);
-    setOtpIntent(intent);
-    setOtp("");
-    go("otp");
-    setBanner({
-      type: "success",
-      text: `We sent a 6-digit code to ${cleanEmail}. Enter it below.`,
-    });
+      writePending({
+        email: cleanEmail,
+        intent,
+        fullName: name,
+        next: dest,
+      });
+      setEmail(cleanEmail);
+      setOtpIntent(intent);
+      setOtp("");
+      go("otp");
+      setBanner({
+        type: "success",
+        text: `We sent a 6-digit code to ${cleanEmail}. Enter it below.`,
+      });
+    } finally {
+      sendLock.current = false;
+    }
   }
 
   async function startOAuth(provider: "google" | "apple") {
@@ -235,6 +243,7 @@ export function AuthForm() {
 
   async function onJoin(e: React.FormEvent) {
     e.preventDefault();
+    if (loading || sendLock.current) return;
     setBanner(null);
     setLoading(true);
     try {
@@ -254,6 +263,7 @@ export function AuthForm() {
 
   async function onLoginOtp(e: React.FormEvent) {
     e.preventDefault();
+    if (loading || sendLock.current) return;
     setBanner(null);
     setLoading(true);
     try {
@@ -267,6 +277,7 @@ export function AuthForm() {
 
   async function onRecovery(e: React.FormEvent) {
     e.preventDefault();
+    if (loading || sendLock.current) return;
     setBanner(null);
     setLoading(true);
     try {
@@ -379,6 +390,7 @@ export function AuthForm() {
   }
 
   async function resendCode() {
+    if (loading || sendLock.current) return;
     setBanner(null);
     setLoading(true);
     try {
