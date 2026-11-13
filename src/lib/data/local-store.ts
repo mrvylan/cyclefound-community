@@ -64,6 +64,8 @@ export type LocalProfilePatch = {
   bio?: string;
   skills?: string[];
   wantedLines?: string[];
+  /** Avatar circle color — keep in sync with AuthProfile.avatarColor. */
+  bg?: string;
   /** Profile photo — data URL or remote URL. */
   avatarUrl?: string;
   /** Cover / workshop banner — data URL or remote URL. */
@@ -266,7 +268,8 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
       handle,
       name: publicName,
       init: initialsFromDisplayName(handle),
-      bg: "#527D31",
+      // Prefer auth-synced color so header and feed posts match.
+      bg: patch?.bg?.trim() || "#527D31",
       role: badge,
       loc: patch?.loc ?? "",
       level: "RIDER",
@@ -311,6 +314,7 @@ export function getMergedPerson(handle: string): Person | undefined {
       ...base,
       name,
       init: patch.name ? initialsFromDisplayName(name) : base.init,
+      bg: patch.bg?.trim() || base.bg,
       loc: patch.loc ?? base.loc,
       bio: patch.bio ?? base.bio,
       skills: normalizeSkillLabels(patch.skills ?? base.skills),
@@ -371,6 +375,7 @@ export function resolvePerson(handle: string): Person | undefined {
       {
         ...directory,
         name: patch.name ?? directory.name,
+        bg: patch.bg?.trim() || directory.bg,
         loc: patch.loc ?? directory.loc,
         bio: patch.bio ?? directory.bio,
         skills: normalizeSkillLabels(patch.skills ?? directory.skills),

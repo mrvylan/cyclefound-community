@@ -50,6 +50,8 @@ export function QuestionCard({ q }: { q: Question }) {
   const linkedPhotos = linkedItem ? getItemPhotoUrls(linkedItem) : [];
   const linkedLabel = q.linked || linkedItem?.name || "";
   const askerName = abbreviatedDisplayName(q.asker);
+  const asker = q.askerHandle ? resolvePerson(q.askerHandle) : undefined;
+  const askerBg = asker?.bg || q.bg;
   const solver = q.expertHandle ? resolvePerson(q.expertHandle) : undefined;
   const related =
     q.solved && q.expertHandle ? relatedGarageCount(q.expertHandle, q.tags) : 0;
@@ -157,7 +159,7 @@ export function QuestionCard({ q }: { q: Question }) {
             className="pointer-events-auto inline-flex items-center gap-2 font-medium text-ink no-underline hover:text-accent-hover"
             onClick={(e) => e.stopPropagation()}
           >
-            <Avatar init={q.init} bg={q.bg} size={26} />
+            <Avatar init={asker?.init || q.init} bg={askerBg} size={26} />
             {askerName}
           </Link>
           <span>{q.time}</span>

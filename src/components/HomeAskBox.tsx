@@ -111,8 +111,7 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={
-          intentMeta?.example ||
-          "e.g. What’s stuck — pick Fix, Find, Value, Build, or Other above for a matching example"
+          intentMeta?.example || "Pick an intent above to see an example question"
         }
         className="resize-none rounded-md border-0 bg-transparent text-base leading-normal text-ink outline-none placeholder:text-meta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       />
@@ -174,7 +173,7 @@ export function HomeAskBox({ compact = false }: { compact?: boolean }) {
           ) : intentMeta ? (
             intentMeta.blurb
           ) : (
-            "Pick an intent and start typing — we’ll show who this will reach."
+            "Start typing after you pick an intent."
           )}
         </p>
         <button

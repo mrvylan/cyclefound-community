@@ -44,6 +44,7 @@ export function AuthSessionSync() {
       saveProfilePatch(handle, {
         name: handlePublicLabel(handle),
         claimedHandle: handle,
+        bg: profile.avatarColor,
         ...(avatarUrl ? { avatarUrl } : {}),
         ...(cover ? { garageCoverItemId: cover } : {}),
       });
