@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyOwnerOfSignup } from "@/lib/auth/notifySignup";
 import {
   AUTH_NEXT_COOKIE,
   readAuthNextFromCookieHeader,
   sanitizeNextPath,
 } from "@/lib/auth/redirects";
+
+async function maybeNotifyNewUser() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) await notifyOwnerOfSignup(user);
+  } catch {
+    /* never block OAuth redirect */
+  }
+}
 
 function clearNextCookie(response: NextResponse) {
   response.cookies.set(AUTH_NEXT_COOKIE, "", {
@@ -30,6 +43,9 @@ export async function GET(request: Request) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (type !== "recovery") {
+        await maybeNotifyNewUser();
+      }
       if (type === "recovery") {
         const res = NextResponse.redirect(
           `${origin}/auth?mode=set-password&next=${encodeURIComponent(next)}`,
@@ -50,6 +66,9 @@ export async function GET(request: Request) {
       type: type as any,
     });
     if (!error) {
+      if (type !== "recovery") {
+        await maybeNotifyNewUser();
+      }
       if (type === "recovery") {
         const res = NextResponse.redirect(
           `${origin}/auth?mode=set-password&next=${encodeURIComponent(next)}`,

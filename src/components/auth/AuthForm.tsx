@@ -339,6 +339,11 @@ export function AuthForm() {
         });
       }
 
+      if (intent === "join") {
+        // Owner alert — never block the member on notify failure.
+        void fetch("/api/notify-signup", { method: "POST" }).catch(() => {});
+      }
+
       clearPending();
       await refresh();
 

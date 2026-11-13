@@ -17,8 +17,8 @@ import { EmptyState } from "./EmptyState";
 import { QuestionCard } from "./QuestionCard";
 
 const SORTS = [
+  { value: "Recent", label: "Recent" },
   { value: "Unanswered", label: "Unanswered" },
-  { value: "Newest", label: "Newest" },
   { value: "Trending", label: "Trending" },
 ] as const;
 type Sort = (typeof SORTS)[number]["value"];
@@ -56,7 +56,7 @@ export function trendingScore(q: Question): number {
 }
 
 export function HomeFeed() {
-  const [sort, setSort] = useState<Sort>("Unanswered");
+  const [sort, setSort] = useState<Sort>("Recent");
   const [category, setCategory] = useState("All");
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [ready, setReady] = useState(false);
@@ -76,8 +76,11 @@ export function HomeFeed() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get("sort");
-    if (s === "Unanswered" || s === "Newest" || s === "Trending") {
+    if (s === "Recent" || s === "Unanswered" || s === "Trending") {
       setSort(s);
+    } else if (s === "Newest") {
+      // Legacy ?sort=Newest
+      setSort("Recent");
     }
   }, []);
 
@@ -90,10 +93,7 @@ export function HomeFeed() {
       // Score = (votes + 2×answers + 1) / (1 + ageHours/72) — fresher + more engagement rises.
       return list.sort((a, b) => trendingScore(b) - trendingScore(a));
     }
-    if (sort === "Unanswered") {
-      return list.sort((a, b) => ageHours(a.time) - ageHours(b.time));
-    }
-    // Newest
+    // Recent + Unanswered: freshest first
     return list.sort((a, b) => ageHours(a.time) - ageHours(b.time));
   }, [questions, sort, category]);
 
