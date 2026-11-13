@@ -103,14 +103,23 @@ export function signupMetadata(fullName: string) {
   };
 }
 
-/** Compact public label from a handle (e.g. "@dylan_s"). */
+/**
+ * Compact public label from a username (e.g. "@dylan_s").
+ * Returns "" when unknown — never invent "@member".
+ */
 export function abbreviatedDisplayName(handleOrName: string) {
   const raw = String(handleOrName || "").trim();
-  if (!raw) return "@member";
-  if (raw.startsWith("@")) return raw;
-  if (/^[a-z][a-z0-9_]{2,19}$/i.test(raw) && !/\s/.test(raw)) {
-    return `@${raw.toLowerCase()}`;
+  if (!raw) return "";
+  if (raw.startsWith("@")) {
+    const body = raw.slice(1).trim().toLowerCase();
+    if (!body || body === "member") return "";
+    return `@${body}`;
   }
-  // Legacy full/display names — do not surface; fall back.
-  return "@member";
+  if (/^[a-z][a-z0-9_]{2,19}$/i.test(raw) && !/\s/.test(raw)) {
+    const h = raw.toLowerCase();
+    if (h === "member") return "";
+    return `@${h}`;
+  }
+  // Legacy full/display names — do not surface publicly.
+  return "";
 }

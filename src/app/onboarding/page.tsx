@@ -19,7 +19,7 @@ import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 type Step = 1 | 2 | 3 | 4;
 
 const STEP_LABELS: Record<Step, string> = {
-  1: "Handle",
+  1: "Username",
   2: "Expertise",
   3: "Garage",
   4: "Wanted",
@@ -107,7 +107,7 @@ export default function OnboardingPage() {
         suggestions?: string[];
       };
       if (!res.ok || !data.ok || !data.handle) {
-        setError(data.error || "Could not claim that handle.");
+        setError(data.error || "Could not claim that username.");
         if (data.suggestions?.[0]) setHandle(data.suggestions[0]);
         return;
       }
@@ -116,7 +116,7 @@ export default function OnboardingPage() {
       await refresh();
       setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not claim handle.");
+      setError(err instanceof Error ? err.message : "Could not claim username.");
     } finally {
       setClaiming(false);
     }
@@ -125,6 +125,9 @@ export default function OnboardingPage() {
   function sessionOrClaimed() {
     return handle || getSessionHandle() || profile?.handle || "";
   }
+
+  /** Later steps stay locked until a username is claimed. */
+  const usernameSaved = Boolean(profile?.handle) || step > 1;
 
   function persistSkills() {
     const h = sessionOrClaimed();
@@ -191,27 +194,39 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-[640px] px-8 py-10 pb-16">
-      <p className="eyebrow m-0">Welcome</p>
+      <p className="eyebrow m-0">
+        Welcome · Step {step} of 4
+      </p>
       <h1 className="section-title m-0 text-[clamp(36px,5vw,52px)]">
-        {step === 1 ? "Choose your handle" : "Set up your profile"}
+        {step === 1 ? "Pick a username" : "Set up your profile"}
       </h1>
       <p className="mt-2 text-[15px] text-muted-2">
         {step === 1
-          ? "Pick how riders will find and mention you. Expertise, garage, and wanted are optional next."
+          ? "This is how riders find and mention you. You can add your expertise, garage, and wanted list next. They’re optional."
           : "You can skip the rest and finish later from Edit profile."}
       </p>
 
       <ol className="mt-5 flex list-none flex-wrap gap-2 p-0 font-mono text-[12px] tracking-wide uppercase">
-        {([1, 2, 3, 4] as Step[]).map((n) => (
-          <li
-            key={n}
-            className={`rounded-full px-3 py-1 ${
-              step === n ? "bg-ink text-white" : "bg-ground text-muted"
-            }`}
-          >
-            {STEP_LABELS[n]}
-          </li>
-        ))}
+        {([1, 2, 3, 4] as Step[]).map((n) => {
+          const locked = n > 1 && !usernameSaved;
+          const active = step === n;
+          return (
+            <li
+              key={n}
+              className={`rounded-full px-3 py-1 ${
+                active
+                  ? "bg-ink text-white"
+                  : locked
+                    ? "bg-ground text-muted/50"
+                    : "bg-ground text-muted"
+              }`}
+              aria-current={active ? "step" : undefined}
+              aria-disabled={locked || undefined}
+            >
+              {STEP_LABELS[n]}
+            </li>
+          );
+        })}
       </ol>
 
       {step === 1 ? (

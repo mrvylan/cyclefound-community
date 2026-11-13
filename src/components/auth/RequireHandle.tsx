@@ -13,7 +13,7 @@ const ALLOW_PREFIXES = [
 ];
 
 /**
- * Signed-in users without a public handle must finish "Choose your handle".
+ * Signed-in users without a username must finish "Pick a username".
  */
 export function RequireHandle({ children }: { children: React.ReactNode }) {
   const { ready, user, profile, handleResolved } = useAuth();

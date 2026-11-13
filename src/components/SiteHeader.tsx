@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { AccountMenu } from "./auth/AccountMenu";
+import { useAuth } from "./auth/AuthProvider";
 import { SearchTrigger } from "./search/SearchOverlay";
 import { Feature } from "./Feature";
 import { openCookieSettings } from "@/lib/cookie-consent";
@@ -79,13 +80,24 @@ export function activeNavFromPath(pathname: string): NavItem["match"] | null {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { ready, user, profile, handleResolved } = useAuth();
   const onAuth = pathname.startsWith("/auth");
+  /**
+   * Signed-in members without a username stay on onboarding — logo-only chrome
+   * so nav / search / Ask / account never flash "@member".
+   */
+  const needsUsername =
+    ready &&
+    handleResolved &&
+    Boolean(user) &&
+    !String(profile?.handle || "").trim();
   /** Home already shows the ask composer — hide the competing header CTA. */
   const hideHeaderAsk = pathname === "/";
   const nextPath = onAuth ? "/" : pathname || "/";
   const active = activeNavFromPath(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const [nav, setNav] = useState<NavItem[]>(() => navItems());
+  const chromeOff = onAuth || needsUsername;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -104,6 +116,33 @@ export function SiteHeader() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [menuOpen]);
+
+  if (needsUsername) {
+    return (
+      <header className="relative z-50 border-b border-line bg-white/90 text-ink backdrop-blur-[10px]">
+        <div className="mx-auto flex max-w-[1280px] items-center px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+          <span className="shrink-0" aria-label="Cycle Found">
+            <Image
+              src="/community-logo-mark.png"
+              alt="Cycle Found"
+              width={76}
+              height={40}
+              className="h-9 w-auto lg:hidden"
+              priority
+            />
+            <Image
+              src="/community-logo.png"
+              alt="Cycle Found — Ask, Share, Ride"
+              width={313}
+              height={45}
+              className="hidden h-11 w-auto lg:block"
+              priority
+            />
+          </span>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="relative z-50 border-b border-line bg-white/90 text-ink backdrop-blur-[10px]">
@@ -128,7 +167,7 @@ export function SiteHeader() {
           />
         </Link>
 
-        {!onAuth ? (
+        {!chromeOff ? (
           <nav
             aria-label="Primary"
             className="hidden min-w-0 flex-1 items-center gap-x-[22px] text-[15px] font-bold lg:flex"
@@ -155,8 +194,8 @@ export function SiteHeader() {
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {!onAuth ? <SearchTrigger /> : null}
-          {!onAuth && !hideHeaderAsk ? (
+          {!chromeOff ? <SearchTrigger /> : null}
+          {!chromeOff && !hideHeaderAsk ? (
             <Link
               href="/ask"
               className="hidden h-[42px] shrink-0 items-center rounded-[10px] bg-accent px-[18px] text-[14px] font-bold text-white no-underline hover:bg-accent-hover hover:text-white lg:inline-flex"
@@ -164,7 +203,7 @@ export function SiteHeader() {
               Ask the community
             </Link>
           ) : null}
-          {!onAuth ? (
+          {!chromeOff ? (
             <button
               type="button"
               className="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-ink lg:hidden"
@@ -180,11 +219,11 @@ export function SiteHeader() {
               )}
             </button>
           ) : null}
-          <AccountMenu nextPath={nextPath} />
+          {!chromeOff ? <AccountMenu nextPath={nextPath} /> : null}
         </div>
       </div>
 
-      {!onAuth && menuOpen ? (
+      {!chromeOff && menuOpen ? (
         <div
           id="mobile-nav"
           className="border-t border-line bg-white px-4 py-4 sm:px-6 lg:hidden"

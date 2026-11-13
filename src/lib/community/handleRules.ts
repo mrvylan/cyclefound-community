@@ -102,28 +102,28 @@ export type HandleFormatResult =
 export function validateHandleFormat(raw: string): HandleFormatResult {
   const handle = normalizeHandleInput(raw);
   if (!handle) {
-    return { ok: false, error: "Enter a handle." };
+    return { ok: false, error: "Enter a username." };
   }
   if (handle.length < HANDLE_MIN) {
     return {
       ok: false,
-      error: `Handle must be at least ${HANDLE_MIN} characters.`,
+      error: `Username must be at least ${HANDLE_MIN} characters.`,
     };
   }
   if (handle.length > HANDLE_MAX) {
     return {
       ok: false,
-      error: `Handle must be ${HANDLE_MAX} characters or fewer.`,
+      error: `Username must be ${HANDLE_MAX} characters or fewer.`,
     };
   }
   if (!/^[a-z]/.test(handle)) {
-    return { ok: false, error: "Handle must start with a letter." };
+    return { ok: false, error: "Username must start with a letter." };
   }
   if (handle.includes("__")) {
     return { ok: false, error: "Don’t use two underscores in a row." };
   }
   if (handle.endsWith("_")) {
-    return { ok: false, error: "Handle can’t end with an underscore." };
+    return { ok: false, error: "Username can’t end with an underscore." };
   }
   if (!HANDLE_RE.test(handle)) {
     return {
@@ -132,7 +132,7 @@ export function validateHandleFormat(raw: string): HandleFormatResult {
     };
   }
   if (isReservedOrBlocked(handle)) {
-    return { ok: false, error: "That handle isn’t available." };
+    return { ok: false, error: "That username isn’t available." };
   }
   return { ok: true, handle };
 }

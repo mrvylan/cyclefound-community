@@ -84,7 +84,7 @@ export async function checkHandleAvailability(
   return {
     available: false as const,
     handle: parsed.handle,
-    error: `Taken: try ${suggestions.map((s) => `@${s}`).join(", ") || "another handle"}`,
+    error: `Taken: try ${suggestions.map((s) => `@${s}`).join(", ") || "another username"}`,
     suggestions,
   };
 }
@@ -150,12 +150,12 @@ export async function claimHandle(opts: {
     return {
       ok: false as const,
       error: next
-        ? `You can change your handle again on ${next.toLocaleDateString("en-US", {
+        ? `You can change your username again on ${next.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
             year: "numeric",
           })}.`
-        : "You can only change your handle once every 30 days.",
+        : "You can only change your username once every 30 days.",
       suggestions: [] as string[],
       nextAllowedAt: next?.toISOString() ?? null,
     };
@@ -168,7 +168,7 @@ export async function claimHandle(opts: {
   if (!availability.available) {
     return {
       ok: false as const,
-      error: availability.error || "That handle isn’t available.",
+      error: availability.error || "That username isn’t available.",
       suggestions: availability.suggestions,
     };
   }
@@ -184,7 +184,7 @@ export async function claimHandle(opts: {
     if (histError) {
       return {
         ok: false as const,
-        error: histError.message || "Could not archive the previous handle.",
+        error: histError.message || "Could not archive the previous username.",
         suggestions: [] as string[],
       };
     }
@@ -211,13 +211,13 @@ export async function claimHandle(opts: {
       });
       return {
         ok: false as const,
-        error: again.error || "That handle was just taken.",
+        error: again.error || "That username was just taken.",
         suggestions: again.suggestions,
       };
     }
     return {
       ok: false as const,
-      error: error.message || "Could not save handle.",
+      error: error.message || "Could not save username.",
       suggestions: [] as string[],
     };
   }

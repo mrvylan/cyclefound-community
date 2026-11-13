@@ -256,7 +256,7 @@ export function ProfileEditForm() {
     setSaved(false);
     const nextClaim = normalizeClaimedHandle(editHandle);
     if (!nextClaim) {
-      setError("Public handle is required.");
+      setError("Username is required.");
       return;
     }
 
@@ -360,7 +360,7 @@ export function ProfileEditForm() {
         <p className="eyebrow m-0">Public</p>
         <h1 className="section-title m-0 text-[clamp(36px,5vw,56px)]">Public profile</h1>
         <p className="m-0 text-[15px] text-muted-2">
-          What members see — your @handle, location, photos, bio, and expertise. Private
+          What members see — your @username, location, photos, bio, and expertise. Private
           account details live under{" "}
           <Link href="/account" className="font-semibold">
             Account settings
@@ -533,11 +533,12 @@ export function ProfileEditForm() {
           />
           {handleCooldown ? (
             <p className="m-0 text-[13px] text-muted-2">
-              You can change your handle again on {handleCooldown}.
+              You can change your username again on {handleCooldown}.
             </p>
           ) : (
             <p className="m-0 text-[13px] text-muted">
-              Handles can be changed once every 30 days. Old handles redirect for 90 days.
+              Usernames can be changed once every 30 days. Old usernames redirect for 90
+              days.
             </p>
           )}
         </div>

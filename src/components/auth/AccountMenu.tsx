@@ -143,7 +143,7 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
       ? localName
       : profile.handle || handle,
   );
-  const displayName = shortName;
+  const displayName = shortName || "Account";
   const avatarSrc = localAvatar || profile.avatarUrl || null;
   const close = () => setOpen(false);
 
@@ -204,9 +204,11 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
               aria-hidden
             />
           ) : null}
-          <span className="hidden max-w-[7rem] truncate text-[14px] font-semibold text-ink lg:inline">
-            {shortName}
-          </span>
+          {shortName ? (
+            <span className="hidden max-w-[7rem] truncate text-[14px] font-semibold text-ink lg:inline">
+              {shortName}
+            </span>
+          ) : null}
           <ChevronDown className="hidden size-4 text-muted lg:inline" aria-hidden />
         </button>
 
