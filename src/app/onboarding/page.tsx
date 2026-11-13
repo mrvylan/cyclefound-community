@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PhotoPicker } from "@/components/forms/PhotoPicker";
 import { HandlePicker } from "@/components/forms/HandlePicker";
-import { SkillsEditor } from "@/components/forms/SkillsEditor";
+import { OnboardingExpertise } from "@/components/forms/OnboardingExpertise";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
 import {
@@ -15,6 +15,7 @@ import {
   setSessionHandle,
 } from "@/lib/data/local-store";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
+import { Check } from "lucide-react";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -33,12 +34,14 @@ export default function OnboardingPage() {
   const [handleReady, setHandleReady] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
+  const [expertiseHelp, setExpertiseHelp] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [year, setYear] = useState("");
   const [wantedText, setWantedText] = useState("");
   const [error, setError] = useState("");
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [completed, setCompleted] = useState<Partial<Record<Step, boolean>>>({});
 
   useEffect(() => {
     if (!ready) return;
@@ -64,6 +67,7 @@ export default function OnboardingPage() {
           setSessionHandle(data.current);
           setHandle(data.current);
           setHandleReady(true);
+          setCompleted((c) => ({ ...c, 1: true }));
           setStep(2);
         } else if (data.suggested) {
           setHandle(data.suggested);
@@ -113,6 +117,7 @@ export default function OnboardingPage() {
       }
       setSessionHandle(data.handle);
       setHandle(data.handle);
+      setCompleted((c) => ({ ...c, 1: true }));
       await refresh();
       setStep(2);
     } catch (err) {
@@ -129,14 +134,29 @@ export default function OnboardingPage() {
   /** Later steps stay locked until a username is claimed. */
   const usernameSaved = Boolean(profile?.handle) || step > 1;
 
-  function persistSkills() {
+  function persistSkills(nextSkills = skills, help = expertiseHelp) {
     const h = sessionOrClaimed();
     if (!h) return;
     setSessionHandle(h);
+    const bioStart = help.trim().slice(0, 160);
+    const existingBio = (profile?.bio || "").trim();
+    let bio: string | undefined;
+    if (bioStart) {
+      if (!existingBio) bio = bioStart;
+      else if (existingBio.startsWith(bioStart)) bio = existingBio;
+      else bio = `${bioStart}${existingBio ? `\n\n${existingBio}` : ""}`;
+    }
     saveProfilePatch(h, {
-      skills: normalizeSkillLabels(skills),
+      skills: normalizeSkillLabels(nextSkills, 5),
       claimedHandle: h,
+      ...(bio !== undefined ? { bio } : {}),
     });
+  }
+
+  function finishExpertise() {
+    persistSkills(skills, expertiseHelp);
+    setCompleted((c) => ({ ...c, 2: true }));
+    setStep(3);
   }
 
   function onFinishWanted() {
@@ -181,6 +201,7 @@ export default function OnboardingPage() {
       provenance: "",
       photoDataUrls: photos,
     });
+    setCompleted((c) => ({ ...c, 3: true }));
     setStep(4);
   }
 
@@ -192,38 +213,58 @@ export default function OnboardingPage() {
     );
   }
 
+  const stepTitle =
+    step === 1
+      ? "Pick a username"
+      : step === 2
+        ? "What do you know about bikes?"
+        : step === 3
+          ? "Add something to your garage"
+          : "Anything you’re looking for?";
+
+  const stepLead =
+    step === 1
+      ? "This is how riders find and mention you. You can add your expertise, garage, and wanted list next. They’re optional."
+      : step === 2
+        ? "Pick up to 5 things you can help riders with. They’re public: shown on your profile and in Members search."
+        : step === 3
+          ? "One bike or part is enough — photos help the community know what you ride."
+          : "Optional — one part per line.";
+
   return (
     <div className="mx-auto max-w-[640px] px-8 py-10 pb-16">
-      <p className="eyebrow m-0">
-        Welcome · Step {step} of 4
-      </p>
-      <h1 className="section-title m-0 text-[clamp(36px,5vw,52px)]">
-        {step === 1 ? "Pick a username" : "Set up your profile"}
-      </h1>
-      <p className="mt-2 text-[15px] text-muted-2">
-        {step === 1
-          ? "This is how riders find and mention you. You can add your expertise, garage, and wanted list next. They’re optional."
-          : "You can skip the rest and finish later from Edit profile."}
-      </p>
+      <p className="eyebrow m-0">Step {step} of 4</p>
+      <h1 className="section-title m-0 text-[clamp(36px,5vw,52px)]">{stepTitle}</h1>
+      <p className="mt-2 text-[15px] text-muted-2">{stepLead}</p>
 
       <ol className="mt-5 flex list-none flex-wrap gap-2 p-0 font-mono text-[12px] tracking-wide uppercase">
         {([1, 2, 3, 4] as Step[]).map((n) => {
           const locked = n > 1 && !usernameSaved;
           const active = step === n;
+          const done = Boolean(completed[n]) || (n === 1 && usernameSaved && step > 1);
           return (
             <li
               key={n}
-              className={`rounded-full px-3 py-1 ${
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${
                 active
                   ? "bg-ink text-white"
                   : locked
                     ? "bg-ground text-muted/50"
-                    : "bg-ground text-muted"
+                    : done
+                      ? "bg-accent-soft text-accent-hover"
+                      : "bg-ground text-muted"
               }`}
               aria-current={active ? "step" : undefined}
               aria-disabled={locked || undefined}
             >
               {STEP_LABELS[n]}
+              {done && !active ? (
+                <>
+                  {" "}
+                  <Check className="size-3 stroke-[2.5]" aria-hidden />
+                  <span className="sr-only">completed</span>
+                </>
+              ) : null}
             </li>
           );
         })}
@@ -257,44 +298,20 @@ export default function OnboardingPage() {
       ) : null}
 
       {step === 2 ? (
-        <section className="mt-8 flex flex-col gap-4">
-          <h2 className="section-title m-0 text-[28px]">What do you know?</h2>
-          <p className="m-0 text-[14px] text-meta">
-            Build a short expertise list — same tags Members use to find you.
-          </p>
-          <SkillsEditor value={skills} onChange={setSkills} compact max={5} />
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={skills.length === 0}
-              onClick={() => {
-                persistSkills();
-                setStep(3);
-              }}
-              className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-[14px] font-bold text-white hover:bg-accent-hover disabled:opacity-50"
-            >
-              Continue
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                persistSkills();
-                setStep(3);
-              }}
-              className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink"
-            >
-              Skip for now
-            </button>
-          </div>
+        <section className="mt-8">
+          <OnboardingExpertise
+            value={skills}
+            onChange={setSkills}
+            helpText={expertiseHelp}
+            onHelpTextChange={setExpertiseHelp}
+            onContinue={() => finishExpertise()}
+            onSkip={() => finishExpertise()}
+          />
         </section>
       ) : null}
 
       {step === 3 ? (
         <section className="mt-8 flex flex-col gap-4">
-          <h2 className="section-title m-0 text-[28px]">Add something to your garage</h2>
-          <p className="m-0 text-[14px] text-meta">
-            One bike or part is enough — photos help the community know what you ride.
-          </p>
           <PhotoPicker photos={photos} onChange={setPhotos} max={4} />
           <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
             Title
@@ -331,6 +348,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={() => {
                 persistSkills();
+                setCompleted((c) => ({ ...c, 3: true }));
                 setStep(4);
               }}
               className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold"
@@ -343,8 +361,6 @@ export default function OnboardingPage() {
 
       {step === 4 ? (
         <section className="mt-8 flex flex-col gap-4">
-          <h2 className="section-title m-0 text-[28px]">Anything you&apos;re looking for?</h2>
-          <p className="m-0 text-[14px] text-meta">Optional — one part per line.</p>
           <textarea
             rows={5}
             value={wantedText}
