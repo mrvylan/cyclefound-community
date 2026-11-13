@@ -5,7 +5,12 @@ import Link from "next/link";
 import { BadgeCheck, Search } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ContributionBadge } from "@/components/ContributionBadge";
-import { Avatar, FilterChip } from "@/components/ui";
+import { FilterChip, MemberAvatar } from "@/components/ui";
+import {
+  getMemberName,
+  getMemberSecondary,
+} from "@/lib/community/memberDisplay";
+import { foundingBadgeLabel } from "@/lib/community/founding-members";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
 import {
@@ -38,6 +43,9 @@ type SortKey = "helpful" | "recent";
 
 /** Roles like "Member" are noise; only surface staff/founder-style badges. */
 function badgeOf(p: Person) {
+  if (p.isFoundingMember || p.roleBadge === "Founding Member") {
+    return foundingBadgeLabel(p.memberNumber);
+  }
   const b = p.roleBadge?.trim();
   return b && b.toLowerCase() !== "member" ? b : "";
 }
@@ -326,21 +334,48 @@ export default function MembersPage() {
                   className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 text-ink no-underline hover:border-ink hover:text-ink"
                 >
                   <div className="flex items-center gap-3.5">
-                    <Avatar init={m.init} bg={m.bg} size={52} src={m.avatarUrl} />
+                    <MemberAvatar
+                      userId={m.userId || getDirectoryUserId(m.handle)}
+                      handle={m.publicHandle || m.handle}
+                      displayName={m.displayName}
+                      name={m.name}
+                      src={m.avatarUrl}
+                      size={52}
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="text-[17px] font-bold">
-                        {m.publicHandle ? `@${m.publicHandle}` : m.name}
+                        {getMemberName({
+                          displayName: m.displayName,
+                          handle: m.publicHandle || m.handle,
+                          name: m.name,
+                        })}
                       </div>
-                      <div className="text-[13px] text-meta">
-                        {m.loc ? m.loc.split("·")[0]?.trim() : "Member"}
-                      </div>
+                      {(() => {
+                        const secondary = getMemberSecondary({
+                          displayName: m.displayName,
+                          handle: m.publicHandle || m.handle,
+                          loc: m.loc,
+                        });
+                        return secondary ? (
+                          <div className="text-[13px] text-meta">{secondary}</div>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {badge ? (
-                      <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent-soft-border bg-accent-soft px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover">
+                      <span
+                        className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent-soft-border bg-accent-soft px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.04em] text-accent-hover"
+                        title={
+                          m.memberNumber
+                            ? foundingBadgeLabel(m.memberNumber)
+                            : undefined
+                        }
+                      >
                         <BadgeCheck className="size-3.5" aria-hidden />
-                        {badge}
+                        {m.isFoundingMember || badge.startsWith("Founding")
+                          ? "Founding Member"
+                          : badge}
                       </span>
                     ) : null}
                     {contribution && contribution.activity.answered > 0 ? (

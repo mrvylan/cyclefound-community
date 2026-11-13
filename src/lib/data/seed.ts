@@ -8,7 +8,10 @@ export type Level = "RIDER" | "PRO" | "MASTER" | "LEGEND";
 
 export type Person = {
   handle: string;
+  /** Primary public label — display name or @handle (via getMemberName). */
   name: string;
+  /** Optional human display name (not username). */
+  displayName?: string;
   init: string;
   bg: string;
   role: string;
@@ -40,6 +43,11 @@ export type Person = {
    * (auto hash suffix), UI should hide the @ until they claim one.
    */
   publicHandle?: string;
+  /** Supabase auth user id when known. */
+  userId?: string;
+  memberNumber?: number | null;
+  isFoundingMember?: boolean;
+  isTestAccount?: boolean;
 };
 
 export type Garage = {

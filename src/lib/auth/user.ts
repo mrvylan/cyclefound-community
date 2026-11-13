@@ -1,15 +1,16 @@
 import type { User } from "@supabase/supabase-js";
+import {
+  MEMBER_AVATAR_COLORS,
+  avatarColorForId,
+  formatDisplayNamePrefill,
+  initialsFromMember,
+} from "@/lib/community/memberDisplay";
 
 export const TERMS_VERSION = "2026-10-27";
 export const MIN_PASSWORD_LENGTH = 12;
-export const AVATAR_COLORS = [
-  "#527D31",
-  "#1E40AF",
-  "#7C2D12",
-  "#0F766E",
-  "#6B21A8",
-  "#9A3412",
-] as const;
+
+/** @deprecated Prefer MEMBER_AVATAR_COLORS / avatarColorForId */
+export const AVATAR_COLORS = MEMBER_AVATAR_COLORS;
 
 export type AuthProfile = {
   id: string;
@@ -49,27 +50,19 @@ export function firstName(value: string) {
 }
 
 export function initialsFromName(name: string, email?: string) {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]![0]!}${parts[1]![0]!}`.toUpperCase();
-  }
-  if (parts.length === 1 && parts[0]!.length >= 2) {
-    return parts[0]!.slice(0, 2).toUpperCase();
-  }
-  if (parts.length === 1) {
-    return `${parts[0]![0]!}${(parts[0]![0] || "C").toUpperCase()}`.toUpperCase();
+  const raw = String(name || "").trim();
+  if (raw) {
+    return initialsFromMember({
+      displayName: raw.startsWith("@") ? "" : raw,
+      handle: raw.startsWith("@") ? raw.slice(1) : raw.includes(" ") ? "" : raw,
+    });
   }
   const local = String(email || "").split("@")[0] || "CF";
   return local.slice(0, 2).toUpperCase();
 }
 
 export function colorForId(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash + id.charCodeAt(i) * 17) % 997;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]!;
+  return avatarColorForId(id);
 }
 
 export function profileFromUser(user: User | null): AuthProfile | null {
@@ -88,7 +81,10 @@ export function profileFromUser(user: User | null): AuthProfile | null {
     handle,
     ...(bio ? { bio } : {}),
     avatarUrl: String(meta.avatar_url || "").trim(),
-    initials: initialsFromName(handle || fullName || user.email || "CF", user.email),
+    initials: initialsFromMember({
+      displayName: displayName || formatDisplayNamePrefill(fullName),
+      handle,
+    }),
     avatarColor: colorForId(user.id),
   };
 }

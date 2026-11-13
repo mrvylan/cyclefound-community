@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MemberAvatar } from "@/components/ui";
+import {
+  getMemberName,
+  getMemberSecondary,
+} from "@/lib/community/memberDisplay";
 import { resolvePerson, subscribeStore } from "@/lib/data/local-store";
 
 type Identity = {
@@ -8,6 +13,8 @@ type Identity = {
   init: string;
   bg: string;
   avatarUrl?: string;
+  displayName?: string;
+  userId?: string;
 };
 
 /** Overlays local profile patches (display name + photo) on the profile hero. */
@@ -29,6 +36,8 @@ export function ProfileIdentity({
         init: merged.init,
         bg: merged.bg,
         avatarUrl: merged.avatarUrl,
+        displayName: merged.displayName,
+        userId: merged.userId,
       });
     }
     sync();
@@ -36,28 +45,21 @@ export function ProfileIdentity({
   }, [handle]);
 
   /* ~5% of 148px circle overlaps the cover (~7–8px). */
-  const overlap = "-mt-2";
-
-  if (identity.avatarUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={identity.avatarUrl}
-        alt=""
-        width={148}
-        height={148}
-        className={`${overlap} size-[148px] shrink-0 rounded-full border-[6px] border-ink object-cover`}
-      />
-    );
-  }
-
   return (
-    <span
-      className={`font-display ${overlap} inline-flex size-[148px] shrink-0 items-center justify-center rounded-full border-[6px] border-ink text-[52px] text-white`}
-      style={{ background: identity.bg }}
-      aria-hidden
-    >
-      {identity.init}
+    <span className="-mt-2 inline-flex shrink-0 rounded-full border-[6px] border-ink">
+      <MemberAvatar
+        userId={identity.userId}
+        handle={handle}
+        displayName={identity.displayName}
+        name={identity.name}
+        src={identity.avatarUrl}
+        size={148}
+        label={getMemberName({
+          displayName: identity.displayName,
+          handle,
+          name: identity.name,
+        })}
+      />
     </span>
   );
 }
@@ -72,15 +74,37 @@ export function ProfileDisplayName({
   className?: string;
 }) {
   const [name, setName] = useState(fallback);
+  const [secondary, setSecondary] = useState("");
 
   useEffect(() => {
     function sync() {
       const merged = resolvePerson(handle);
-      if (merged?.name) setName(merged.name);
+      if (!merged) return;
+      setName(
+        getMemberName({
+          displayName: merged.displayName,
+          handle: merged.publicHandle || merged.handle,
+          name: merged.name,
+        }) || fallback,
+      );
+      setSecondary(
+        getMemberSecondary({
+          displayName: merged.displayName,
+          handle: merged.publicHandle || merged.handle,
+          loc: merged.loc,
+        }),
+      );
     }
     sync();
     return subscribeStore(sync);
-  }, [handle]);
+  }, [handle, fallback]);
 
-  return <h1 className={className}>{name}</h1>;
+  return (
+    <div>
+      <h1 className={className}>{name}</h1>
+      {secondary ? (
+        <p className="m-0 mt-1 text-[14px] text-on-dark-muted">{secondary}</p>
+      ) : null}
+    </div>
+  );
 }

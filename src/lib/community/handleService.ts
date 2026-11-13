@@ -120,10 +120,27 @@ export async function claimHandle(opts: {
   handle: string;
   /** First claim (onboarding) ignores 30-day cooldown. */
   initial?: boolean;
+  /** Optional public display name (empty → null). */
+  displayName?: string;
 }) {
   const parsed = validateHandleFormat(opts.handle);
   if (!parsed.ok) {
     return { ok: false as const, error: parsed.error, suggestions: [] as string[] };
+  }
+
+  let displayNameSql: string | null | undefined;
+  if (opts.displayName !== undefined) {
+    const { validateDisplayName } = await import("@/lib/community/memberDisplay");
+    try {
+      const cleaned = validateDisplayName(opts.displayName);
+      displayNameSql = cleaned || null;
+    } catch (err) {
+      return {
+        ok: false as const,
+        error: err instanceof Error ? err.message : "Invalid display name.",
+        suggestions: [] as string[],
+      };
+    }
   }
 
   const supabase = adminClient();
@@ -138,6 +155,19 @@ export async function claimHandle(opts: {
 
   const current = String(row.handle || "").trim().toLowerCase();
   if (current && current === parsed.handle) {
+    if (displayNameSql !== undefined) {
+      const { error: nameErr } = await supabase
+        .from("profiles")
+        .update({ display_name: displayNameSql })
+        .eq("id", opts.userId);
+      if (nameErr) {
+        return {
+          ok: false as const,
+          error: nameErr.message || "Could not save display name.",
+          suggestions: [] as string[],
+        };
+      }
+    }
     return {
       ok: true as const,
       handle: parsed.handle,
@@ -195,11 +225,10 @@ export async function claimHandle(opts: {
     .update({
       handle: parsed.handle,
       handle_changed_at: now,
-      // Keep marketplace display_name in sync without exposing full_name.
-      display_name: parsed.handle,
+      ...(displayNameSql !== undefined ? { display_name: displayNameSql } : {}),
     })
     .eq("id", opts.userId)
-    .select("handle, handle_changed_at")
+    .select("handle, handle_changed_at, display_name")
     .maybeSingle();
 
   if (error) {

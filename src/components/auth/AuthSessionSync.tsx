@@ -26,7 +26,12 @@ export function AuthSessionSync() {
 
     let cancelled = false;
 
-    function apply(handle: string, avatarUrl = "", garageCoverItemId = "") {
+    function apply(
+      handle: string,
+      avatarUrl = "",
+      garageCoverItemId = "",
+      displayName = "",
+    ) {
       if (cancelled) return;
       if (!profile || !handle) {
         if (!profile && getSessionHandle()) setSessionHandle("");
@@ -45,6 +50,7 @@ export function AuthSessionSync() {
         name: handlePublicLabel(handle),
         claimedHandle: handle,
         bg: profile.avatarColor,
+        ...(displayName ? { displayName } : {}),
         ...(avatarUrl ? { avatarUrl } : {}),
         ...(cover ? { garageCoverItemId: cover } : {}),
       });
@@ -65,7 +71,12 @@ export function AuthSessionSync() {
           String(row?.handle || profile.handle || "").trim().toLowerCase() ||
           getDirectoryHandleForUserId(profile.id) ||
           "";
-        apply(handle, row?.avatarUrl || profile.avatarUrl || "", coverFromMeta);
+        apply(
+          handle,
+          row?.avatarUrl || profile.avatarUrl || "",
+          coverFromMeta,
+          row?.displayName || "",
+        );
       } catch {
         if (!cancelled) {
           const handle =

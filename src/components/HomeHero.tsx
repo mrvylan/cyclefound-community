@@ -11,7 +11,7 @@ import {
   subscribeStore,
 } from "@/lib/data/local-store";
 import { handleFromAuthProfile } from "@/lib/demo-session";
-import { abbreviatedDisplayName } from "@/lib/auth/user";
+import { getMemberName } from "@/lib/community/memberDisplay";
 
 export function HomeHero() {
   const { ready: authReady, profile, user } = useAuth();
@@ -45,9 +45,11 @@ export function HomeHero() {
   if (memberHome && profile) {
     const authHandle = handleFromAuthProfile(profile);
     const person = resolvePerson(handle || authHandle);
-    const publicLabel = abbreviatedDisplayName(
-      person?.publicHandle || person?.handle || profile.handle || authHandle,
-    );
+    const publicLabel = getMemberName({
+      displayName: person?.displayName,
+      handle: person?.publicHandle || person?.handle || profile.handle || authHandle,
+      name: person?.name,
+    });
     return (
       <section className="border-b border-line">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 py-8 pb-7">

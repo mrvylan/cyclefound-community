@@ -18,7 +18,10 @@ export function isHiddenMember(opts: {
   name?: string | null;
   handle?: string | null;
   userId?: string | null;
+  isTestAccount?: boolean | null;
 }): boolean {
+  if (opts.isTestAccount) return true;
+
   const userId = String(opts.userId || "")
     .trim()
     .toLowerCase();

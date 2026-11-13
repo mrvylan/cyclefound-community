@@ -30,7 +30,12 @@ import {
   uploadCoverToStorage,
 } from "@/lib/profile/avatarUpload";
 import { profileService } from "@/lib/profile/profileService";
-import { colorForId, initialsFromName } from "@/lib/auth/user";
+import { colorForId } from "@/lib/auth/user";
+import {
+  getMemberName,
+  initialsFromMember,
+  validateDisplayName,
+} from "@/lib/community/memberDisplay";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
 import {
   formatPublicLocation,
@@ -48,6 +53,7 @@ export function ProfileEditForm() {
   // Empty on SSR + first client paint — session handle lives in localStorage.
   const [handle, setHandle] = useState("");
   const [editHandle, setEditHandle] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [nextHandleAllowedAt, setNextHandleAllowedAt] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
@@ -69,6 +75,7 @@ export function ProfileEditForm() {
     const person = getMergedPerson(h);
     if (person) {
       setEditHandle(person.publicHandle || person.handle || h);
+      setDisplayName(person.displayName || "");
       const parsed = parsePublicLocation(person.loc);
       setCity(parsed.city);
       setStateCode(parsed.stateCode);
@@ -118,6 +125,7 @@ export function ProfileEditForm() {
           setHandle(remote.handle);
           setEditHandle(remote.handle);
         }
+        if (remote.displayName) setDisplayName(remote.displayName);
         setNextHandleAllowedAt(
           remote.handleChangedAt
             ? (() => {
@@ -289,8 +297,14 @@ export function ProfileEditForm() {
         setEditHandle(data.handle);
       }
 
+      const cleanedDisplay = validateDisplayName(displayName);
+
       saveProfilePatch(publicHandle, {
-        name: handlePublicLabel(publicHandle),
+        name: getMemberName({
+          displayName: cleanedDisplay,
+          handle: publicHandle,
+        }),
+        displayName: cleanedDisplay || undefined,
         loc,
         bio: bio.trim(),
         skills: normalizeSkillLabels(skills),
@@ -319,6 +333,7 @@ export function ProfileEditForm() {
 
         try {
           await profileService.updateMyProfile({
+            displayName: cleanedDisplay,
             city: cityOnly || undefined,
             state: st || "",
             avatarUrl: avatarUrl && !avatarUrl.startsWith("data:") ? avatarUrl : undefined,
@@ -343,7 +358,10 @@ export function ProfileEditForm() {
   const selectField =
     "cf-select h-12 w-full rounded-[10px] border border-[#D4D3CD] bg-white pl-3.5 text-[16px] text-ink outline-none focus:border-accent";
 
-  const previewInit = initialsFromName(editHandle || handle || "CF");
+  const previewInit = initialsFromMember({
+    displayName,
+    handle: editHandle || handle,
+  });
   const previewBg = user ? colorForId(user.id) : getMergedPerson(handle)?.bg || "#527D31";
   const handleCooldown =
     nextHandleAllowedAt && new Date(nextHandleAllowedAt).getTime() > Date.now()
@@ -523,6 +541,23 @@ export function ProfileEditForm() {
               }}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="p-display-name" className="text-[14px] font-semibold">
+            Display name
+          </label>
+          <input
+            id="p-display-name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value.slice(0, 40))}
+            placeholder="e.g. Dylan S."
+            maxLength={40}
+            className={field}
+          />
+          <p className="m-0 text-[13px] text-muted">
+            How your name appears to other members. Optional.
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">

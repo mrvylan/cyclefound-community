@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  let body: { handle?: string; initial?: boolean } = {};
+  let body: { handle?: string; initial?: boolean; displayName?: string } = {};
   try {
     body = await request.json();
   } catch {
@@ -119,6 +119,9 @@ export async function POST(request: Request) {
       userId: user.id,
       handle: String(body.handle || ""),
       initial: Boolean(body.initial),
+      ...(body.displayName !== undefined
+        ? { displayName: String(body.displayName) }
+        : {}),
     });
 
     if (!result.ok) {

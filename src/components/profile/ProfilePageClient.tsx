@@ -21,6 +21,11 @@ import {
   isCommunityDirectoryReady,
 } from "@/lib/community/directory-cache";
 import {
+  foundingBadgeLabel,
+  FOUNDING_MEMBER_BADGE,
+} from "@/lib/community/founding-members";
+import { getMemberName } from "@/lib/community/memberDisplay";
+import {
   displayHandleFor,
   getAllAnswers,
   getAllQuestions,
@@ -141,7 +146,12 @@ export function ProfilePageClient({ handle }: { handle: string }) {
   }
 
   const publicHandle = displayHandleFor(person);
-  const publicLabel = publicHandle ? `@${publicHandle}` : person.name;
+  const publicLabel =
+    getMemberName({
+      displayName: person.displayName,
+      handle: publicHandle || person.handle,
+      name: person.name,
+    }) || (publicHandle ? `@${publicHandle}` : person.name);
   const askLabel = publicHandle ? `Ask @${publicHandle}` : "Ask";
   const acceptedCount = Math.max(
     person.accepted || 0,
@@ -177,7 +187,21 @@ export function ProfilePageClient({ handle }: { handle: string }) {
           />
           <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-2 pt-1">
             <div className="flex flex-wrap items-center gap-2">
-              {person.roleBadge && person.roleBadge.toLowerCase() !== "member" ? (
+              {person.isFoundingMember ||
+              person.roleBadge === FOUNDING_MEMBER_BADGE ? (
+                <p
+                  className="m-0 font-mono text-[12px] font-medium tracking-[0.12em] uppercase text-accent-bright"
+                  title={foundingBadgeLabel(person.memberNumber)}
+                >
+                  {FOUNDING_MEMBER_BADGE}
+                  {person.memberNumber != null ? (
+                    <span className="ml-1.5 normal-case tracking-normal text-on-dark-muted">
+                      #{person.memberNumber}
+                    </span>
+                  ) : null}
+                </p>
+              ) : person.roleBadge &&
+                person.roleBadge.toLowerCase() !== "member" ? (
                 <p className="m-0 font-mono text-[12px] font-medium tracking-[0.12em] uppercase text-accent-bright">
                   {person.roleBadge}
                 </p>

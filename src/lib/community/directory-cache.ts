@@ -4,7 +4,11 @@ import type { GarageItem, Person } from "@/lib/data/seed";
 import { roleBadgeForMember } from "@/lib/community/founding-members";
 import { isHiddenMember } from "@/lib/community/hidden-members";
 import { communityHandleFromProfile } from "@/lib/community/handles";
-import { initialsFromName, colorForId } from "@/lib/auth/user";
+import {
+  avatarColorForId,
+  getMemberName,
+  initialsFromMember,
+} from "@/lib/community/memberDisplay";
 import { isItemCategory, normalizeItemCategory } from "@/lib/data/categories";
 import { inferDiscipline, normalizeDiscipline } from "@/lib/garage/disciplines";
 import type { RemoteGarageItem } from "@/lib/garage/garageMap";
@@ -35,6 +39,7 @@ type Cache = {
   items: MarketplaceGarageItem[];
   /** Community garage_bikes rows (Supabase). */
   garageItems: RemoteGarageItem[];
+  foundingAssigned: number;
 };
 
 const cache: Cache = {
@@ -45,6 +50,7 @@ const cache: Cache = {
   byUserId: new Map(),
   items: [],
   garageItems: [],
+  foundingAssigned: 0,
 };
 
 function notify() {
@@ -64,18 +70,28 @@ function personFromRow(row: {
   city: string | null;
   state: string | null;
   created_at: string | null;
+  is_founding_member?: boolean | null;
+  member_number?: number | null;
+  is_test_account?: boolean | null;
 }): DirectoryMember {
   const handle =
     String(row.handle || "").trim().toLowerCase() ||
     communityHandleFromProfile(row.id, String(row.display_name || "member"));
-  const name = `@${handle}`;
+  const displayName = String(row.display_name || "").trim() || undefined;
+  const name = getMemberName({ displayName, handle });
   const year = row.created_at ? String(new Date(row.created_at).getFullYear()) : "2026";
-  const badge = roleBadgeForMember({ userId: row.id, handle });
+  const isFounding = Boolean(row.is_founding_member);
+  const badge = roleBadgeForMember({
+    userId: row.id,
+    handle,
+    isFoundingMember: row.is_founding_member,
+  });
   const person: Person = {
     handle,
     name,
-    init: initialsFromName(handle),
-    bg: colorForId(row.id),
+    displayName,
+    init: initialsFromMember({ displayName, handle }),
+    bg: avatarColorForId(row.id),
     role: badge,
     loc: locOf(row.city, row.state),
     level: "RIDER",
@@ -90,10 +106,14 @@ function personFromRow(row: {
     skills: [],
     consult: "",
     verified: false,
-    roleBadge: badge,
+    roleBadge: badge || undefined,
     memberSince: year,
     avatarUrl: row.avatar_url || undefined,
     publicHandle: handle,
+    userId: row.id,
+    memberNumber: row.member_number ?? null,
+    isFoundingMember: isFounding,
+    isTestAccount: Boolean(row.is_test_account),
   };
   return { userId: row.id, handle, person };
 }
@@ -116,6 +136,10 @@ function statusFromListing(status: string): GarageItem["status"] {
 
 export function getDirectoryMembers(): DirectoryMember[] {
   return cache.members;
+}
+
+export function getFoundingAssignedCount(): number {
+  return cache.foundingAssigned;
 }
 
 export function getDirectoryPerson(handle: string): Person | undefined {
@@ -208,7 +232,11 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
         city: string | null;
         state: string | null;
         created_at: string | null;
+        is_founding_member?: boolean | null;
+        member_number?: number | null;
+        is_test_account?: boolean | null;
       }>;
+      foundingAssigned?: number;
       error?: string;
     };
     if (!dirRes.ok) {
@@ -232,6 +260,10 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
     cache.members = members;
     cache.byHandle = byHandle;
     cache.byUserId = byUserId;
+    cache.foundingAssigned =
+      typeof dirPayload.foundingAssigned === "number"
+        ? dirPayload.foundingAssigned
+        : members.filter((m) => m.person.isFoundingMember).length;
     cache.ready = true;
     cache.error = "";
     notify();

@@ -7,8 +7,8 @@ import { Bell, ChevronDown, MessageSquare } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { authHref } from "@/lib/auth/redirects";
 import { handleFromAuthProfile } from "@/lib/demo-session";
-import { abbreviatedDisplayName } from "@/lib/auth/user";
-import { Avatar } from "@/components/ui";
+import { MemberAvatar } from "@/components/ui";
+import { getMemberName } from "@/lib/community/memberDisplay";
 import {
   subscribeMessages,
   unreadMessageCount,
@@ -138,13 +138,15 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
   }
 
   const handle = handleFromAuthProfile(profile);
-  const shortName = abbreviatedDisplayName(
-    localName?.startsWith("@")
-      ? localName
-      : profile.handle || handle,
-  );
+  const person = handle ? getMergedPerson(handle) : undefined;
+  const shortName =
+    getMemberName({
+      displayName: person?.displayName,
+      handle: person?.publicHandle || profile.handle || handle,
+      name: localName || person?.name,
+    }) || "";
   const displayName = shortName || "Account";
-  const avatarSrc = localAvatar || profile.avatarUrl || null;
+  const avatarSrc = localAvatar || person?.avatarUrl || profile.avatarUrl || null;
   const close = () => setOpen(false);
 
   const totalUnread = unreadMsgs + unreadNotifs;
@@ -190,11 +192,13 @@ export function AccountMenu({ nextPath }: { nextPath: string }) {
           aria-label={`Account menu, ${displayName}`}
           onClick={() => setOpen((v) => !v)}
         >
-          <Avatar
-            init={profile.initials}
-            bg={profile.avatarColor}
-            size={36}
+          <MemberAvatar
+            userId={profile.id}
+            handle={person?.publicHandle || profile.handle || handle}
+            displayName={person?.displayName}
+            name={person?.name || localName}
             src={avatarSrc}
+            size={36}
             label={displayName}
           />
           {/* Mobile unread dot when messages/notifs are collapsed into this menu */}

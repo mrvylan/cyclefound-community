@@ -47,6 +47,11 @@ import {
 } from "@/lib/community/contribution-tier";
 import { roleBadgeForMember } from "@/lib/community/founding-members";
 import { isHiddenMember } from "@/lib/community/hidden-members";
+import {
+  avatarColorForId,
+  getMemberName,
+  initialsFromMember,
+} from "@/lib/community/memberDisplay";
 
 export { isValidMemberHandle } from "./handles";
 export {
@@ -60,6 +65,8 @@ const STORAGE_KEY = "cf_beta_v1";
 
 export type LocalProfilePatch = {
   name?: string;
+  /** Optional public display name (not username). */
+  displayName?: string;
   loc?: string;
   bio?: string;
   skills?: string[];
@@ -258,18 +265,17 @@ function seedPerson(_handle: string): Person | undefined {
 }
 
 function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person {
-  const publicName =
-    patch?.name?.trim()?.startsWith("@")
-      ? patch.name.trim()
-      : `@${handle}`;
-  const badge = roleBadgeForMember({ handle });
+  const displayName = patch?.displayName?.trim() || undefined;
+  const name = getMemberName({ displayName, handle });
+  const userId = getDirectoryUserId(handle) || undefined;
+  const badge = roleBadgeForMember({ handle, userId });
   return withPublicHandle(
     {
       handle,
-      name: publicName,
-      init: initialsFromDisplayName(handle),
-      // Prefer auth-synced color so header and feed posts match.
-      bg: patch?.bg?.trim() || "#527D31",
+      name,
+      displayName,
+      init: initialsFromMember({ displayName, handle }),
+      bg: patch?.bg?.trim() || avatarColorForId(userId || handle),
       role: badge,
       loc: patch?.loc ?? "",
       level: "RIDER",
@@ -285,7 +291,8 @@ function stubPersonFromHandle(handle: string, patch?: LocalProfilePatch): Person
       consult: "",
       verified: false,
       memberSince: "2026",
-      roleBadge: badge,
+      roleBadge: badge || undefined,
+      userId,
       avatarUrl: patch?.avatarUrl || undefined,
       coverUrl: patch?.coverUrl || undefined,
       coverPositionY:
@@ -309,11 +316,21 @@ export function getMergedPerson(handle: string): Person | undefined {
   }
   if (!patch) return withPublicHandle(base, undefined);
   const name = patch.name ?? base.name;
+  const displayName = patch.displayName?.trim() || base.displayName;
+  const publicName = getMemberName({
+    displayName,
+    handle: patch.claimedHandle || handle,
+    name: patch.name ?? base.name,
+  });
   return withPublicHandle(
     {
       ...base,
-      name,
-      init: patch.name ? initialsFromDisplayName(name) : base.init,
+      name: publicName,
+      displayName,
+      init: initialsFromMember({
+        displayName,
+        handle: patch.claimedHandle || handle,
+      }),
       bg: patch.bg?.trim() || base.bg,
       loc: patch.loc ?? base.loc,
       bio: patch.bio ?? base.bio,

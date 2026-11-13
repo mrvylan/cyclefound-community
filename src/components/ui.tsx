@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ArrowLeftRight, Bike, EyeOff, Handshake, Star, Tag } from "lucide-react";
 import type { ItemStatus, Level } from "@/lib/data/seed";
+import {
+  avatarColorForId,
+  getMemberName,
+  initialsFromMember,
+} from "@/lib/community/memberDisplay";
 
 export function Avatar({
   init,
@@ -51,6 +56,40 @@ export function Avatar({
     </Link>
   ) : (
     el
+  );
+}
+
+/**
+ * Shared member avatar — photo > initials from display name / handle,
+ * color from user id.
+ */
+export function MemberAvatar({
+  userId,
+  handle,
+  displayName,
+  name,
+  src,
+  size = 40,
+  href,
+  label,
+}: {
+  userId?: string | null;
+  handle?: string | null;
+  displayName?: string | null;
+  name?: string | null;
+  src?: string | null;
+  size?: number;
+  href?: string;
+  label?: string;
+}) {
+  const init = initialsFromMember({ displayName, handle, name });
+  const bg = avatarColorForId(String(userId || handle || "cyclefound"));
+  const aria =
+    label ||
+    getMemberName({ displayName, handle, name }) ||
+    "Member";
+  return (
+    <Avatar init={init} bg={bg} size={size} href={href} label={aria} src={src} />
   );
 }
 

@@ -12,8 +12,8 @@ import {
   resolvePerson,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { abbreviatedDisplayName } from "@/lib/auth/user";
-import { Avatar, TagChip } from "./ui";
+import { getMemberName } from "@/lib/community/memberDisplay";
+import { MemberAvatar, TagChip } from "./ui";
 
 function relatedGarageCount(handle: string, tags: string[]): number {
   const items = getGarageItemsFor(handle);
@@ -49,9 +49,13 @@ export function QuestionCard({ q }: { q: Question }) {
   const linkedItem = q.linkedItemId ? getItemLocal(q.linkedItemId) : undefined;
   const linkedPhotos = linkedItem ? getItemPhotoUrls(linkedItem) : [];
   const linkedLabel = q.linked || linkedItem?.name || "";
-  const askerName = abbreviatedDisplayName(q.asker);
   const asker = q.askerHandle ? resolvePerson(q.askerHandle) : undefined;
-  const askerBg = asker?.bg || q.bg;
+  const askerName =
+    getMemberName({
+      displayName: asker?.displayName,
+      handle: q.askerHandle || asker?.handle,
+      name: asker?.name || q.asker,
+    }) || q.asker;
   const solver = q.expertHandle ? resolvePerson(q.expertHandle) : undefined;
   const related =
     q.solved && q.expertHandle ? relatedGarageCount(q.expertHandle, q.tags) : 0;
@@ -159,7 +163,14 @@ export function QuestionCard({ q }: { q: Question }) {
             className="pointer-events-auto inline-flex items-center gap-2 font-medium text-ink no-underline hover:text-accent-hover"
             onClick={(e) => e.stopPropagation()}
           >
-            <Avatar init={asker?.init || q.init} bg={askerBg} size={26} />
+            <MemberAvatar
+              userId={asker?.userId}
+              handle={q.askerHandle || asker?.handle}
+              displayName={asker?.displayName}
+              name={asker?.name || q.asker}
+              src={asker?.avatarUrl}
+              size={26}
+            />
             {askerName}
           </Link>
           <span>{q.time}</span>
@@ -170,7 +181,11 @@ export function QuestionCard({ q }: { q: Question }) {
           {q.solved && q.expert ? (
             <span className="inline-flex flex-wrap items-center gap-1.5 rounded-full bg-status-accepted-soft px-2.5 py-0.5 font-semibold text-status-accepted">
               <Check className="size-3.5 stroke-[2.6]" aria-hidden />
-              Solved by {abbreviatedDisplayName(q.expert)}
+              Solved by{" "}
+              {getMemberName({
+                handle: q.expertHandle,
+                name: q.expert,
+              }) || q.expert}
               {solver && related > 0 ? (
                 <span className="font-normal text-status-accepted/80">
                   · {related} related garage item{related === 1 ? "" : "s"}

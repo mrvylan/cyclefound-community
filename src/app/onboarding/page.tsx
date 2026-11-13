@@ -15,6 +15,7 @@ import {
   setSessionHandle,
 } from "@/lib/data/local-store";
 import { normalizeSkillLabels } from "@/lib/skills/taxonomy";
+import { formatDisplayNamePrefill, validateDisplayName } from "@/lib/community/memberDisplay";
 import { Check } from "lucide-react";
 
 type Step = 1 | 2 | 3 | 4;
@@ -31,6 +32,8 @@ export default function OnboardingPage() {
   const { ready, user, profile, refresh } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [handle, setHandle] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [displayNamePrefillDone, setDisplayNamePrefillDone] = useState(false);
   const [handleReady, setHandleReady] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
@@ -49,6 +52,15 @@ export default function OnboardingPage() {
       router.replace(authHref("join", "/onboarding"));
     }
   }, [ready, user, router]);
+
+  useEffect(() => {
+    if (!ready || !user || displayNamePrefillDone) return;
+    const full =
+      profile?.fullName ||
+      String(user.user_metadata?.full_name || user.user_metadata?.name || "").trim();
+    if (full) setDisplayName(formatDisplayNamePrefill(full));
+    setDisplayNamePrefillDone(true);
+  }, [ready, user, profile?.fullName, displayNamePrefillDone]);
 
   useEffect(() => {
     if (!ready || !user || bootstrapped) return;
@@ -99,10 +111,20 @@ export default function OnboardingPage() {
     setError("");
     setClaiming(true);
     try {
+      let cleanedDisplay = "";
+      try {
+        cleanedDisplay = validateDisplayName(displayName);
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("Invalid display name.");
+      }
       const res = await fetch("/api/profile/handle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle, initial: true }),
+        body: JSON.stringify({
+          handle,
+          initial: true,
+          displayName: cleanedDisplay,
+        }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -117,6 +139,10 @@ export default function OnboardingPage() {
       }
       setSessionHandle(data.handle);
       setHandle(data.handle);
+      saveProfilePatch(data.handle, {
+        displayName: cleanedDisplay || undefined,
+        claimedHandle: data.handle,
+      });
       setCompleted((c) => ({ ...c, 1: true }));
       await refresh();
       setStep(2);
@@ -272,6 +298,23 @@ export default function OnboardingPage() {
 
       {step === 1 ? (
         <section className="mt-8 flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
+            Display name
+            <input
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value.slice(0, 40));
+                setError("");
+              }}
+              placeholder="e.g. Dylan S."
+              maxLength={40}
+              disabled={claiming}
+              className="h-11 rounded-[10px] border border-[#D4D3CD] px-3.5 text-[15px] font-normal outline-none focus:border-accent"
+            />
+            <span className="text-[13px] font-normal text-muted">
+              How your name appears to other members. Optional.
+            </span>
+          </label>
           <HandlePicker
             value={handle}
             onChange={(v) => {

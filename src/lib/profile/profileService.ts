@@ -26,7 +26,7 @@ function normalizeProfile(row: Record<string, unknown> | null): SellerProfile | 
   return {
     id: String(row.id),
     fullName: String(row.full_name ?? ""),
-    displayName: String(row.display_name ?? handle),
+    displayName: String(row.display_name ?? "").trim(),
     handle,
     handleChangedAt: (row.handle_changed_at as string | null) ?? null,
     city: String(row.city ?? ""),
@@ -82,6 +82,8 @@ export const profileService = {
 
   async updateMyProfile(updates: {
     fullName?: string;
+    /** Optional public display name; empty string clears to null. */
+    displayName?: string;
     city?: string;
     state?: string;
     zipCode?: string;
@@ -98,6 +100,11 @@ export const profileService = {
 
     const payload: Record<string, string | null> = {};
     if (updates.fullName !== undefined) payload.full_name = String(updates.fullName).trim();
+    if (updates.displayName !== undefined) {
+      const { validateDisplayName } = await import("@/lib/community/memberDisplay");
+      const cleaned = validateDisplayName(updates.displayName);
+      payload.display_name = cleaned || null;
+    }
     if (updates.city !== undefined) payload.city = String(updates.city).trim() || null;
     if (updates.state !== undefined) payload.state = String(updates.state).trim() || null;
     if (updates.zipCode !== undefined) {

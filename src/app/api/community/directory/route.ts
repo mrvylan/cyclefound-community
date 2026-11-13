@@ -29,7 +29,9 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, handle, avatar_url, city, state, created_at")
+    .select(
+      "id, handle, display_name, avatar_url, city, state, created_at, is_founding_member, member_number, is_test_account",
+    )
     .not("handle", "is", null)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -41,8 +43,11 @@ export async function GET() {
   const members = (data || []).filter((row) => {
     const handle = String(row.handle || "").trim();
     if (!handle || !row.id) return false;
+    if (row.is_test_account) return false;
     return !isHiddenMember({ name: handle, userId: row.id });
   });
 
-  return NextResponse.json({ members });
+  const foundingAssigned = members.filter((m) => m.is_founding_member).length;
+
+  return NextResponse.json({ members, foundingAssigned });
 }

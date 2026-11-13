@@ -3,6 +3,7 @@ import { HomeFeed } from "@/components/HomeFeed";
 import { HomeGarageSpotlight } from "@/components/HomeGarageSpotlight";
 import { HomeHero } from "@/components/HomeHero";
 import { HomeOnboardedBanner } from "@/components/HomeOnboardedBanner";
+import { HomeFoundingSpots } from "@/components/HomeFoundingSpots";
 import {
   HomeBrowseExpertise,
   HomeRecentlyListed,
@@ -22,6 +23,10 @@ export default function HomePage() {
       </Suspense>
 
       <HomeHero />
+
+      <div className="mx-auto max-w-[1280px] px-8 pt-3">
+        <HomeFoundingSpots />
+      </div>
 
       <section className="mx-auto flex max-w-[1280px] flex-wrap items-start gap-8 px-8 py-10">
         <HomeFeed />
