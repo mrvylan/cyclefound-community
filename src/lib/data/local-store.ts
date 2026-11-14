@@ -8,11 +8,6 @@ import {
   type Person,
   type Question,
 } from "./seed";
-import {
-  getStarterAnswers,
-  getStarterQuestion,
-  STARTER_QUESTIONS,
-} from "./starter-feed";
 import { normalizeItemCategory } from "./categories";
 import {
   isClaimableHandle,
@@ -465,34 +460,19 @@ function enrichUserQuestion(q: Question): Question {
 
 export function getAllQuestions(): Question[] {
   const store = readStore();
-  const userQs = store.extraQuestions.map(enrichUserQuestion);
-  const userIds = new Set(userQs.map((q) => q.id));
-  // Starter Community threads fill an empty Pre-Alpha feed (read-only catalog).
-  const starters = STARTER_QUESTIONS.filter((q) => !userIds.has(q.id)).map((q) => {
-    const thread = getAllAnswers(q.id);
-    const accepted = thread.find((a) => a.accepted);
-    return {
-      ...q,
-      answers: thread.length,
-      solved: Boolean(accepted),
-      expert: accepted?.name ?? q.expert,
-      expertHandle: accepted?.handle ?? q.expertHandle,
-    };
-  });
-  return [...userQs, ...starters];
+  // User-posted threads only — starter/mock catalog is no longer mixed into the feed.
+  return store.extraQuestions.map(enrichUserQuestion);
 }
 
 export function getQuestionLocal(id: string): Question | undefined {
-  return getAllQuestions().find((q) => q.id === id) || getStarterQuestion(id);
+  return getAllQuestions().find((q) => q.id === id);
 }
 
 export function getAllAnswers(questionId: string): Answer[] {
   const store = readStore();
   const local = store.extraAnswers.filter((a) => a.questionId === questionId);
-  const starter = local.length ? [] : getStarterAnswers(questionId);
-  const merged = [...local, ...starter];
   const acceptedId = store.acceptedByQuestion[questionId];
-  return merged
+  return local
     .map((a) => {
       if (acceptedId === undefined) return a;
       return { ...a, accepted: a.id === acceptedId };
