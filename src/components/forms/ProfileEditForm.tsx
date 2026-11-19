@@ -337,6 +337,7 @@ export function ProfileEditForm() {
             city: cityOnly || undefined,
             state: st || "",
             avatarUrl: avatarUrl && !avatarUrl.startsWith("data:") ? avatarUrl : undefined,
+            bio: bio.trim(),
           });
         } catch {
           // Auth metadata still updated; profiles row may be missing in Pre-Alpha.

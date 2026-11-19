@@ -16,6 +16,7 @@ export type SellerProfile = {
   zipCode: string;
   avatarUrl: string;
   sellerType: string;
+  bio: string;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -34,13 +35,14 @@ function normalizeProfile(row: Record<string, unknown> | null): SellerProfile | 
     zipCode: String(row.zip_code ?? ""),
     avatarUrl: String(row.avatar_url ?? ""),
     sellerType: String(row.seller_type ?? "individual"),
+    bio: String(row.bio ?? "").trim(),
     createdAt: (row.created_at as string | null) ?? null,
     updatedAt: (row.updated_at as string | null) ?? null,
   };
 }
 
 const SELECT =
-  "id, full_name, display_name, handle, handle_changed_at, city, state, zip_code, avatar_url, seller_type, created_at, updated_at";
+  "id, full_name, display_name, handle, handle_changed_at, city, state, zip_code, avatar_url, seller_type, bio, created_at, updated_at";
 
 export const profileService = {
   async getMyProfile() {
@@ -89,6 +91,8 @@ export const profileService = {
     zipCode?: string;
     avatarUrl?: string | null;
     sellerType?: string;
+    /** Optional public short bio; empty string clears to null. */
+    bio?: string;
   }) {
     const supabase = createClient();
     const {
@@ -119,6 +123,10 @@ export const profileService = {
         throw new Error("Seller type must be Individual or Business.");
       }
       payload.seller_type = sellerType;
+    }
+    if (updates.bio !== undefined) {
+      const bio = String(updates.bio).trim().slice(0, 600);
+      payload.bio = bio || null;
     }
 
     const { data, error } = await supabase

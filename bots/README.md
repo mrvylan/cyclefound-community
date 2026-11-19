@@ -41,3 +41,4 @@ Run in Supabase SQL editor (order matters):
 2. `supabase/migrations/20261119100000_community_questions_answers.sql`
 3. `supabase/migrations/20261119110000_member_messaging.sql`
 4. `supabase/migrations/20261119120000_bot_accounts.sql`
+5. `supabase/migrations/20261119130000_profiles_bio.sql` (public short bio on profiles)

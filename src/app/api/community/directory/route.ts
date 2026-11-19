@@ -30,7 +30,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, handle, display_name, avatar_url, city, state, created_at, is_founding_member, member_number, is_test_account",
+      "id, handle, display_name, bio, avatar_url, city, state, created_at, is_founding_member, member_number, is_test_account",
     )
     .not("handle", "is", null)
     .order("created_at", { ascending: false })

@@ -227,6 +227,7 @@ async function main() {
       full_name: persona.fullName,
       city: persona.city || null,
       state: persona.state || null,
+      bio: persona.bio?.trim() || null,
       is_bot: true,
       is_founding_member: false,
       member_number: null,

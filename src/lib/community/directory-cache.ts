@@ -66,6 +66,7 @@ function personFromRow(row: {
   id: string;
   handle?: string | null;
   display_name?: string | null;
+  bio?: string | null;
   avatar_url: string | null;
   city: string | null;
   state: string | null;
@@ -102,7 +103,7 @@ function personFromRow(row: {
     accepted: 0,
     items: 0,
     reply: "—",
-    bio: "",
+    bio: String(row.bio || "").trim(),
     skills: [],
     consult: "",
     verified: false,
@@ -228,6 +229,7 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
         id: string;
         handle?: string | null;
         display_name?: string | null;
+        bio?: string | null;
         avatar_url: string | null;
         city: string | null;
         state: string | null;
