@@ -1,6 +1,10 @@
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { garageMessagingService, type GarageActor } from "./garageMessagingService";
 import { listingMessagingService } from "./listingMessagingService";
+import {
+  memberMessagingAvailable,
+  memberMessagingService,
+} from "./memberMessagingService";
 import type { ThreadDetail, ThreadListItem } from "./types";
 
 const UUID_RE =
@@ -14,6 +18,16 @@ function messagingUnavailable(error: unknown) {
   return String((error as Error)?.message || "")
     .toLowerCase()
     .includes("isn’t enabled");
+}
+
+function memberRemoteUnavailable(error: unknown) {
+  const msg = String((error as Error)?.message || "").toLowerCase();
+  return (
+    msg.includes("not configured") ||
+    msg.includes("relation") ||
+    msg.includes("does not exist") ||
+    msg.includes("could not")
+  );
 }
 
 export type StartGarageMessageInput = {
@@ -66,6 +80,33 @@ export const messagingService = {
     handle: string;
     name: string;
   }) {
+    if (memberMessagingAvailable()) {
+      try {
+        return await memberMessagingService.startThread({
+          actor,
+          message,
+          handle,
+          name,
+        });
+      } catch (error) {
+        // Fall back to local until migrations / service role are ready.
+        if (!memberRemoteUnavailable(error) && actor.id.length > 20) {
+          // Auth users talking to real members — surface the remote error.
+          const msg = String((error as Error)?.message || "");
+          if (
+            msg.includes("Sign in") ||
+            msg.includes("Verify") ||
+            msg.includes("not found") ||
+            msg.includes("yourself") ||
+            msg.includes("at least") ||
+            msg.includes("2000")
+          ) {
+            throw error;
+          }
+        }
+        console.warn("Member messaging remote failed; using local store:", error);
+      }
+    }
     return garageMessagingService.startThread({
       actor,
       message,
@@ -81,6 +122,7 @@ export const messagingService = {
   async listThreads(viewer: { id: string; handle?: string }): Promise<ThreadListItem[]> {
     const garage = await garageMessagingService.listThreads(viewer);
     let listing: ThreadListItem[] = [];
+    let member: ThreadListItem[] = [];
     if (hasSupabaseConfig()) {
       try {
         listing = await listingMessagingService.listThreads();
@@ -89,8 +131,20 @@ export const messagingService = {
           console.warn("Could not load listing threads:", error);
         }
       }
+      if (memberMessagingAvailable()) {
+        try {
+          member = await memberMessagingService.listThreads();
+        } catch (error) {
+          console.warn("Could not load member threads:", error);
+        }
+      }
     }
-    return [...listing, ...garage].sort(
+    // Prefer remote member threads; drop local member duplicates with same peer title+kind.
+    const remoteMemberIds = new Set(member.map((t) => t.threadId));
+    const garageFiltered = garage.filter(
+      (t) => t.kind !== "member" || !remoteMemberIds.size,
+    );
+    return [...listing, ...member, ...garageFiltered].sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   },
@@ -99,6 +153,14 @@ export const messagingService = {
     threadId: string,
     viewer: { id: string; handle?: string },
   ): Promise<ThreadDetail | null> {
+    if (memberMessagingAvailable() && UUID_RE.test(threadId)) {
+      try {
+        const remote = await memberMessagingService.getThread(threadId);
+        if (remote) return remote;
+      } catch {
+        /* try local / listing */
+      }
+    }
     const garage = await garageMessagingService.getThread(threadId, viewer);
     if (garage) return garage;
     if (!hasSupabaseConfig()) return null;
@@ -124,10 +186,37 @@ export const messagingService = {
     if (kind === "listing") {
       return listingMessagingService.reply({ threadId, message });
     }
+    if (kind === "member" && memberMessagingAvailable() && UUID_RE.test(threadId)) {
+      try {
+        return await memberMessagingService.reply({ threadId, message });
+      } catch (error) {
+        const msg = String((error as Error)?.message || "");
+        if (
+          msg.includes("at least") ||
+          msg.includes("2000") ||
+          msg.includes("Sign in") ||
+          msg.includes("Verify") ||
+          msg.includes("not found")
+        ) {
+          throw error;
+        }
+        console.warn("Member reply remote failed; using local:", error);
+      }
+    }
     if (kind === "garage" || kind === "member") {
       return garageMessagingService.reply({ threadId, message, actor });
     }
-    // Kind unknown — try garage first (local), then listing RPC.
+    // Kind unknown — try member remote, then garage, then listing.
+    if (memberMessagingAvailable() && UUID_RE.test(threadId)) {
+      try {
+        const remote = await memberMessagingService.getThread(threadId);
+        if (remote) {
+          return memberMessagingService.reply({ threadId, message });
+        }
+      } catch {
+        /* continue */
+      }
+    }
     const garage = await garageMessagingService.getThread(threadId, actor);
     if (garage) {
       return garageMessagingService.reply({ threadId, message, actor });

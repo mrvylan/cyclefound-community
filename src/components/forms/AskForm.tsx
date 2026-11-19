@@ -195,7 +195,7 @@ export function AskForm() {
     router.push(authHref("join", "/ask"));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (needsAuth) {
       persistDraftAndAuth();
@@ -226,19 +226,34 @@ export function AskForm() {
     if (!finalTags.includes(intent) && finalTags.length < MAX_TAGS) {
       finalTags.unshift(intent);
     }
-    const q = postQuestion({
-      title: title.trim().slice(0, MAX_TITLE),
-      body: body.trim().slice(0, MAX_DETAILS),
-      tags: finalTags.slice(0, MAX_TAGS),
-      linkedItemId: linkedItemId || undefined,
-      photoDataUrls: photos,
-    });
+    let questionId = "";
+    try {
+      const { postCommunityQuestion } = await import(
+        "@/lib/community/questionsRemote"
+      );
+      const remote = await postCommunityQuestion({
+        title: title.trim().slice(0, MAX_TITLE),
+        body: body.trim().slice(0, MAX_DETAILS),
+        tags: finalTags.slice(0, MAX_TAGS),
+        linkedItemId: linkedItemId || undefined,
+      });
+      questionId = remote.id;
+    } catch {
+      const q = postQuestion({
+        title: title.trim().slice(0, MAX_TITLE),
+        body: body.trim().slice(0, MAX_DETAILS),
+        tags: finalTags.slice(0, MAX_TAGS),
+        linkedItemId: linkedItemId || undefined,
+        photoDataUrls: photos,
+      });
+      questionId = q.id;
+    }
     const reach = membersReachedByTopics(tags);
     try {
       sessionStorage.setItem(
         "cf_ask_sent",
         JSON.stringify({
-          questionId: q.id,
+          questionId,
           count: reach.count,
           topic: reach.topTopic,
           intent: intentMeta?.label ?? null,
@@ -247,7 +262,7 @@ export function AskForm() {
     } catch {
       /* ignore */
     }
-    router.push(`/q/${q.id}`);
+    router.push(`/q/${questionId}`);
   }
 
   return (
@@ -273,7 +288,7 @@ export function AskForm() {
         ) : null}
       </div>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <span className="text-[14px] font-semibold">What are you trying to do?</span>
           <p className="m-0 text-[13px] text-muted-2">

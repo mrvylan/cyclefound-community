@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PhotoPicker } from "./PhotoPicker";
 import { SessionPicker } from "./SessionPicker";
 import { postAnswer } from "@/lib/data/local-store";
+import { postCommunityAnswer } from "@/lib/community/questionsRemote";
 
 export function AnswerComposer({
   questionId,
@@ -15,24 +16,36 @@ export function AnswerComposer({
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim() || body.trim().length < 12) {
       setError("Write a bit more so the asker can use your answer.");
       return;
     }
     setError("");
-    postAnswer({ questionId, body, photoDataUrls: photos });
-    setBody("");
-    setPhotos([]);
-    onPosted();
+    setBusy(true);
+    try {
+      try {
+        await postCommunityAnswer({ questionId, body: body.trim() });
+      } catch {
+        postAnswer({ questionId, body, photoDataUrls: photos });
+      }
+      setBody("");
+      setPhotos([]);
+      onPosted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not post answer.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <form
       id="answer"
-      onSubmit={onSubmit}
+      onSubmit={(e) => void onSubmit(e)}
       className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -54,9 +67,10 @@ export function AnswerComposer({
       {error ? <p className="m-0 text-[14px] font-medium text-[#9B2C2C]">{error}</p> : null}
       <button
         type="submit"
-        className="inline-flex h-12 items-center justify-center self-start rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-hover"
+        disabled={busy}
+        className="inline-flex h-12 items-center justify-center self-start rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
       >
-        Post answer
+        {busy ? "Posting…" : "Post answer"}
       </button>
     </form>
   );

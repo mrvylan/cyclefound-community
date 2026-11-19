@@ -7,6 +7,7 @@ import {
   getSessionHandle,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { fetchCommunityQuestions } from "@/lib/community/questionsRemote";
 import type { Question } from "@/lib/data/seed";
 import {
   FEED_INTENT_OPTIONS,
@@ -64,13 +65,23 @@ export function HomeFeed() {
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    function sync() {
-      setQuestions(getAllQuestions());
+    let cancelled = false;
+    async function load() {
       setSignedIn(Boolean(getSessionHandle()));
-      setReady(true);
+      try {
+        const remote = await fetchCommunityQuestions();
+        if (!cancelled) setQuestions(remote);
+      } catch {
+        if (!cancelled) setQuestions(getAllQuestions());
+      } finally {
+        if (!cancelled) setReady(true);
+      }
     }
-    sync();
-    return subscribeStore(sync);
+    void load();
+    return subscribeStore(() => {
+      setSignedIn(Boolean(getSessionHandle()));
+      void load();
+    });
   }, []);
 
   useEffect(() => {

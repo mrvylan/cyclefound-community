@@ -26,6 +26,8 @@ import {
   isMockDataEnabled,
   subscribeStore,
 } from "@/lib/data/local-store";
+import { fetchCommunityQuestion } from "@/lib/community/questionsRemote";
+import type { Answer, Question } from "@/lib/data/seed";
 
 export default function QuestionPage({
   params,
@@ -35,15 +37,16 @@ export default function QuestionPage({
   const { id } = use(params);
   const [tick, setTick] = useState(0);
   const [ready, setReady] = useState(false);
-  const [sessionHandle, setSessionHandle] = useState("ben_carver");
+  const [sessionHandle, setSessionHandle] = useState("");
   const [voted, setVoted] = useState(false);
+  const [remoteQ, setRemoteQ] = useState<Question | null>(null);
+  const [remoteAnswers, setRemoteAnswers] = useState<Answer[] | null>(null);
   const [sentTo, setSentTo] = useState<{
     count: number;
     topic: string | null;
   } | null>(null);
 
   useEffect(() => {
-    setReady(true);
     setSessionHandle(getSessionHandle());
     try {
       const raw = sessionStorage.getItem("cf_ask_sent");
@@ -64,6 +67,22 @@ export default function QuestionPage({
     } catch {
       /* ignore */
     }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const remote = await fetchCommunityQuestion(id);
+        if (!cancelled && remote) {
+          setRemoteQ(remote.question);
+          setRemoteAnswers(remote.answers);
+        }
+      } catch {
+        /* fall back to local */
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+
     return subscribeStore(() => {
       setSessionHandle(getSessionHandle());
       setTick((t) => t + 1);
@@ -73,7 +92,7 @@ export default function QuestionPage({
   // tick forces re-read after local store writes
   void tick;
 
-  const q = getQuestionLocal(id);
+  const q = remoteQ || getQuestionLocal(id);
 
   if (!ready) {
     return (
@@ -85,7 +104,7 @@ export default function QuestionPage({
 
   if (!q) notFound();
 
-  const thread = getAllAnswers(id);
+  const thread = remoteAnswers ?? getAllAnswers(id);
   const sidebarExperts = getExpertsLocal().slice(0, 3);
   const showMockRelated = isMockDataEnabled();
   const linkedItem = q.linkedItemId ? getItemLocal(q.linkedItemId) : undefined;
@@ -433,7 +452,18 @@ export default function QuestionPage({
             })
           )}
 
-          <AnswerComposer questionId={id} onPosted={() => setTick((t) => t + 1)} />
+          <AnswerComposer
+            questionId={id}
+            onPosted={() => {
+              setTick((t) => t + 1);
+              void fetchCommunityQuestion(id).then((remote) => {
+                if (remote) {
+                  setRemoteQ(remote.question);
+                  setRemoteAnswers(remote.answers);
+                }
+              });
+            }}
+          />
         </div>
 
         <aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
