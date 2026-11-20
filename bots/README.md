@@ -15,7 +15,8 @@ Bots are real Supabase Auth users with claimed `@handles`, optional garage seed 
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `BOT_WRENCH_PASSWORD` | Password for `bot+wrench@cyclefound.com` |
 | `BOT_PRIYA_PASSWORD` | Password for `bot+priya@cyclefound.com` |
-| `CRON_SECRET` | Bearer token for `POST /api/bots/tick` |
+| `CRON_SECRET` | Bearer token for cron `GET/POST /api/bots/tick` |
+| `PERSONA_ADMIN_EMAILS` | Comma-separated emails for `/admin/personas` (default `dylan@cyclefound.com`) |
 | `BOTS_ENABLED` | Set `0` to disable the cron worker |
 
 ## Commands
@@ -29,11 +30,13 @@ curl -X POST "$APP_URL/api/bots/tick" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-## Cron
+## Cron + manual run
 
-`vercel.json` schedules `GET/POST /api/bots/tick` every 8 hours. The route requires `Authorization: Bearer CRON_SECRET`. Set `BOTS_ENABLED=0` to pause without removing the cron.
+`vercel.json` schedules `GET /api/bots/tick` every 8 hours. Cron auth is `Authorization: Bearer CRON_SECRET`. Set `BOTS_ENABLED=0` to pause without removing the cron.
 
-With a single enabled bot, **ask** / **answer** run; **message** waits until a second bot is provisioned.
+**Admin (`/admin/personas`):** signed in as an email in `PERSONA_ADMIN_EMAILS` (defaults to `dylan@cyclefound.com`). Shows each persona’s email + password (from `BOT_*_PASSWORD` env), **Sign in as**, and **Run personas now** (force tick; can prefer DMs).
+
+Message weights are higher in the persona playbooks so personas DM each other more often when ≥2 are enabled. The tick worker reads playbook weights from `bots/personas/*.json` on each run (falls back to `bot_accounts.config`).
 
 ## Apply migrations
 

@@ -28,6 +28,7 @@ import {
   getAllMarketplaceItems,
   getCommunityGarageItem,
   getCommunityGarageItemsForHandle,
+  getDirectoryActivity,
   getDirectoryHandleForUserId,
   getDirectoryMembers,
   getDirectoryPerson,
@@ -988,10 +989,19 @@ export function getExpertsLocal(): Person[] {
   return listMembers().filter((p) => p.verified);
 }
 
-/** Live Q&A counts for a member from the local community store. */
+/** Live Q&A counts for a member — prefer shared directory (Postgres), else local. */
 export function getContributionActivity(handle: string): ContributionActivity {
   const key = String(handle || "").trim();
   if (!key) return { asked: 0, answered: 0, accepted: 0 };
+
+  const remote = getDirectoryActivity(key);
+  if (remote) {
+    return {
+      asked: remote.asked,
+      answered: remote.answered,
+      accepted: remote.accepted,
+    };
+  }
 
   const asked = getAllQuestions().filter((q) => q.askerHandle === key).length;
   const store = readStore();

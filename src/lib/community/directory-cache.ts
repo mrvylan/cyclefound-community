@@ -17,6 +17,8 @@ export type DirectoryMember = {
   userId: string;
   handle: string;
   person: Person;
+  /** Live Community Q&A counts from Postgres (0 if unavailable). */
+  activity: { asked: number; answered: number; accepted: number };
 };
 
 export type MarketplaceGarageItem = GarageItem & {
@@ -74,6 +76,9 @@ function personFromRow(row: {
   is_founding_member?: boolean | null;
   member_number?: number | null;
   is_test_account?: boolean | null;
+  asked?: number | null;
+  answered?: number | null;
+  accepted?: number | null;
 }): DirectoryMember {
   const handle =
     String(row.handle || "").trim().toLowerCase() ||
@@ -116,7 +121,16 @@ function personFromRow(row: {
     isFoundingMember: isFounding,
     isTestAccount: Boolean(row.is_test_account),
   };
-  return { userId: row.id, handle, person };
+  return {
+    userId: row.id,
+    handle,
+    person,
+    activity: {
+      asked: Math.max(0, Number(row.asked) || 0),
+      answered: Math.max(0, Number(row.answered) || 0),
+      accepted: Math.max(0, Number(row.accepted) || 0),
+    },
+  };
 }
 
 function formatUsdFromCents(cents: number | null | undefined) {
@@ -145,6 +159,15 @@ export function getFoundingAssignedCount(): number {
 
 export function getDirectoryPerson(handle: string): Person | undefined {
   return cache.byHandle.get(handle)?.person;
+}
+
+export function getDirectoryActivity(handle: string): {
+  asked: number;
+  answered: number;
+  accepted: number;
+} | null {
+  const row = cache.byHandle.get(String(handle || "").trim().toLowerCase());
+  return row?.activity ?? null;
 }
 
 export function getDirectoryUserId(handle: string): string | undefined {
@@ -237,6 +260,9 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
         is_founding_member?: boolean | null;
         member_number?: number | null;
         is_test_account?: boolean | null;
+        asked?: number | null;
+        answered?: number | null;
+        accepted?: number | null;
       }>;
       foundingAssigned?: number;
       error?: string;

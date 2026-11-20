@@ -54,9 +54,9 @@
     "maxActionsPerDay": 2,
     "quietHoursLocal": { "start": 22, "end": 6, "tz": "America/Los_Angeles" },
     "weights": {
-      "ask": 50,
-      "answer": 30,
-      "message": 20
+      "ask": 35,
+      "answer": 25,
+      "message": 40
     },
     "askTemplates": [
       {

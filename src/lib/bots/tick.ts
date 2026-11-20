@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { orderedPair } from "@/lib/messaging/memberMessagingServer";
 
@@ -33,6 +35,19 @@ function service(): SupabaseClient {
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+/** Prefer checked-in persona JSON playbook so weight tweaks apply without re-provision. */
+function playbookFromDisk(slug: string): BotPlaybook | undefined {
+  try {
+    const path = join(process.cwd(), "bots/personas", `${slug}.json`);
+    const raw = JSON.parse(readFileSync(path, "utf8")) as {
+      playbook?: BotPlaybook;
+    };
+    return raw.playbook;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Deterministic 0..1 from date + bot id + salt. */
@@ -98,12 +113,16 @@ function pickAction(
   botId: string,
   hasPeer: boolean,
   hasOpenQuestion: boolean,
+  opts?: { rollSalt?: string; preferMessage?: boolean },
 ): ActionKind | null {
-  const weights = {
+  let weights = {
     ask: playbook?.weights?.ask ?? 60,
     answer: playbook?.weights?.answer ?? 30,
     message: playbook?.weights?.message ?? 10,
   };
+  if (opts?.preferMessage && hasPeer) {
+    weights = { ask: 10, answer: 10, message: 80 };
+  }
   const entries: Array<{ kind: ActionKind; w: number }> = (
     [
       { kind: "ask" as const, w: weights.ask },
@@ -115,7 +134,8 @@ function pickAction(
   if (!entries.length) return null;
 
   const total = entries.reduce((s, e) => s + e.w, 0);
-  let roll = seededUnit(dateKey, botId, "action") * total;
+  let roll =
+    seededUnit(dateKey, botId, opts?.rollSalt || "action") * total;
   for (const e of entries) {
     roll -= e.w;
     if (roll <= 0) return e.kind;
@@ -288,12 +308,20 @@ export type TickResult = {
   error?: string;
 };
 
-export async function runBotTick(): Promise<{
+export type RunBotTickOptions = {
+  /** Bypass quiet hours, daily cap, and wave cooldown (admin / manual run). */
+  force?: boolean;
+  /** Bias this run toward bot↔bot DMs when peers exist. */
+  preferMessage?: boolean;
+};
+
+export async function runBotTick(opts: RunBotTickOptions = {}): Promise<{
   ok: boolean;
   results: TickResult[];
   disabled?: boolean;
+  forced?: boolean;
 }> {
-  if (process.env.BOTS_ENABLED === "0") {
+  if (process.env.BOTS_ENABLED === "0" && !opts.force) {
     return { ok: true, results: [], disabled: true };
   }
 
@@ -312,6 +340,11 @@ export async function runBotTick(): Promise<{
   const rows = (bots || []) as BotAccountRow[];
   const results: TickResult[] = [];
   const peerPool = rows.map((b) => b.user_id);
+  const force = Boolean(opts.force);
+  const preferMessage = Boolean(opts.preferMessage);
+  const rollSalt = force
+    ? `force-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    : "action";
 
   // Resolve handles for peers
   const { data: profiles } = await admin
@@ -325,12 +358,13 @@ export async function runBotTick(): Promise<{
   }
 
   for (const bot of rows) {
-    const playbook = bot.config?.playbook;
+    const playbook =
+      playbookFromDisk(bot.persona_slug) || bot.config?.playbook;
     const tz = playbook?.quietHoursLocal?.tz || "America/Los_Angeles";
     const dateKey = todayKeyInTz(tz);
     const maxActions = playbook?.maxActionsPerDay ?? 2;
 
-    if (inQuietHours(playbook)) {
+    if (!force && inQuietHours(playbook)) {
       results.push({ bot: bot.persona_slug, skipped: "quiet_hours" });
       continue;
     }
@@ -339,16 +373,19 @@ export async function runBotTick(): Promise<{
     if (bot.actions_day !== dateKey) {
       actionsToday = 0;
     }
-    if (actionsToday >= maxActions) {
+    if (!force && actionsToday >= maxActions) {
       results.push({ bot: bot.persona_slug, skipped: "daily_cap" });
       continue;
     }
 
     // At most one action per tick wave unless under cap and roll says go.
-    const shouldAct = seededUnit(dateKey, bot.user_id, `wave-${actionsToday}`) > 0.15;
-    if (!shouldAct && actionsToday > 0) {
-      results.push({ bot: bot.persona_slug, skipped: "cooldown" });
-      continue;
+    if (!force) {
+      const shouldAct =
+        seededUnit(dateKey, bot.user_id, `wave-${actionsToday}`) > 0.15;
+      if (!shouldAct && actionsToday > 0) {
+        results.push({ bot: bot.persona_slug, skipped: "cooldown" });
+        continue;
+      }
     }
 
     const peers = peerPool.filter((id) => id !== bot.user_id);
@@ -366,6 +403,7 @@ export async function runBotTick(): Promise<{
       bot.user_id,
       hasPeer,
       (openCount || 0) > 0,
+      { rollSalt: `${rollSalt}:${bot.persona_slug}`, preferMessage },
     );
 
     if (!action) {
@@ -427,5 +465,5 @@ export async function runBotTick(): Promise<{
     }
   }
 
-  return { ok: true, results };
+  return { ok: true, results, forced: force || undefined };
 }

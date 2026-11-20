@@ -89,18 +89,11 @@ export const CONTRIBUTION_TIERS: ContributionTier[] = [
 ];
 
 /**
- * Preview activity for empty Pre-Alpha feeds so we can see tier UI.
- * Remove or empty this map when real Q&A volume is enough.
+ * Optional preview activity for empty feeds (UI demos only).
+ * Keep empty once Community Q&A is live — Members/profile use real counts.
  */
-export const CONTRIBUTION_PREVIEW_ACTIVITY: Record<string, ContributionActivity> = {
-  // Dylan — preview Breakaway so the badge is visible on Members + profile before real Q&A volume.
-  // Score: 6*1 + 12*2 + 5*4 = 50 → Breakaway
-  "75f7798f-4f31-442c-b0dc-91f28a45f5a1": {
-    asked: 6,
-    answered: 12,
-    accepted: 5,
-  },
-};
+export const CONTRIBUTION_PREVIEW_ACTIVITY: Record<string, ContributionActivity> =
+  {};
 
 const PREVIEW_HANDLE_SUFFIXES = new Set(
   Object.keys(CONTRIBUTION_PREVIEW_ACTIVITY).map((id) =>

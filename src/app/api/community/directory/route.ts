@@ -49,5 +49,47 @@ export async function GET() {
 
   const foundingAssigned = members.filter((m) => m.is_founding_member).length;
 
-  return NextResponse.json({ members, foundingAssigned });
+  // Live Q&A counts from shared Community tables (not localStorage / preview).
+  const askedBy = new Map<string, number>();
+  const answeredBy = new Map<string, number>();
+  const acceptedBy = new Map<string, number>();
+  try {
+    const ids = members.map((m) => String(m.id));
+    if (ids.length) {
+      const { data: questions } = await supabase
+        .from("community_questions")
+        .select("asker_id")
+        .in("asker_id", ids);
+      for (const row of questions || []) {
+        const id = String((row as { asker_id: string }).asker_id);
+        askedBy.set(id, (askedBy.get(id) || 0) + 1);
+      }
+
+      const { data: answers } = await supabase
+        .from("community_answers")
+        .select("author_id, accepted")
+        .in("author_id", ids);
+      for (const row of answers || []) {
+        const id = String((row as { author_id: string }).author_id);
+        answeredBy.set(id, (answeredBy.get(id) || 0) + 1);
+        if ((row as { accepted?: boolean }).accepted) {
+          acceptedBy.set(id, (acceptedBy.get(id) || 0) + 1);
+        }
+      }
+    }
+  } catch {
+    // Tables may not be migrated yet — leave counts at 0.
+  }
+
+  const withActivity = members.map((m) => {
+    const id = String(m.id);
+    return {
+      ...m,
+      asked: askedBy.get(id) || 0,
+      answered: answeredBy.get(id) || 0,
+      accepted: acceptedBy.get(id) || 0,
+    };
+  });
+
+  return NextResponse.json({ members: withActivity, foundingAssigned });
 }
