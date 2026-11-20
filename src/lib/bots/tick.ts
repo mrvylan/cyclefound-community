@@ -147,15 +147,40 @@ async function insertAsk(
   admin: SupabaseClient,
   bot: BotAccountRow,
   dateKey: string,
-): Promise<{ action: string; targetId: string }> {
-  const templates = bot.config?.playbook?.askTemplates || [];
+  playbook?: BotPlaybook,
+): Promise<{ action: string; targetId: string } | null> {
+  const templates =
+    playbook?.askTemplates || bot.config?.playbook?.askTemplates || [];
   if (!templates.length) {
     throw new Error(`No ask templates for ${bot.persona_slug}`);
   }
-  const idx = Math.floor(
-    seededUnit(dateKey, bot.user_id, "ask-idx") * templates.length,
+
+  // Never re-post a template this persona already asked (same title).
+  const { data: prior } = await admin
+    .from("community_questions")
+    .select("title")
+    .eq("asker_id", bot.user_id)
+    .limit(100);
+  const usedTitles = new Set(
+    (prior || []).map((row) =>
+      String((row as { title?: string }).title || "")
+        .trim()
+        .toLowerCase(),
+    ),
   );
-  const tpl = templates[Math.min(idx, templates.length - 1)]!;
+  const unused = templates.filter(
+    (tpl) => !usedTitles.has(String(tpl.title || "").trim().toLowerCase()),
+  );
+  if (!unused.length) {
+    return null;
+  }
+
+  const idx = Math.floor(
+    seededUnit(dateKey, bot.user_id, `ask-idx-${usedTitles.size}`) *
+      unused.length,
+  );
+  const tpl = unused[Math.min(idx, unused.length - 1)]!;
+  const title = tpl.title.slice(0, 200);
   const tags = [
     tpl.intent,
     ...(bot.config?.skills || []).slice(0, 3),
@@ -164,11 +189,22 @@ async function insertAsk(
     .filter(Boolean)
     .slice(0, 8);
 
+  // Race-safe: another tick may have inserted the same title moments ago.
+  const { data: existing } = await admin
+    .from("community_questions")
+    .select("id")
+    .eq("asker_id", bot.user_id)
+    .ilike("title", title)
+    .maybeSingle();
+  if (existing?.id) {
+    return null;
+  }
+
   const { data, error } = await admin
     .from("community_questions")
     .insert({
       asker_id: bot.user_id,
-      title: tpl.title.slice(0, 200),
+      title,
       body: tpl.body.slice(0, 8000),
       tags,
     })
@@ -176,6 +212,10 @@ async function insertAsk(
     .maybeSingle();
 
   if (error || !data?.id) {
+    // Unique/race duplicate — treat as skip, not a hard failure.
+    if (error && /duplicate|unique/i.test(error.message)) {
+      return null;
+    }
     throw new Error(error?.message || "Could not insert question.");
   }
   return { action: "ask", targetId: data.id };
@@ -414,11 +454,11 @@ export async function runBotTick(opts: RunBotTickOptions = {}): Promise<{
     try {
       let outcome: { action: string; targetId: string } | null = null;
       if (action === "ask") {
-        outcome = await insertAsk(admin, bot, dateKey);
+        outcome = await insertAsk(admin, bot, dateKey, playbook);
       } else if (action === "answer") {
         outcome = await insertAnswer(admin, bot, dateKey);
         if (!outcome) {
-          outcome = await insertAsk(admin, bot, dateKey);
+          outcome = await insertAsk(admin, bot, dateKey, playbook);
         }
       } else if (action === "message") {
         const peerIdx = Math.floor(
