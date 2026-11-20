@@ -104,7 +104,7 @@ const inputClass =
 export function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refresh, profile, ready } = useAuth();
+  const { refresh, profile, ready, handleResolved } = useAuth();
   const configured = hasSupabaseConfig();
 
   const next = useMemo(
@@ -148,14 +148,19 @@ export function AuthForm() {
   }, [initialMode, searchParams]);
 
   useEffect(() => {
-    if (!ready || !profile) return;
+    if (!ready || !handleResolved || !profile) return;
     if (mode === "set-password" || mode === "otp") return;
+    const needsOnboarding = !String(profile.handle || "").trim();
+    if (needsOnboarding) {
+      router.replace("/onboarding");
+      return;
+    }
     const dest =
       otpIntent === "join" && (next === "/" || next.startsWith("/auth"))
         ? "/onboarding"
         : next;
     router.replace(dest);
-  }, [ready, profile, mode, next, router, otpIntent]);
+  }, [ready, handleResolved, profile, mode, next, router, otpIntent]);
 
   function go(nextMode: Mode) {
     setBanner(null);

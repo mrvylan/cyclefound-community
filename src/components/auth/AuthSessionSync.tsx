@@ -34,7 +34,9 @@ export function AuthSessionSync() {
     ) {
       if (cancelled) return;
       if (!profile || !handle) {
-        if (!profile && getSessionHandle()) setSessionHandle("");
+        // Drop stale local handles so onboarding can't "finish" without a
+        // profiles.handle that RequireHandle will accept.
+        if (getSessionHandle()) setSessionHandle("");
         return;
       }
       const prev = getSessionHandle();

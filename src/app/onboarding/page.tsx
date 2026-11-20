@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PhotoPicker } from "@/components/forms/PhotoPicker";
 import { HandlePicker } from "@/components/forms/HandlePicker";
@@ -29,7 +28,8 @@ const STEP_LABELS: Record<Step, string> = {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { ready, user, profile, refresh } = useAuth();
+  const { ready, user, profile, handleResolved, refresh, setKnownHandle } =
+    useAuth();
   const [step, setStep] = useState<Step>(1);
   const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -52,6 +52,13 @@ export default function OnboardingPage() {
       router.replace(authHref("join", "/onboarding"));
     }
   }, [ready, user, router]);
+
+  // Never show steps 2–4 until AuthProvider has the claimed username —
+  // otherwise Finish/Skip can bounce home and RequireHandle sends you back.
+  useEffect(() => {
+    if (!ready || !handleResolved) return;
+    if (!profile?.handle && step > 1) setStep(1);
+  }, [ready, handleResolved, profile?.handle, step]);
 
   useEffect(() => {
     if (!ready || !user || displayNamePrefillDone) return;
@@ -76,11 +83,14 @@ export default function OnboardingPage() {
         };
         if (cancelled) return;
         if (data.current) {
-          setSessionHandle(data.current);
-          setHandle(data.current);
+          const claimed = String(data.current).trim().toLowerCase();
+          setSessionHandle(claimed);
+          setHandle(claimed);
+          setKnownHandle(claimed);
           setHandleReady(true);
           setCompleted((c) => ({ ...c, 1: true }));
-          setStep(2);
+          await refresh();
+          if (!cancelled) setStep(2);
         } else if (data.suggested) {
           setHandle(data.suggested);
         }
@@ -93,7 +103,7 @@ export default function OnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, user, bootstrapped]);
+  }, [ready, user, bootstrapped, refresh, setKnownHandle]);
 
   const onAvailability = useCallback(
     (state: {
@@ -139,6 +149,7 @@ export default function OnboardingPage() {
       }
       setSessionHandle(data.handle);
       setHandle(data.handle);
+      setKnownHandle(data.handle);
       saveProfilePatch(data.handle, {
         displayName: cleanedDisplay || undefined,
         claimedHandle: data.handle,
@@ -154,11 +165,11 @@ export default function OnboardingPage() {
   }
 
   function sessionOrClaimed() {
-    return handle || getSessionHandle() || profile?.handle || "";
+    return profile?.handle || handle || getSessionHandle() || "";
   }
 
-  /** Later steps stay locked until a username is claimed. */
-  const usernameSaved = Boolean(profile?.handle) || step > 1;
+  /** Later steps stay locked until the auth profile has a claimed username. */
+  const usernameSaved = Boolean(profile?.handle);
 
   function persistSkills(nextSkills = skills, help = expertiseHelp) {
     const h = sessionOrClaimed();
@@ -185,8 +196,18 @@ export default function OnboardingPage() {
     setStep(3);
   }
 
+  function leaveOnboarding() {
+    const claimed = String(profile?.handle || "").trim();
+    if (!handleResolved || !claimed) {
+      setError("Claim a username first so we can finish setting up your account.");
+      setStep(1);
+      return false;
+    }
+    return claimed;
+  }
+
   function onFinishWanted() {
-    const h = sessionOrClaimed();
+    const h = leaveOnboarding();
     if (!h) return;
     const wantedLines = wantedText
       .split("\n")
@@ -419,12 +440,17 @@ export default function OnboardingPage() {
             >
               Finish
             </button>
-            <Link
-              href="/"
-              className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink no-underline"
+            <button
+              type="button"
+              onClick={() => {
+                const h = leaveOnboarding();
+                if (!h) return;
+                router.replace("/?onboarded=1");
+              }}
+              className="inline-flex h-11 items-center rounded-[10px] border border-line bg-white px-4 text-[14px] font-semibold text-ink"
             >
               Skip
-            </Link>
+            </button>
           </div>
         </section>
       ) : null}

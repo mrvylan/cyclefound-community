@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
@@ -24,6 +25,8 @@ type AuthContextValue = {
   handleResolved: boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Optimistic update after a successful handle claim (avoids stale load races). */
+  setKnownHandle: (handle: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -35,11 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profileHandle, setProfileHandle] = useState("");
   const [handleResolved, setHandleResolved] = useState(!configured);
+  const loadSeq = useRef(0);
 
   const applySession = useCallback((next: Session | null) => {
     setSession(next);
     setUser(next?.user ?? null);
     if (!next?.user) {
+      loadSeq.current += 1;
       setProfileHandle("");
       setHandleResolved(true);
     } else {
@@ -48,14 +53,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadHandle = useCallback(async (uid: string) => {
+    const seq = ++loadSeq.current;
     try {
       const row = await profileService.getMyProfile();
+      if (seq !== loadSeq.current) return;
       setProfileHandle(String(row?.handle || "").trim().toLowerCase());
     } catch {
-      setProfileHandle("");
+      if (seq !== loadSeq.current) return;
+      // Keep any previously known handle on transient errors — don't wipe
+      // a successful claim with a racing failed fetch.
+      setProfileHandle((prev) => prev);
     } finally {
-      setHandleResolved(true);
+      if (seq === loadSeq.current) setHandleResolved(true);
     }
+  }, []);
+
+  const setKnownHandle = useCallback((handle: string) => {
+    loadSeq.current += 1;
+    setProfileHandle(String(handle || "").trim().toLowerCase());
+    setHandleResolved(true);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -122,8 +138,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       handleResolved,
       signOut,
       refresh,
+      setKnownHandle,
     }),
-    [ready, configured, session, user, profile, handleResolved, signOut, refresh],
+    [
+      ready,
+      configured,
+      session,
+      user,
+      profile,
+      handleResolved,
+      signOut,
+      refresh,
+      setKnownHandle,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
