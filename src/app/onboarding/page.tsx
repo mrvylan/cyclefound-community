@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoPicker } from "@/components/forms/PhotoPicker";
 import { HandlePicker } from "@/components/forms/HandlePicker";
@@ -30,6 +30,8 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { ready, user, profile, handleResolved, refresh, setKnownHandle } =
     useAuth();
+  /** True after claiming in this visit — stay for optional steps 2–4. */
+  const stayForOptionalSteps = useRef(false);
   const [step, setStep] = useState<Step>(1);
   const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -49,9 +51,20 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!ready) return;
     if (!user) {
+      setBootstrapped(true);
       router.replace(authHref("join", "/onboarding"));
     }
   }, [ready, user, router]);
+
+  // Returning members who already claimed a username — leave onboarding.
+  // Fresh claims in this visit set stayForOptionalSteps to continue 2–4.
+  useEffect(() => {
+    if (!ready || !handleResolved || !user) return;
+    const claimed = String(profile?.handle || "").trim();
+    if (!claimed || stayForOptionalSteps.current) return;
+    setSessionHandle(claimed);
+    router.replace("/");
+  }, [ready, handleResolved, user, profile?.handle, router]);
 
   // Never show steps 2–4 until AuthProvider has the claimed username —
   // otherwise Finish/Skip can bounce home and RequireHandle sends you back.
@@ -87,11 +100,11 @@ export default function OnboardingPage() {
           setSessionHandle(claimed);
           setHandle(claimed);
           setKnownHandle(claimed);
-          setHandleReady(true);
-          setCompleted((c) => ({ ...c, 1: true }));
-          await refresh();
-          if (!cancelled) setStep(2);
-        } else if (data.suggested) {
+          // Existing username → leave onboarding (effect above also routes home).
+          router.replace("/");
+          return;
+        }
+        if (data.suggested) {
           setHandle(data.suggested);
         }
       } catch {
@@ -103,7 +116,7 @@ export default function OnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, user, bootstrapped, refresh, setKnownHandle]);
+  }, [ready, user, bootstrapped, setKnownHandle, router]);
 
   const onAvailability = useCallback(
     (state: {
@@ -147,6 +160,7 @@ export default function OnboardingPage() {
         if (data.suggestions?.[0]) setHandle(data.suggestions[0]);
         return;
       }
+      stayForOptionalSteps.current = true;
       setSessionHandle(data.handle);
       setHandle(data.handle);
       setKnownHandle(data.handle);
@@ -155,7 +169,8 @@ export default function OnboardingPage() {
         claimedHandle: data.handle,
       });
       setCompleted((c) => ({ ...c, 1: true }));
-      await refresh();
+      // Hydrate without clearing the optimistic handle; then continue wizard.
+      void refresh();
       setStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not claim username.");

@@ -52,17 +52,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loadHandle = useCallback(async (uid: string) => {
+  const loadHandle = useCallback(async (_uid: string) => {
     const seq = ++loadSeq.current;
     try {
       const row = await profileService.getMyProfile();
       if (seq !== loadSeq.current) return;
-      setProfileHandle(String(row?.handle || "").trim().toLowerCase());
+      const next = String(row?.handle || "").trim().toLowerCase();
+      // Prefer the server value when present; keep an optimistic claim if the
+      // row briefly lags behind a successful POST.
+      setProfileHandle((prev) => next || prev);
     } catch {
       if (seq !== loadSeq.current) return;
       // Keep any previously known handle on transient errors — don't wipe
       // a successful claim with a racing failed fetch.
-      setProfileHandle((prev) => prev);
     } finally {
       if (seq === loadSeq.current) setHandleResolved(true);
     }
@@ -82,10 +84,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const supabase = createClient();
     const { data } = await supabase.auth.getSession();
-    applySession(data.session);
-    if (data.session?.user) await loadHandle(data.session.user.id);
+    const next = data.session;
+    setSession(next);
+    setUser(next?.user ?? null);
+    if (!next?.user) {
+      loadSeq.current += 1;
+      setProfileHandle("");
+      setHandleResolved(true);
+    } else {
+      // Don't flip handleResolved false here — that re-triggers onboarding
+      // gates and can strand members who already claimed a username.
+      await loadHandle(next.user.id);
+    }
     setReady(true);
-  }, [applySession, configured, loadHandle]);
+  }, [configured, loadHandle]);
 
   useEffect(() => {
     if (!configured) return;
