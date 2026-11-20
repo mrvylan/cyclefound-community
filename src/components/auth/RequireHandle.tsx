@@ -7,6 +7,7 @@ import { useAuth } from "./AuthProvider";
 const ALLOW_PREFIXES = [
   "/auth",
   "/onboarding",
+  "/admin",
   "/terms",
   "/privacy",
   "/api",

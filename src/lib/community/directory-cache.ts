@@ -238,10 +238,20 @@ let hydrateInFlight: Promise<void> | null = null;
 /** Load Supabase profiles + active marketplace listings into the client cache. */
 export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
   if (typeof window === "undefined") return;
+  // A prior failed hydrate marks ready=true with an empty roster — always retry
+  // until we have a successful directory payload (or the caller forces).
+  const shouldSkip =
+    cache.ready && !cache.error && cache.members.length > 0 && !opts?.force;
+  if (shouldSkip) return;
+
   if (hydrateInFlight) {
     if (!opts?.force) return hydrateInFlight;
-    // Wait out the in-flight load, then fetch again so Market reflects pauses.
-    await hydrateInFlight.catch(() => undefined);
+    // Wait briefly for the in-flight load, then fetch again.
+    await Promise.race([
+      hydrateInFlight.catch(() => undefined),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 2500)),
+    ]);
+    hydrateInFlight = null;
   }
 
   hydrateInFlight = (async () => {
@@ -419,8 +429,14 @@ export async function hydrateCommunityDirectory(opts?: { force?: boolean }) {
     cache.byUserId = new Map(members.map((m) => [m.userId, m]));
     notify();
   } catch (err) {
-    cache.ready = true;
     cache.error = err instanceof Error ? err.message : "Directory unavailable";
+    // Only mark ready when we already have a roster — otherwise callers keep
+    // retrying instead of locking onto an empty "loaded" state.
+    if (cache.members.length > 0) {
+      cache.ready = true;
+    } else {
+      cache.ready = false;
+    }
     notify();
   } finally {
     hydrateInFlight = null;

@@ -150,6 +150,11 @@ export function AuthForm() {
   useEffect(() => {
     if (!ready || !handleResolved || !profile) return;
     if (mode === "set-password" || mode === "otp") return;
+    // Admin tools must stay reachable before username onboarding.
+    if (next.startsWith("/admin")) {
+      router.replace(next);
+      return;
+    }
     const needsOnboarding = !String(profile.handle || "").trim();
     if (needsOnboarding) {
       router.replace("/onboarding");

@@ -102,9 +102,8 @@ export default function MembersPage() {
     }
 
     void (async () => {
-      if (!isCommunityDirectoryReady()) {
-        await hydrateCommunityDirectory();
-      }
+      // Force refresh so a prior failed/empty cache can't stick forever.
+      await hydrateCommunityDirectory({ force: true });
       if (!cancelled) sync();
     })();
 
