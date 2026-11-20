@@ -2,9 +2,10 @@
 
 Bots are real Supabase Auth users with claimed `@handles`, optional garage seed data, and scheduled activity.
 
-## First persona
+## Personas
 
 - [`personas/wrench.json`](personas/wrench.json) — Riley S. (`@wrench`), vintage/steel shop wrench
+- [`personas/priya.json`](personas/priya.json) — Priya N. (`@priya`), hardcore Peninsula road cyclist
 
 ## Secrets (never commit)
 
@@ -13,6 +14,7 @@ Bots are real Supabase Auth users with claimed `@handles`, optional garage seed 
 | `SUPABASE_SERVICE_ROLE_KEY` | Provision + garage seed + cron worker |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `BOT_WRENCH_PASSWORD` | Password for `bot+wrench@cyclefound.com` |
+| `BOT_PRIYA_PASSWORD` | Password for `bot+priya@cyclefound.com` |
 | `CRON_SECRET` | Bearer token for `POST /api/bots/tick` |
 | `BOTS_ENABLED` | Set `0` to disable the cron worker |
 

@@ -17,6 +17,7 @@ import {
   statusToDb,
   waitForProfile,
   type Persona,
+  type PersonaGarageItem,
 } from "./lib";
 
 function loadEnvLocal() {
@@ -85,6 +86,82 @@ async function ensureUser(persona: Persona, password: string) {
   return data.user.id;
 }
 
+async function loadPhotoBytes(
+  photoUrl: string | undefined,
+): Promise<{ bytes: Buffer; contentType: string } | null> {
+  const src = String(photoUrl || "").trim();
+  if (!src) return null;
+
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    const bytes = Buffer.from(await res.arrayBuffer());
+    const contentType =
+      res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
+    return { bytes, contentType };
+  }
+
+  const path = resolve(process.cwd(), src);
+  if (!existsSync(path)) {
+    console.warn(`Photo file missing: ${path}`);
+    return null;
+  }
+  const lower = path.toLowerCase();
+  const contentType = lower.endsWith(".png")
+    ? "image/png"
+    : lower.endsWith(".webp")
+      ? "image/webp"
+      : "image/jpeg";
+  return { bytes: readFileSync(path), contentType };
+}
+
+async function upsertCoverPhoto(
+  supabase: ReturnType<typeof adminClient>,
+  userId: string,
+  bikeId: string,
+  item: PersonaGarageItem,
+) {
+  const photo = await loadPhotoBytes(item.photoUrl);
+  if (!photo) return false;
+
+  const ext =
+    photo.contentType === "image/png"
+      ? "png"
+      : photo.contentType === "image/webp"
+        ? "webp"
+        : "jpg";
+  const photoId = crypto.randomUUID();
+  const storagePath = `${userId}/${bikeId}/${photoId}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from("garage-photos")
+    .upload(storagePath, photo.bytes, {
+      contentType: photo.contentType,
+      upsert: false,
+    });
+  if (upErr) {
+    console.warn(`Photo upload failed for ${item.title}:`, upErr.message);
+    return false;
+  }
+
+  // Replace prior covers so re-provision can swap in new art.
+  await supabase.from("garage_bike_photos").delete().eq("bike_id", bikeId);
+
+  const { error: rowErr } = await supabase.from("garage_bike_photos").insert({
+    bike_id: bikeId,
+    storage_path: storagePath,
+    sort_order: 0,
+    is_cover: true,
+    content_type: photo.contentType,
+    byte_size: photo.bytes.length,
+  });
+  if (rowErr) {
+    console.warn(`Photo row failed for ${item.title}:`, rowErr.message);
+    return false;
+  }
+  return true;
+}
+
 async function seedGarage(
   supabase: ReturnType<typeof adminClient>,
   userId: string,
@@ -102,13 +179,19 @@ async function seedGarage(
     .eq("owner_id", userId);
 
   for (const item of items) {
-    const already = (existing || []).some((row) => {
+    const match = (existing || []).find((row) => {
       const title = String(row.title || "").trim();
       const composed = `${row.manufacturer_name || ""} ${row.model_name || ""}`.trim();
       return title === item.title || composed === item.title;
     });
-    if (already) {
-      console.log(`Garage skip (exists): ${item.title}`);
+
+    if (match?.id) {
+      const ok = await upsertCoverPhoto(supabase, userId, match.id, item);
+      console.log(
+        ok
+          ? `Garage photo updated: ${item.title} (${match.id})`
+          : `Garage skip (exists, no photo): ${item.title}`,
+      );
       continue;
     }
 
@@ -169,36 +252,12 @@ async function seedGarage(
       continue;
     }
 
-    if (item.photoUrl?.startsWith("http")) {
-      try {
-        const res = await fetch(item.photoUrl);
-        if (res.ok) {
-          const blob = Buffer.from(await res.arrayBuffer());
-          const photoId = crypto.randomUUID();
-          const storagePath = `${userId}/${bike.id}/${photoId}.jpg`;
-          const { error: upErr } = await supabase.storage
-            .from("garage-photos")
-            .upload(storagePath, blob, {
-              contentType: "image/jpeg",
-              upsert: false,
-            });
-          if (!upErr) {
-            await supabase.from("garage_bike_photos").insert({
-              bike_id: bike.id,
-              storage_path: storagePath,
-              sort_order: 0,
-              is_cover: true,
-              content_type: "image/jpeg",
-              byte_size: blob.length,
-            });
-          }
-        }
-      } catch (err) {
-        console.warn(`Photo seed failed for ${item.title}:`, err);
-      }
-    }
-
-    console.log(`Garage seeded: ${item.title} (${bike.id})`);
+    const ok = await upsertCoverPhoto(supabase, userId, bike.id, item);
+    console.log(
+      ok
+        ? `Garage seeded: ${item.title} (${bike.id})`
+        : `Garage seeded (no photo): ${item.title} (${bike.id})`,
+    );
   }
 }
 
@@ -218,21 +277,33 @@ async function main() {
   const userId = await ensureUser(persona, password);
   await waitForProfile(supabase, userId);
 
-  const { error: profileErr } = await supabase
+  const profilePatch: Record<string, unknown> = {
+    handle: persona.handle.toLowerCase(),
+    handle_changed_at: new Date().toISOString(),
+    display_name: persona.displayName || null,
+    full_name: persona.fullName,
+    city: persona.city || null,
+    state: persona.state || null,
+    bio: persona.bio?.trim() || null,
+    is_bot: true,
+    is_founding_member: false,
+    member_number: null,
+  };
+
+  let { error: profileErr } = await supabase
     .from("profiles")
-    .update({
-      handle: persona.handle.toLowerCase(),
-      handle_changed_at: new Date().toISOString(),
-      display_name: persona.displayName || null,
-      full_name: persona.fullName,
-      city: persona.city || null,
-      state: persona.state || null,
-      bio: persona.bio?.trim() || null,
-      is_bot: true,
-      is_founding_member: false,
-      member_number: null,
-    })
+    .update(profilePatch)
     .eq("id", userId);
+
+  // Bio column may not be migrated yet — retry without it.
+  if (profileErr?.message?.toLowerCase().includes("bio")) {
+    console.warn(`Profile bio skipped: ${profileErr.message}`);
+    delete profilePatch.bio;
+    ({ error: profileErr } = await supabase
+      .from("profiles")
+      .update(profilePatch)
+      .eq("id", userId));
+  }
 
   if (profileErr) {
     throw new Error(`Profile update failed: ${profileErr.message}`);
