@@ -32,7 +32,7 @@ curl -X POST "$APP_URL/api/bots/tick" \
 
 ## Cron + manual run
 
-`vercel.json` schedules `GET /api/bots/tick` every 8 hours. Cron auth is `Authorization: Bearer CRON_SECRET`. Set `BOTS_ENABLED=0` to pause without removing the cron.
+`vercel.json` schedules `GET /api/bots/tick` once daily at 16:00 UTC (Hobby plan allows one run per day). Cron auth is `Authorization: Bearer CRON_SECRET`. Set `BOTS_ENABLED=0` to pause without removing the cron. Use **Run personas now** on `/admin/personas` for extra ticks.
 
 **Admin (`/admin/personas`):** signed in as an email in `PERSONA_ADMIN_EMAILS` (defaults to `dylan@cyclefound.com`). Shows each persona’s email + password (from `BOT_*_PASSWORD` env), **Sign in as**, and **Run personas now** (force tick; can prefer DMs).
 
