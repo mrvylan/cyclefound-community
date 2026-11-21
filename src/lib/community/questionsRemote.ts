@@ -117,7 +117,12 @@ export async function fetchCommunityQuestions(): Promise<Question[]> {
 
 export async function fetchCommunityQuestion(
   id: string,
-): Promise<{ question: Question; answers: Answer[] } | null> {
+): Promise<{
+  question: Question;
+  answers: Answer[];
+  viewerVotedQuestion: boolean;
+  viewerVotedAnswerIds: string[];
+} | null> {
   const res = await fetch(`/api/community/questions/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
@@ -125,11 +130,18 @@ export async function fetchCommunityQuestion(
   const data = (await res.json().catch(() => ({}))) as {
     question?: Question;
     answers?: Answer[];
+    viewerVotedQuestion?: boolean;
+    viewerVotedAnswerIds?: string[];
     error?: string;
   };
   if (!res.ok) throw new Error(data.error || "Could not load question.");
   if (!data.question) return null;
-  return { question: data.question, answers: data.answers || [] };
+  return {
+    question: data.question,
+    answers: data.answers || [],
+    viewerVotedQuestion: Boolean(data.viewerVotedQuestion),
+    viewerVotedAnswerIds: data.viewerVotedAnswerIds || [],
+  };
 }
 
 export async function postCommunityQuestion(input: {
@@ -173,4 +185,47 @@ export async function postCommunityAnswer(input: {
     throw new Error(data.error || "Could not post answer.");
   }
   return data.answer;
+}
+
+export async function toggleCommunityVote(input: {
+  targetType: "question" | "answer";
+  targetId: string;
+}): Promise<{ voted: boolean; votes: number }> {
+  const res = await fetch("/api/community/votes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    voted?: boolean;
+    votes?: number;
+    error?: string;
+  };
+  if (!res.ok) {
+    throw new Error(data.error || "Could not save vote.");
+  }
+  return {
+    voted: Boolean(data.voted),
+    votes: Number(data.votes) || 0,
+  };
+}
+
+export async function fetchCommunityVotedIds(input: {
+  targetType: "question" | "answer";
+  targetIds: string[];
+}): Promise<string[]> {
+  const ids = input.targetIds.filter(Boolean).slice(0, 100);
+  if (!ids.length) return [];
+  const params = new URLSearchParams({
+    targetType: input.targetType,
+    targetIds: ids.join(","),
+  });
+  const res = await fetch(`/api/community/votes?${params}`, {
+    cache: "no-store",
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    votedIds?: string[];
+  };
+  if (!res.ok) return [];
+  return data.votedIds || [];
 }

@@ -7,7 +7,10 @@ import {
   getSessionHandle,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { fetchCommunityQuestions } from "@/lib/community/questionsRemote";
+import {
+  fetchCommunityQuestions,
+  fetchCommunityVotedIds,
+} from "@/lib/community/questionsRemote";
 import type { Question } from "@/lib/data/seed";
 import {
   FEED_INTENT_OPTIONS,
@@ -62,6 +65,7 @@ export function HomeFeed() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [ready, setReady] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
@@ -70,9 +74,18 @@ export function HomeFeed() {
       setSignedIn(Boolean(getSessionHandle()));
       try {
         const remote = await fetchCommunityQuestions();
-        if (!cancelled) setQuestions(remote);
+        if (cancelled) return;
+        setQuestions(remote);
+        const ids = await fetchCommunityVotedIds({
+          targetType: "question",
+          targetIds: remote.map((q) => q.id),
+        });
+        if (!cancelled) setVotedIds(new Set(ids));
       } catch {
-        if (!cancelled) setQuestions(getAllQuestions());
+        if (!cancelled) {
+          setQuestions(getAllQuestions());
+          setVotedIds(new Set());
+        }
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -197,7 +210,13 @@ export function HomeFeed() {
           actionHref={empty.actionHref}
         />
       ) : (
-        shown.map((q) => <QuestionCard key={q.id} q={q} />)
+        shown.map((q) => (
+          <QuestionCard
+            key={q.id}
+            q={q}
+            initiallyVoted={votedIds.has(q.id)}
+          />
+        ))
       )}
 
       {ready && remaining > 0 ? (

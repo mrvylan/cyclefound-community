@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { Check, ChevronUp } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Feature } from "@/components/Feature";
@@ -15,6 +15,7 @@ import {
   PlaceholderPhoto,
   TagChip,
 } from "@/components/ui";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   acceptAnswer,
   getAllAnswers,
@@ -26,7 +27,11 @@ import {
   isMockDataEnabled,
   subscribeStore,
 } from "@/lib/data/local-store";
-import { fetchCommunityQuestion } from "@/lib/community/questionsRemote";
+import {
+  fetchCommunityQuestion,
+  toggleCommunityVote,
+} from "@/lib/community/questionsRemote";
+import { authHref } from "@/lib/auth/redirects";
 import type { Answer, Question } from "@/lib/data/seed";
 
 export default function QuestionPage({
@@ -35,10 +40,17 @@ export default function QuestionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { user } = useAuth();
   const [tick, setTick] = useState(0);
   const [ready, setReady] = useState(false);
   const [sessionHandle, setSessionHandle] = useState("");
   const [voted, setVoted] = useState(false);
+  const [votes, setVotes] = useState(0);
+  const [votingQ, setVotingQ] = useState(false);
+  const [votedAnswers, setVotedAnswers] = useState<Record<string, boolean>>({});
+  const [answerVotes, setAnswerVotes] = useState<Record<string, number>>({});
+  const [votingAnswerId, setVotingAnswerId] = useState<string | null>(null);
   const [remoteQ, setRemoteQ] = useState<Question | null>(null);
   const [remoteAnswers, setRemoteAnswers] = useState<Answer[] | null>(null);
   const [sentTo, setSentTo] = useState<{
@@ -75,6 +87,14 @@ export default function QuestionPage({
         if (!cancelled && remote) {
           setRemoteQ(remote.question);
           setRemoteAnswers(remote.answers);
+          setVoted(remote.viewerVotedQuestion);
+          setVotes(remote.question.votes);
+          const nextVoted: Record<string, boolean> = {};
+          for (const aid of remote.viewerVotedAnswerIds) nextVoted[aid] = true;
+          setVotedAnswers(nextVoted);
+          setAnswerVotes(
+            Object.fromEntries(remote.answers.map((a) => [a.id, a.votes])),
+          );
         }
       } catch {
         /* fall back to local */
@@ -110,7 +130,73 @@ export default function QuestionPage({
   const linkedItem = q.linkedItemId ? getItemLocal(q.linkedItemId) : undefined;
   const linkedOwner = linkedItem ? getMergedPerson(linkedItem.ownerHandle) : undefined;
   const isAsker = sessionHandle === q.askerHandle;
-  const votes = voted ? q.votes + 1 : q.votes;
+  const displayVotes = votes || q.votes;
+
+  async function onVoteQuestion() {
+    if (votingQ || isAsker) return;
+    if (!user) {
+      router.push(authHref("login", `/q/${id}`));
+      return;
+    }
+    setVotingQ(true);
+    const prevVoted = voted;
+    const prevVotes = displayVotes;
+    setVoted(!prevVoted);
+    setVotes(Math.max(0, prevVotes + (prevVoted ? -1 : 1)));
+    try {
+      const result = await toggleCommunityVote({
+        targetType: "question",
+        targetId: id,
+      });
+      setVoted(result.voted);
+      setVotes(result.votes);
+      setRemoteQ((prev) => (prev ? { ...prev, votes: result.votes } : prev));
+    } catch {
+      setVoted(prevVoted);
+      setVotes(prevVotes);
+    } finally {
+      setVotingQ(false);
+    }
+  }
+
+  async function onVoteAnswer(answerId: string, isOwnAnswer: boolean) {
+    if (votingAnswerId || isOwnAnswer) return;
+    if (!user) {
+      router.push(authHref("login", `/q/${id}`));
+      return;
+    }
+    setVotingAnswerId(answerId);
+    const prevVoted = Boolean(votedAnswers[answerId]);
+    const prevVotes =
+      answerVotes[answerId] ??
+      thread.find((a) => a.id === answerId)?.votes ??
+      0;
+    setVotedAnswers((m) => ({ ...m, [answerId]: !prevVoted }));
+    setAnswerVotes((m) => ({
+      ...m,
+      [answerId]: Math.max(0, prevVotes + (prevVoted ? -1 : 1)),
+    }));
+    try {
+      const result = await toggleCommunityVote({
+        targetType: "answer",
+        targetId: answerId,
+      });
+      setVotedAnswers((m) => ({ ...m, [answerId]: result.voted }));
+      setAnswerVotes((m) => ({ ...m, [answerId]: result.votes }));
+      setRemoteAnswers((list) =>
+        list
+          ? list.map((a) =>
+              a.id === answerId ? { ...a, votes: result.votes } : a,
+            )
+          : list,
+      );
+    } catch {
+      setVotedAnswers((m) => ({ ...m, [answerId]: prevVoted }));
+      setAnswerVotes((m) => ({ ...m, [answerId]: prevVotes }));
+    } finally {
+      setVotingAnswerId(null);
+    }
+  }
   const photosRaw =
     typeof window !== "undefined"
       ? sessionStorage.getItem(`cf_q_photos_${id}`)
@@ -250,18 +336,20 @@ export default function QuestionPage({
                   title="You can’t vote on your own question"
                 >
                   <ChevronUp className="size-[15px] stroke-[2.2] opacity-40" aria-hidden />
-                  Useful · {q.votes}
+                  Useful · {displayVotes}
                 </span>
               ) : (
                 <button
                   type="button"
-                  onClick={() => setVoted((v) => !v)}
-                  className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#D4D3CD] px-3.5 text-[14px] font-semibold ${
+                  onClick={() => void onVoteQuestion()}
+                  disabled={votingQ}
+                  aria-pressed={voted}
+                  className={`inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#D4D3CD] px-3.5 text-[14px] font-semibold disabled:opacity-60 ${
                     voted ? "bg-ink text-white" : "bg-white text-ink"
                   }`}
                 >
                   <ChevronUp className="size-[15px] stroke-[2.2]" aria-hidden />
-                  Useful · {votes}
+                  Useful · {displayVotes}
                 </button>
               )}
               <Feature name="followGarage">
@@ -382,18 +470,33 @@ export default function QuestionPage({
                             >
                               <ChevronUp className="size-4 opacity-40" />
                             </span>
-                            <span className="font-mono font-medium">{a.votes}</span>
+                            <span className="font-mono font-medium">
+                              {answerVotes[a.id] ?? a.votes}
+                            </span>
                           </>
                         ) : (
                           <>
                             <button
                               type="button"
-                              aria-label="Upvote answer"
-                              className="inline-flex h-9 w-11 items-center justify-center rounded-lg border border-line"
+                              aria-label={
+                                votedAnswers[a.id]
+                                  ? "Remove answer upvote"
+                                  : "Upvote answer"
+                              }
+                              aria-pressed={Boolean(votedAnswers[a.id])}
+                              disabled={votingAnswerId === a.id}
+                              onClick={() => void onVoteAnswer(a.id, false)}
+                              className={`inline-flex h-9 w-11 items-center justify-center rounded-lg border disabled:opacity-60 ${
+                                votedAnswers[a.id]
+                                  ? "border-ink bg-ink text-white"
+                                  : "border-line bg-white text-ink"
+                              }`}
                             >
                               <ChevronUp className="size-4" aria-hidden />
                             </button>
-                            <span className="font-mono font-medium">{a.votes}</span>
+                            <span className="font-mono font-medium">
+                              {answerVotes[a.id] ?? a.votes}
+                            </span>
                           </>
                         )}
                       </div>

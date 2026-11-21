@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronUp, MessageCircle, Check } from "lucide-react";
 import type { Question } from "@/lib/data/seed";
 import {
@@ -13,6 +14,9 @@ import {
   subscribeStore,
 } from "@/lib/data/local-store";
 import { getMemberName } from "@/lib/community/memberDisplay";
+import { toggleCommunityVote } from "@/lib/community/questionsRemote";
+import { authHref } from "@/lib/auth/redirects";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { MemberAvatar, TagChip } from "./ui";
 
 function relatedGarageCount(handle: string, tags: string[]): number {
@@ -36,8 +40,20 @@ function excerptText(q: Question) {
   return `${(boundary > 160 ? cut.slice(0, boundary) : cut).trim()}…`;
 }
 
-export function QuestionCard({ q }: { q: Question }) {
+export function QuestionCard({
+  q,
+  initiallyVoted = false,
+}: {
+  q: Question;
+  initiallyVoted?: boolean;
+}) {
+  const router = useRouter();
+  const { user } = useAuth();
   const [sessionHandle, setSessionHandle] = useState("");
+  const [votes, setVotes] = useState(q.votes);
+  const [voted, setVoted] = useState(initiallyVoted);
+  const [voting, setVoting] = useState(false);
+
   useEffect(() => {
     function sync() {
       setSessionHandle(getSessionHandle());
@@ -45,6 +61,14 @@ export function QuestionCard({ q }: { q: Question }) {
     sync();
     return subscribeStore(sync);
   }, []);
+
+  useEffect(() => {
+    setVotes(q.votes);
+  }, [q.votes, q.id]);
+
+  useEffect(() => {
+    setVoted(initiallyVoted);
+  }, [initiallyVoted, q.id]);
 
   const linkedItem = q.linkedItemId ? getItemLocal(q.linkedItemId) : undefined;
   const linkedPhotos = linkedItem ? getItemPhotoUrls(linkedItem) : [];
@@ -66,6 +90,34 @@ export function QuestionCard({ q }: { q: Question }) {
   const href = `/q/${q.id}`;
   const summary = excerptText(q);
 
+  async function onVote(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (voting || isOwn) return;
+    if (!user) {
+      router.push(authHref("login", href));
+      return;
+    }
+    setVoting(true);
+    const prevVoted = voted;
+    const prevVotes = votes;
+    setVoted(!prevVoted);
+    setVotes(Math.max(0, prevVotes + (prevVoted ? -1 : 1)));
+    try {
+      const result = await toggleCommunityVote({
+        targetType: "question",
+        targetId: q.id,
+      });
+      setVoted(result.voted);
+      setVotes(result.votes);
+    } catch {
+      setVoted(prevVoted);
+      setVotes(prevVotes);
+    } finally {
+      setVoting(false);
+    }
+  }
+
   return (
     <article className="relative flex gap-[18px] rounded-[14px] border border-line bg-surface p-5 transition-colors hover:border-[#D4D3CD]">
       {/* Whole-card hit target; nested controls sit above via z-index. */}
@@ -86,7 +138,7 @@ export function QuestionCard({ q }: { q: Question }) {
               <ChevronUp className="size-4 opacity-40" />
             </span>
             <span className="font-mono text-base font-medium">
-              {q.votes}
+              {votes}
               <span className="sr-only"> votes</span>
             </span>
           </>
@@ -94,13 +146,20 @@ export function QuestionCard({ q }: { q: Question }) {
           <>
             <button
               type="button"
-              aria-label="Upvote"
-              className="inline-flex size-11 items-center justify-center rounded-lg border border-line bg-white hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              aria-label={voted ? "Remove upvote" : "Upvote"}
+              aria-pressed={voted}
+              disabled={voting}
+              onClick={(e) => void onVote(e)}
+              className={`inline-flex size-11 items-center justify-center rounded-lg border hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60 ${
+                voted
+                  ? "border-ink bg-ink text-white"
+                  : "border-line bg-white text-ink"
+              }`}
             >
               <ChevronUp className="size-4" aria-hidden />
             </button>
             <span className="font-mono text-base font-medium">
-              {q.votes}
+              {votes}
               <span className="sr-only"> votes</span>
             </span>
           </>

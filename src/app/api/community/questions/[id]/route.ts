@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import {
   mapAnswerRow,
   mapQuestionRow,
@@ -27,6 +28,11 @@ export async function GET(
   if (!admin) {
     return NextResponse.json({ error: "Not configured." }, { status: 503 });
   }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: q, error } = await admin
     .from("community_questions")
@@ -94,8 +100,38 @@ export async function GET(
     accepted?.profiles?.handle || "",
   );
 
+  let viewerVotedQuestion = false;
+  const viewerVotedAnswerIds: string[] = [];
+  if (user) {
+    const { data: qVote } = await admin
+      .from("community_votes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("target_type", "question")
+      .eq("target_id", id)
+      .maybeSingle();
+    viewerVotedQuestion = Boolean(qVote?.id);
+
+    const answerIds = answerRows.map((a) => a.id);
+    if (answerIds.length) {
+      const { data: aVotes } = await admin
+        .from("community_votes")
+        .select("target_id")
+        .eq("user_id", user.id)
+        .eq("target_type", "answer")
+        .in("target_id", answerIds);
+      for (const row of aVotes || []) {
+        viewerVotedAnswerIds.push(
+          String((row as { target_id: string }).target_id),
+        );
+      }
+    }
+  }
+
   return NextResponse.json({
     question,
     answers: answerRows.map(mapAnswerRow),
+    viewerVotedQuestion,
+    viewerVotedAnswerIds,
   });
 }
